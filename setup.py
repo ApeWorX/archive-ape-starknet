@@ -8,12 +8,14 @@ extras_require = {
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
+        "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=21.10b0,<22.0",  # auto-formatter and linter
+        "black>=21.12b0,<22.0",  # auto-formatter and linter
         "mypy>=0.910,<1.0",  # Static type analyzer
         "flake8>=3.8.3,<4.0",  # Style linter
         "isort>=5.9.3,<6.0",  # Import sorting linter
+        "types-pkg-resources>=0.1.3,<0.2",
     ],
     "release": [  # `release` GitHub Action job uses this
         "setuptools",  # Installation tool
@@ -21,8 +23,8 @@ extras_require = {
         "twine",  # Package upload tool
     ],
     "dev": [
-        "commitizen",  # Manage commits and publishing releases
-        "pre-commit",  # Ensure that linters are run prior to commiting
+        "commitizen>=2.19,<2.20",  # Manage commits and publishing releases
+        "pre-commit",  # Ensure that linters are run prior to committing
         "pytest-watch",  # `ptw` test watcher/runner
         "IPython",  # Console for interacting
         "ipdb",  # Debugger (Must use `export PYTHONBREAKPOINT=ipdb.set_trace`)
@@ -43,21 +45,37 @@ with open("./README.md") as readme:
 
 setup(
     name="ape-starknet",
-    use_scm_version=True,
-    setup_requires=["setuptools_scm"],
+    version="0.1.0a0",
+    # use_scm_version=True,
+    # setup_requires=["setuptools_scm"],
     description="""ape-starknet: An ape plugin for the StarkNet networks""",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="ApeWorX Ltd.",
     author_email="admin@apeworx.io",
-    url="https://github.com/ApeWorX/<REPO_NAME>",
+    url="https://github.com/ApeWorX/ape-starknet",
     include_package_data=True,
     install_requires=[
+        "ecdsa",  # Not directly used, but part of install instructions for cairo-lang
+        "fastecdsa",  # Not directly used, but part of install instructions for cairo-lang
+        "sympy",  # Not directly used, but part of install instructions for cairo-lang
+        "cairo-lang>=0.8.0,<0.9",
+        "pytest>=6.0,<7.0",  # For 'ape test' integration
+        "pytest-asyncio",  # For 'ape test' integration
+        "click>=8.1.0,<8.2",
+        "hexbytes>=0.2.2,<0.3",
+        "pydantic>=1.9.0,<2.0",
+        "ethpm-types>=0.1.0b7",
+        "eth-ape>=0.1.3,<0.2.0",
+        "pydantic>=1.9.0,<2.0",
+        "starknet.py>=0.2.0a0,<0.3.0",
+        "starknet-devnet>=0.1.19,<0.2",
         "importlib-metadata ; python_version<'3.8'",
     ],  # NOTE: Add 3rd party libraries here
-    python_requires=">=3.7,<4",
+    entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
+    python_requires=">=3.7.2,<3.10",
     extras_require=extras_require,
-    py_modules=["<ape_starknet>"],
+    py_modules=["ape_starknet"],
     license="Apache-2.0",
     zip_safe=False,
     keywords="ethereum",
