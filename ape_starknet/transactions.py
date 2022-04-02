@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from ape.api import ReceiptAPI, TransactionAPI
+from ape.types import AddressType
 from ape.utils import abstractmethod
 from pydantic import Field
 from starknet_py.constants import TxStatus  # type: ignore
@@ -18,7 +19,8 @@ class StarknetTransaction(TransactionAPI):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TxStatus.NOT_RECEIVED.value  # type: ignore
+    status: int = TxStatus.NOT_RECEIVED.value
+    version: int = 0
 
     """Ignored"""
     gas_limit: int = Field(0, exclude=True)
@@ -41,7 +43,7 @@ class StarknetTransaction(TransactionAPI):
 
 
 class DeployTransaction(StarknetTransaction):
-    type: int = TransactionType.DEPLOY
+    type: TransactionType = TransactionType.DEPLOY
     salt: int
     constructor_calldata: List[int] = []
     caller_address: int = 0
@@ -62,18 +64,27 @@ class DeployTransaction(StarknetTransaction):
 
 
 class InvokeFunctionTransaction(StarknetTransaction):
-    type: TransactionType = TransactionType.INVOKE_FUNCTION.value
+    type: TransactionType = TransactionType.INVOKE_FUNCTION
     entry_point_selector: int
+    max_fee: int = 0
 
     """Aliases"""
-    data: int = Field(alias="calldata")  # type: ignore
-    receiver: str = Field(alias="contract_address")
+    data: List[int] = Field(alias="calldata")  # type: ignore
+    receiver: AddressType = Field(alias="contract_address")
 
     """Ignored"""
-    sender: str = Field("", exclude=True)
+    sender: AddressType = Field("", exclude=True)
 
     def as_starknet_object(self) -> InvokeFunction:
-        return InvokeFunction()
+        contract_address = self.provider.network.ecosystem.encode_address(self.receiver)
+        return InvokeFunction(
+            contract_address=contract_address,
+            entry_point_selector=self.entry_point_selector,
+            calldata=self.data,
+            signature=[*self.signature] if self.signature else [],
+            max_fee=self.max_fee,
+            version=self.version,
+        )
 
 
 class StarknetReceipt(ReceiptAPI):

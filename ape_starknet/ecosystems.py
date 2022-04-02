@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List, Type, Union
+from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 
 from ape.api import (
     BlockAPI,
@@ -15,6 +15,7 @@ from eth_utils import add_0x_prefix, encode_hex, hexstr_if_str, keccak, remove_0
 from eth_utils.hexadecimal import is_0x_prefixed
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
+from starknet_py.net.models.address import parse_address  # type: ignore
 from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
@@ -45,7 +46,7 @@ class StarknetBlock(BlockAPI):
 
 class Starknet(EcosystemAPI):
     """
-    The starknet ``EcosystemAPI`` implementation.
+    The Starknet ``EcosystemAPI`` implementation.
     """
 
     def __repr__(self) -> str:
@@ -82,7 +83,7 @@ class Starknet(EcosystemAPI):
         return AddressType(hex_address)
 
     def encode_address(self, address: AddressType) -> RawAddress:
-        return int(address, 16)
+        return parse_address(str(address))
 
     def serialize_transaction(self, transaction: TransactionAPI) -> bytes:
         if not isinstance(transaction, StarknetTransaction):
@@ -90,6 +91,10 @@ class Starknet(EcosystemAPI):
 
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
+
+    def decode_calldata(self, abi: MethodABI, raw_data: bytes) -> Tuple[Any, ...]:
+        # TODO: I think this may only handle integers right now
+        return tuple(raw_data)
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = data["type"]
@@ -140,7 +145,9 @@ class Starknet(EcosystemAPI):
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
         selector = get_selector_from_name(abi.name)
-        return InvokeFunctionTransaction(contract_address=address, entry_point_selector=selector)
+        return InvokeFunctionTransaction(
+            contract_address=address, entry_point_selector=selector, calldata=args
+        )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = kwargs.pop("type")

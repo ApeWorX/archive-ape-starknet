@@ -5,7 +5,7 @@ from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ProviderError
+from ape.exceptions import ProviderError, ProviderNotConnectedError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
 from ethpm_types.abi import EventABI
@@ -20,7 +20,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
 
 from ape_starknet._utils import PLUGIN_NAME, get_chain_id
 from ape_starknet.config import StarknetConfig
-from ape_starknet.transactions import StarknetTransaction
+from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
 DEFAULT_PORT = 8545
 
@@ -28,11 +28,8 @@ DEFAULT_PORT = 8545
 def handle_client_errors(f):
     def func(*args, **kwargs):
         try:
-            f(*args, **kwargs)
+            return f(*args, **kwargs)
         except BadRequest as err:
-            # TODO: remove when I am sure anomolies are gone
-            raise
-
             msg = err.text if hasattr(err, "text") else str(err)
             raise ProviderError(msg) from err
 
@@ -106,35 +103,35 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         return get_chain_id(self.network.name)
 
     def get_balance(self, address: str) -> int:
+        # TODO
         return 0
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
         address_int = parse_address(address)
-        return self.starknet_client.get_code_sync(address_int)["bytecode"]  # type: ignore
+        code = self.starknet_client.get_code_sync(address_int)["bytecode"]  # type: ignore
+        return code
 
+    @handle_client_errors
     def get_nonce(self, address: str) -> int:
         # TODO: is this possible? usually the contract manages the nonce.
         return 0
 
+    @handle_client_errors
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
-        # TODO
-        return 0
+        starknet_object = txn.as_starknet_object()
+
+        if not self.client:
+            raise ProviderNotConnectedError()
+
+        return self.client.estimate_fee_sync(starknet_object)
 
     @property
     def gas_price(self) -> int:
-        # TODO
-        return 0
-
-    @property
-    def priority_fee(self) -> int:
-        # TODO
-        return 0
-
-    @property
-    def base_fee(self) -> int:
-        # TODO
-        return 0
+        """
+        **NOTE**: Currently, the gas price is fixed to always be 100 gwei.
+        """
+        return self.conversion_manager.convert("100 gwei", int)
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
@@ -148,15 +145,23 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         block = self.starknet_client.get_block_sync(**{kwarg: block_id})
         return self.network.ecosystem.decode_block(block.dump())
 
+    @handle_client_errors
     def send_call(self, txn: TransactionAPI) -> bytes:
-        # TODO
-        return b""
+        if not isinstance(txn, InvokeFunctionTransaction):
+            raise ProviderError(
+                f"Transaction must be from an invocation. Received type {txn.type}."
+            )
 
+        if not self.client:
+            raise ProviderNotConnectedError()
+
+        return self.client.call_contract_sync(txn.as_starknet_object())
+
+    @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
         try:
             self.starknet_client.wait_for_tx_sync(txn_hash)
         except Exception as err:
-            raise
             raise ProviderError(str(err)) from err
 
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
@@ -175,7 +180,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         receipt_dict["type"] = txn_type
         return self.network.ecosystem.decode_receipt(receipt_dict)
 
+    @handle_client_errors
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
+        txn = self.prepare_transaction(txn)
         if not isinstance(txn, StarknetTransaction):
             raise ProviderError("Unable to send non-Starknet transaction using Starknet provider.")
 
@@ -189,6 +196,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         txn_hash = result["transaction_hash"]
         return self.get_transaction(txn_hash)
 
+    @handle_client_errors
     def get_contract_logs(
         self,
         address: Union[AddressType, List[AddressType]],
@@ -200,8 +208,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     ) -> Iterator[ContractLog]:
         raise NotImplementedError("TODO")
 
+    @handle_client_errors
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        # TODO: Handle fees
+        if txn.type == TransactionType.INVOKE_FUNCTION and txn.max_fee is None:
+            txn.max_fee = self.estimate_gas_cost(txn)
+
         return txn
 
 

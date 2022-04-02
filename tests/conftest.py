@@ -17,10 +17,10 @@ def config():
     return ape.config
 
 
-@pytest.fixture(params=project_names)
+@pytest.fixture(scope="session")
 def project(request, config):
     here = Path(__file__).parent
-    project_path = here / "projects" / request.param
+    project_path = here / "projects" / "project"
     os.chdir(project_path)
 
     with config.using_project(project_path):
@@ -29,7 +29,7 @@ def project(request, config):
     os.chdir(here)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def provider() -> Iterator[ProviderAPI]:
     with ape.networks.parse_network_choice("starknet:local:starknet") as provider:
         yield provider
