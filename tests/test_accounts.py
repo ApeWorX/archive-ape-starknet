@@ -22,8 +22,29 @@ def temp_keyfile_path(config):
         test_keyfile_path.unlink()
 
 
-def test_create(runner, ape_cli, temp_keyfile_path):
+def test_accounts(runner, ape_cli):
+    """
+    Integration test for accounts.
+    It all happens under one test because it is really slow to deploy accounts.
+    """
+
     result = runner.invoke(
         ape_cli, ["starknet", "accounts", "create", ALIAS], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
+
+    # Make sure account shows up in `list` command.
+    result = runner.invoke(ape_cli, ["starknet", "accounts", "list"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert ALIAS in result.output
+
+    result = runner.invoke(
+        ape_cli, ["starknet", "accounts", "delete", ALIAS], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert ALIAS in result.output
+
+    # Make sure account no-longer shows up in `list` command.
+    result = runner.invoke(ape_cli, ["starknet", "accounts", "list"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert ALIAS not in result.output

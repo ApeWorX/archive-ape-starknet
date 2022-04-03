@@ -6,7 +6,11 @@ from ape.cli.options import ApeCliContextObject
 from ape.utils import add_padding_to_strings
 
 from ape_starknet._utils import PLUGIN_NAME
-from ape_starknet.accounts import StarknetAccount, StarknetAccountContracts
+from ape_starknet.accounts import (
+    BaseStarknetAccount,
+    StarknetAccountContracts,
+    StarknetKeyfileAccount,
+)
 
 
 def _get_container(cli_ctx: ApeCliContextObject) -> StarknetAccountContracts:
@@ -47,7 +51,9 @@ def create(cli_ctx, alias, network):
 def _list(cli_ctx):
     """List your Starknet accounts"""
 
-    starknet_accounts = cast(List[StarknetAccount], [a for a in _get_container(cli_ctx).accounts])
+    starknet_accounts = cast(
+        List[StarknetKeyfileAccount], [a for a in _get_container(cli_ctx).accounts]
+    )
 
     if len(starknet_accounts) == 0:
         cli_ctx.logger.warning("No accounts found.")
@@ -60,8 +66,7 @@ def _list(cli_ctx):
 
     for index in range(num_accounts):
         account = starknet_accounts[index]
-        click.echo(f"{account.alias}:")
-        output_dict = {"Public key": account.address}
+        output_dict = {"Alias": account.alias, "Public key": account.address}
         for deployment in account.deployments:
             key = f"{deployment.network_name.capitalize()} network address"
             output_dict[key] = deployment.contract_address
@@ -70,16 +75,16 @@ def _list(cli_ctx):
         output_dict = {k: output_dict[k.rstrip()] for k in output_keys}
 
         for k, v in output_dict.items():
-            click.echo(f"{k}:{v}")
+            click.echo(f"{k} - {v}")
 
         if index < num_accounts - 1:
             click.echo()
 
 
 @accounts.command(short_help="Delete an existing account")
-@existing_alias_argument(account_type=StarknetAccount)
+@existing_alias_argument(account_type=BaseStarknetAccount)
 @ape_cli_context()
 def delete(cli_ctx, alias):
-    account = cli_ctx.account_manager.load(alias)
-    account.delete()
-    cli_ctx.logger.success(f"Account '{alias}' has been deleted")
+    container = _get_container(cli_ctx)
+    container.delete_account(alias)
+    cli_ctx.logger.success(f"Account '{alias}' has been deleted.")

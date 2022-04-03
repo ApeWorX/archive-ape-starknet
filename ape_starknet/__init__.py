@@ -2,7 +2,7 @@ from ape import plugins
 from ape.api.networks import LOCAL_NETWORK_NAME, NetworkAPI, create_network_type
 
 from ape_starknet._utils import NETWORKS, PLUGIN_NAME
-from ape_starknet.accounts import StarknetAccount, StarknetAccountContracts
+from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
 from ape_starknet.config import StarknetConfig
 from ape_starknet.ecosystems import Starknet
 from ape_starknet.provider import StarknetProvider
@@ -36,4 +36,4 @@ def providers():
 
 @plugins.register(plugins.AccountPlugin)
 def account_types():
-    return StarknetAccountContracts, StarknetAccount
+    return StarknetAccountContracts, StarknetKeyfileAccount

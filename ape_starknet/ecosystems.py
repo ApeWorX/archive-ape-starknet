@@ -57,8 +57,10 @@ class Starknet(EcosystemAPI):
         Make a checksum address given a supported format.
         Borrowed from ``eth_utils.to_checksum_address()`` but supports
         non-length 42 addresses.
+
         Args:
             value (Union[int, str, bytes]): The value to convert.
+
         Returns:
             ``AddressType``: The converted address.
         """
