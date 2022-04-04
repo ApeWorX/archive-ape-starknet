@@ -1,8 +1,11 @@
-from typing import List, Optional
+from typing import Any, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
+from ape.exceptions import ProviderError
 from ape.types import AddressType
 from ape.utils import abstractmethod
+from ethpm_types.abi import MethodABI
+from hexbytes import HexBytes
 from pydantic import Field
 from starknet_py.constants import TxStatus  # type: ignore
 from starknet_py.net.models.transaction import (  # type: ignore
@@ -11,6 +14,7 @@ from starknet_py.net.models.transaction import (  # type: ignore
     Transaction,
     TransactionType,
 )
+from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
 
 
@@ -65,26 +69,63 @@ class DeployTransaction(StarknetTransaction):
 
 class InvokeFunctionTransaction(StarknetTransaction):
     type: TransactionType = TransactionType.INVOKE_FUNCTION
-    entry_point_selector: int
+    method_abi: MethodABI
     max_fee: int = 0
 
     """Aliases"""
-    data: List[int] = Field(alias="calldata")  # type: ignore
+    data: List[Any] = Field(alias="calldata")  # type: ignore
     receiver: AddressType = Field(alias="contract_address")
 
     """Ignored"""
     sender: AddressType = Field("", exclude=True)
 
     def as_starknet_object(self) -> InvokeFunction:
-        contract_address = self.provider.network.ecosystem.encode_address(self.receiver)
+        from ape_starknet.ecosystems import Starknet
+        from ape_starknet.provider import StarknetProvider
+
+        ecosystem = self.provider.network.ecosystem
+        if (
+            not isinstance(self.provider, StarknetProvider)
+            or not isinstance(ecosystem, Starknet)
+            or not self.provider.client
+        ):
+            # **NOTE**: This check is mostly done for mypy.
+            raise ProviderError("Must be connected to a Starknet provider.")
+
+        contract_address = ecosystem.encode_address(self.receiver)
+        contract_abi = self.provider.client.get_code_sync(contract_address=contract_address)["abi"]
+        call_data = ecosystem.encode_call_data(contract_abi, self.method_abi.dict(), self.data)
+        selector = get_selector_from_name(self.method_abi.name)
         return InvokeFunction(
             contract_address=contract_address,
-            entry_point_selector=self.entry_point_selector,
-            calldata=self.data,
+            entry_point_selector=selector,
+            calldata=call_data,
             signature=[*self.signature] if self.signature else [],
             max_fee=self.max_fee,
             version=self.version,
         )
+
+    def decode_calldata(self) -> List[Union[int, Tuple[int, ...]]]:
+        call_data: List[Union[int, Tuple[int, ...]]] = []
+
+        def convert(item: Any) -> int:
+            if isinstance(item, HexBytes):
+                return int(item.hex(), 16)
+            elif isinstance(item, str):
+                return int(item, 16)
+            elif item is not None:
+                return item
+
+            raise ValueError(f"Unable to handle argument type '{type(item)}'.")
+
+        for item in self.data:
+            if isinstance(item, (tuple, list)):
+                tuple_args = tuple([convert(v) for v in item])
+                call_data.append(tuple_args)
+            else:
+                call_data.append(convert(item))
+
+        return call_data
 
 
 class StarknetReceipt(ReceiptAPI):

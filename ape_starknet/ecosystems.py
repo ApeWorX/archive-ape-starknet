@@ -20,7 +20,6 @@ from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
 
@@ -87,7 +86,7 @@ class Starknet(EcosystemAPI):
 
     @classmethod
     def encode_address(cls, address: AddressType) -> RawAddress:
-        return parse_address(str(address))
+        return parse_address(address)
 
     def serialize_transaction(self, transaction: TransactionAPI) -> bytes:
         if not isinstance(transaction, StarknetTransaction):
@@ -96,9 +95,27 @@ class Starknet(EcosystemAPI):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_calldata(self, abi: MethodABI, raw_data: bytes) -> Tuple[Any, ...]:
+    def decode_return_data(self, abi: MethodABI, raw_data: bytes) -> List[Any]:
         # TODO: I think this may only handle integers right now
-        return tuple(raw_data)
+        return raw_data  # type: ignore
+
+    def encode_call_data(
+        self, full_abi: List, entry_point_abi: Dict, call_args: Union[List, Tuple]
+    ) -> List:
+        id_manager = identifier_manager_from_abi(full_abi)
+        transformer = DataTransformer(entry_point_abi, id_manager)
+
+        cleaned_args = []
+        for arg in call_args:
+            if isinstance(arg, str) and is_0x_prefixed(arg):
+                cleaned_args.append(int(arg, 16))
+            elif isinstance(arg, HexBytes):
+                cleaned_args.append(int(arg.hex(), 16))
+            else:
+                cleaned_args.append(arg)
+
+        calldata, _ = transformer.from_python(*cleaned_args)
+        return calldata
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = data["type"]
@@ -134,13 +151,7 @@ class Starknet(EcosystemAPI):
             salt = ContractAddressSalt.get_random_value()
 
         contract = ContractDefinition.deserialize(deployment_bytecode)
-        abi_data = abi.dict()
-        id_manager = identifier_manager_from_abi(contract.abi)
-        transformer = DataTransformer(abi_data, id_manager)
-        constructor_args = [
-            int(a, 16) if isinstance(a, str) and is_0x_prefixed(a) else a for a in args
-        ]
-        calldata, _args = transformer.from_python(*constructor_args)
+        calldata = self.encode_call_data(contract.abi, abi.dict(), args)
         return DeployTransaction(
             salt=salt, constructor_calldata=calldata, contract_code=contract.dumps()
         )
@@ -148,10 +159,7 @@ class Starknet(EcosystemAPI):
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
-        selector = get_selector_from_name(abi.name)
-        return InvokeFunctionTransaction(
-            contract_address=address, entry_point_selector=selector, calldata=args
-        )
+        return InvokeFunctionTransaction(contract_address=address, method_abi=abi, calldata=args)
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = kwargs.pop("type")

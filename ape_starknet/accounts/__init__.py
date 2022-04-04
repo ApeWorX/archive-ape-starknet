@@ -9,7 +9,7 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError
 from ape.logging import logger
-from ape.types import AddressType, MessageSignature, SignableMessage, TransactionSignature
+from ape.types import AddressType, SignableMessage
 from ape.utils import cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
@@ -19,8 +19,14 @@ from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
     COMPILED_ACCOUNT_CONTRACT,
 )
+from starknet_py.utils.crypto.cpp_bindings import ECSignature  # type: ignore
+from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
+from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+
+from ape_starknet._utils import PLUGIN_NAME
+from ape_starknet.transactions import InvokeFunctionTransaction
 
 
 class StarknetAccountContracts(AccountContainerAPI):
@@ -144,18 +150,31 @@ class StarknetAccountDeployment:
 
 class BaseStarknetAccount(AccountAPI):
     @property
+    def __key(self) -> int:
+        """Override"""
+        return 0
+
+    @property
+    def account_data(self) -> Dict:
+        """Override"""
+        return {}
+
+    @property
     def contract_address(self) -> AddressType:
-        return self.network_manager.starknet.decode_address(self.account_data["contract_address"])
+        address = self.account_data["contract_address"]
+        return self.network_manager.starknet.decode_address(address)
 
     @property
     def address(self) -> AddressType:
-        return self.network_manager.starknet.decode_address(self.account_data["public_key"])
+        public_key = self.account_data["public_key"]
+        return self.network_manager.starknet.decode_address(public_key)
 
-    def sign_message(self, msg: SignableMessage) -> Optional[MessageSignature]:
-        return None  # TODO
+    def sign_transaction(self, txn: TransactionAPI) -> Optional[ECSignature]:
+        if not isinstance(txn, InvokeFunctionTransaction):
+            raise AccountsError("This account can only sign Starknet transactions.")
 
-    def sign_transaction(self, txn: TransactionAPI) -> Optional[TransactionSignature]:
-        return None  # TODO
+        starknet_object = txn.as_starknet_object()
+        return self.sign_message(starknet_object.calldata)
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)
@@ -163,6 +182,14 @@ class BaseStarknetAccount(AccountAPI):
     @property
     def deployments(self) -> List[StarknetAccountDeployment]:
         return [StarknetAccountDeployment(**d) for d in self.account_data["deployments"]]
+
+    def check_signature(  # type: ignore
+        self,
+        data: int,
+        signature: Optional[ECSignature] = None,  # TransactionAPI doesn't need it
+    ) -> bool:
+        int_address = self.network_manager.get_ecosystem(PLUGIN_NAME).encode_address(self.address)
+        return verify_ecdsa_sig(int_address, data, signature)
 
 
 class StarknetEphemeralAccount(BaseStarknetAccount):
@@ -177,9 +204,12 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
     def alias(self) -> Optional[str]:
         return self.account_key
 
-    @property
-    def __key(self) -> HexBytes:
-        return self.raw_account_data["private_key"]
+    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
+        if not isinstance(msg, (list, tuple)):
+            msg = [msg]
+
+        key = self.raw_account_data["private_key"]
+        return sign_calldata(msg, key)
 
 
 class StarknetKeyfileAccount(BaseStarknetAccount):
@@ -211,6 +241,12 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         )
         self.__decrypt_key_file(passphrase)
         self.key_file_path.unlink()
+
+    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
+        if not isinstance(msg, (list, tuple)):
+            msg = [msg]
+
+        return sign_calldata(msg, self.__key)
 
     @property
     def __key(self) -> HexBytes:
