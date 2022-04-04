@@ -3,18 +3,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional
 
+import click
 from ape.api import AccountAPI, AccountContainerAPI, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError
 from ape.logging import logger
 from ape.types import AddressType, MessageSignature, SignableMessage, TransactionSignature
-from ape.utils import abstractmethod, cached_property
+from ape.utils import cached_property
+from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
+from eth_utils import text_if_str, to_bytes
 from ethpm_types.abi import ConstructorABI
 from hexbytes import HexBytes
 from starknet_py.net import KeyPair  # type: ignore
-from starknet_py.net.account.compiled_account_contract import (
-    COMPILED_ACCOUNT_CONTRACT,  # type: ignore
+from starknet_py.net.account.compiled_account_contract import (  # type: ignore
+    COMPILED_ACCOUNT_CONTRACT,
 )
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
@@ -46,7 +49,7 @@ class StarknetAccountContracts(AccountContainerAPI):
             yield StarknetKeyfileAccount(key_file_path=key_file_path)
 
     def __len__(self) -> int:
-        return len([*self._key_files])
+        return len([*self._key_file_paths])
 
     def __setitem__(self, address: AddressType, account: AccountAPI):
         pass
@@ -56,7 +59,9 @@ class StarknetAccountContracts(AccountContainerAPI):
 
     def load(self, alias: str) -> "BaseStarknetAccount":
         if alias in self.ephemeral_accounts:
-            return StarknetEphemeralAccount(self.ephemeral_accounts[alias])
+            return StarknetEphemeralAccount(
+                raw_account_data=self.ephemeral_accounts[alias], account_key=alias
+            )
 
         return self.load_key_file_account(alias)
 
@@ -103,30 +108,32 @@ class StarknetAccountContracts(AccountContainerAPI):
         if not receipt.contract_address:
             raise AccountsError("Failed to deploy account contract.")
 
-        account_data = {
+        deployment_data = {
             "deployments": [
                 {"network_name": network_name, "contract_address": receipt.contract_address},
             ],
-            "private_key": key_pair.private_key,
-            "public_key": key_pair.public_key,
         }
 
         if self.provider.network.name == LOCAL_NETWORK_NAME:
+            account_data = {
+                "public_key": key_pair.public_key,
+                "private_key": key_pair.private_key,
+                **deployment_data,
+            }
             self.ephemeral_accounts[alias] = account_data
         else:
             # Only write keyfile if not in a local network
             path = self.data_folder.joinpath(f"{alias}.json")
-            path.write_text(json.dumps(account_data))
+            StarknetKeyfileAccount.write(path, key_pair, **deployment_data)
 
         return receipt.contract_address
 
     def delete_account(self, alias: str):
         if alias in self.ephemeral_accounts:
             del self.ephemeral_accounts[alias]
-
         else:
             account = self.load_key_file_account(alias)
-            account.key_file_path.unlink(missing_ok=True)
+            account.delete()
 
 
 @dataclass
@@ -136,10 +143,6 @@ class StarknetAccountDeployment:
 
 
 class BaseStarknetAccount(AccountAPI):
-    @abstractmethod
-    def account_data(self) -> Dict:
-        ...
-
     @property
     def contract_address(self) -> AddressType:
         return self.network_manager.starknet.decode_address(self.account_data["contract_address"])
@@ -174,9 +177,24 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
     def alias(self) -> Optional[str]:
         return self.account_key
 
+    @property
+    def __key(self) -> HexBytes:
+        return self.raw_account_data["private_key"]
+
 
 class StarknetKeyfileAccount(BaseStarknetAccount):
     key_file_path: Path
+    locked: bool = True
+    __cached_key: Optional[HexBytes] = None
+
+    @classmethod
+    def write(cls, path: Path, key_pair: KeyPair, **kwargs):
+        passphrase = click.prompt("Enter a passphrase", hide_input=True, confirmation_prompt=True)
+        key_file_data = cls.__encrypt_key_file(passphrase, key_pair.private_key)
+        key_file_data["public_key"] = key_file_data["address"]
+        del key_file_data["address"]
+        account_data = {**key_file_data, **kwargs}
+        path.write_text(json.dumps(account_data))
 
     @property
     def alias(self) -> Optional[str]:
@@ -185,3 +203,47 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     @cached_property
     def account_data(self) -> Dict:
         return json.loads(self.key_file_path.read_text())
+
+    def delete(self):
+        passphrase = click.prompt(
+            f"Enter Passphrase to delete '{self.alias}'",
+            hide_input=True,
+        )
+        self.__decrypt_key_file(passphrase)
+        self.key_file_path.unlink()
+
+    @property
+    def __key(self) -> HexBytes:
+        if self.__cached_key is not None:
+            if not self.locked:
+                click.echo(f"Using cached key for '{self.alias}'")
+                return self.__cached_key
+            else:
+                self.__cached_key = None
+
+        passphrase = click.prompt(
+            f"Enter Passphrase to unlock '{self.alias}'",
+            hide_input=True,
+            default="",  # Just in case there's no passphrase
+        )
+
+        key = self.__decrypt_key_file(passphrase)
+
+        if click.confirm(f"Leave '{self.alias}' unlocked?"):
+            self.locked = False
+            self.__cached_key = key
+
+        return key
+
+    @classmethod
+    def __encrypt_key_file(cls, passphrase: str, private_key: int) -> Dict:
+        key_bytes = HexBytes(private_key)
+        passphrase_bytes = text_if_str(to_bytes, passphrase)
+        return create_keyfile_json(key_bytes, passphrase_bytes, kdf="scrypt")
+
+    def __decrypt_key_file(self, passphrase: str) -> HexBytes:
+        key_file_dict = json.loads(self.key_file_path.read_text())
+        key_file_dict["address"] = key_file_dict["public_key"]
+        del key_file_dict["public_key"]
+        password_bytes = text_if_str(to_bytes, passphrase)
+        return HexBytes(decode_keyfile_json(key_file_dict, password_bytes))

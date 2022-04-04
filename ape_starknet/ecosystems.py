@@ -52,7 +52,8 @@ class Starknet(EcosystemAPI):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}>"
 
-    def decode_address(self, raw_address: RawAddress) -> AddressType:
+    @classmethod
+    def decode_address(cls, raw_address: RawAddress) -> AddressType:
         """
         Make a checksum address given a supported format.
         Borrowed from ``eth_utils.to_checksum_address()`` but supports
@@ -84,7 +85,8 @@ class Starknet(EcosystemAPI):
         hex_address = HexAddress(checksum_address)
         return AddressType(hex_address)
 
-    def encode_address(self, address: AddressType) -> RawAddress:
+    @classmethod
+    def encode_address(cls, address: AddressType) -> RawAddress:
         return parse_address(str(address))
 
     def serialize_transaction(self, transaction: TransactionAPI) -> bytes:

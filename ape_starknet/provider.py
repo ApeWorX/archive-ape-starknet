@@ -119,6 +119,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
+        if not isinstance(txn, StarknetTransaction):
+            raise ProviderError(
+                "Unable to estimate the gas cost for a non-Starknet transaction "
+                "using Starknet provider."
+            )
+
         starknet_object = txn.as_starknet_object()
 
         if not self.client:
@@ -148,8 +154,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     @handle_client_errors
     def send_call(self, txn: TransactionAPI) -> bytes:
         if not isinstance(txn, InvokeFunctionTransaction):
+            type_str = f"{txn.type!r}" if isinstance(txn.type, bytes) else str(txn.type)
             raise ProviderError(
-                f"Transaction must be from an invocation. Received type {txn.type}."
+                f"Transaction must be from an invocation. Received type {type_str}."
             )
 
         if not self.client:
@@ -184,7 +191,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         txn = self.prepare_transaction(txn)
         if not isinstance(txn, StarknetTransaction):
-            raise ProviderError("Unable to send non-Starknet transaction using Starknet provider.")
+            raise ProviderError(
+                "Unable to send non-Starknet transaction using a Starknet provider."
+            )
 
         starknet_txn = txn.as_starknet_object()
         result = self.starknet_client.add_transaction_sync(starknet_txn)
