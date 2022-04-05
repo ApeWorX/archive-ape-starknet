@@ -25,12 +25,13 @@ from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
-from starkware.starknet.services.api.feeder_gateway.response_objects import (
-    TransactionInfo,  # type: ignore
+from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+    TransactionInfo,
 )
 
 from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
-from ape_starknet.transactions import InvokeFunctionTransaction
+from ape_starknet.provider import StarknetProvider
+from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
 
 class StarknetAccountContracts(AccountContainerAPI):
@@ -74,8 +75,8 @@ class StarknetAccountContracts(AccountContainerAPI):
     def __delitem__(self, address: AddressType):
         pass
 
-    def __getitem__(self, item: Union[str, int]) -> "BaseStarknetAccount":
-        address = (
+    def __getitem__(self, item: Union[AddressType, int]) -> AccountAPI:
+        address: AddressType = (
             self.network_manager.starknet.decode_address(item) if isinstance(item, int) else item
         )
         return super().__getitem__(address)
@@ -207,6 +208,12 @@ class BaseStarknetAccount(AccountAPI):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI) -> TransactionInfo:
+        if not isinstance(txn, StarknetTransaction) or not isinstance(
+            self.provider, StarknetProvider
+        ):
+            # Mostly for mypy
+            raise AccountsError("Can only send Starknet transactions.")
+
         network = self.provider.network
         key_pair = KeyPair(
             public_key=network.ecosystem.encode_address(self.address),

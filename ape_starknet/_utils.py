@@ -14,7 +14,7 @@ from eth_utils import (
     remove_0x_prefix,
     to_hex,
 )
-from starknet_py.net.client import BadRequest
+from starknet_py.net.client import BadRequest  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
 
 PLUGIN_NAME = "starknet"
