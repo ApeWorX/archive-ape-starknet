@@ -21,9 +21,9 @@ project_names = [p.stem for p in projects_directory.iterdir() if p.is_dir()]
 ALIAS = "__TEST_ALIAS__"
 EXISTING_KEY_FILE_ALIAS = f"{ALIAS}existing_key_file"
 EXISTING_EPHEMERAL_ALIAS = f"{ALIAS}existing_ephemeral"
-PASSWORD = "a"
-PUBLIC_KEY = "7e5f4552091a69125d5dfcb7b8c2659029395bdf"
-CONTRACT_ADDRESS = "0x122345f379DfB10cE77AF7787677177254977Ec6b774b3677D7779dF99d99"
+PASSWORD = "123"
+PUBLIC_KEY = "140dfbab0d711a23dd58842be2ee16318e3de1c7"
+CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B387463a183"
 
 
 @pytest.fixture(scope="session")
@@ -116,29 +116,29 @@ def clean_cache(project):
 @pytest.fixture
 def key_file_account_data():
     return {
-        "public_key": PUBLIC_KEY,
-        "deployments": [
-            {
-                "contract_address": CONTRACT_ADDRESS,
-                "network_name": "testnet",
-            }
-        ],
+        "public_key": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
         "crypto": {
             "cipher": "aes-128-ctr",
-            "cipherparams": {"iv": "7bc492fb5dca4fe80fd47645b2aad0ff"},
-            "ciphertext": "43beb65018a35c31494f642ec535315897634b021d7ec5bb8e0e2172387e2812",
+            "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
+            "ciphertext": "78789f5d4fc5054c18342f020473ecd7c8f75ff2050cdee548121446b40a8ffb",
             "kdf": "scrypt",
             "kdfparams": {
                 "dklen": 32,
                 "n": 262144,
                 "r": 1,
                 "p": 8,
-                "salt": "4b127cb5ddbc0b3bd0cc0d2ef9a89bec",
+                "salt": "c1bbae92537eb53d9ffa3790740bcdb4",
             },
-            "mac": "6a1d520975a031e11fc16cff610f5ae7476bcae4f2f598bc59ccffeae33b1caa",
+            "mac": "9684c62113753054fc893ffa1b7ae704c65a454f5f89c3b55cc986798d8d5a58",
         },
-        "id": "ee424db9-da20-405d-bd75-e609d3e2b4ad",
+        "id": "393bb446-55fb-42ec-bd35-ada0b25e17cf",
         "version": 3,
+        "deployments": [
+            {
+                "network_name": "testnet",
+                "contract_address": CONTRACT_ADDRESS,
+            }
+        ],
     }
 
 

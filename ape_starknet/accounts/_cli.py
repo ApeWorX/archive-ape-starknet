@@ -88,3 +88,12 @@ def delete(cli_ctx, alias):
     container = _get_container(cli_ctx)
     container.delete_account(alias)
     cli_ctx.logger.success(f"Account '{alias}' has been deleted.")
+
+
+@accounts.command(short_help="Change the password of an existing account")
+@existing_alias_argument(account_type=StarknetKeyfileAccount)
+@ape_cli_context()
+def change_password(cli_ctx, alias):
+    account = cli_ctx.account_manager.load(alias)
+    account.change_password()
+    cli_ctx.logger.success(f"Password has been changed for account '{alias}'")

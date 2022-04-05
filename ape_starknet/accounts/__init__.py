@@ -154,7 +154,8 @@ class StarknetAccountContracts(AccountContainerAPI):
         else:
             # Only write keyfile if not in a local network
             path = self.data_folder.joinpath(f"{alias}.json")
-            StarknetKeyfileAccount.write(path, key_pair, **deployment_data)
+            new_account = StarknetKeyfileAccount(key_file_path=path)
+            new_account.write(private_key=None, **deployment_data)
 
         return receipt.contract_address
 
@@ -208,13 +209,12 @@ class BaseStarknetAccount(AccountAPI):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI) -> TransactionInfo:
-        if not isinstance(txn, StarknetTransaction) or not isinstance(
-            self.provider, StarknetProvider
-        ):
+        provider = self.provider
+        if not isinstance(txn, StarknetTransaction) or not isinstance(provider, StarknetProvider):
             # Mostly for mypy
             raise AccountsError("Can only send Starknet transactions.")
 
-        network = self.provider.network
+        network = provider.network
         key_pair = KeyPair(
             public_key=network.ecosystem.encode_address(self.address),
             private_key=self._get_key(),
@@ -223,7 +223,7 @@ class BaseStarknetAccount(AccountAPI):
         account_client = AccountClient(
             self.contract_address,
             key_pair,
-            self.provider.uri,
+            provider.uri,
             chain=chain_id,
         )
         return account_client.add_transaction_sync(txn.as_starknet_object())
@@ -267,14 +267,15 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     locked: bool = True
     __cached_key: Optional[int] = None
 
-    @classmethod
-    def write(cls, path: Path, key_pair: KeyPair, **kwargs):
-        passphrase = click.prompt("Enter a passphrase", hide_input=True, confirmation_prompt=True)
-        key_file_data = cls.__encrypt_key_file(passphrase, key_pair.private_key)
+    def write(self, private_key: Optional[int] = None, **kwargs):
+        new_passphrase = click.prompt(
+            "Enter a new passphrase", hide_input=True, confirmation_prompt=True
+        )
+        key_file_data = self.__encrypt_key_file(new_passphrase, private_key=private_key)
         key_file_data["public_key"] = key_file_data["address"]
         del key_file_data["address"]
-        account_data = {**key_file_data, **kwargs}
-        path.write_text(json.dumps(account_data))
+        account_data = {**key_file_data, **self.get_account_data(), **kwargs}
+        self.key_file_path.write_text(json.dumps(account_data))
 
     @property
     def alias(self) -> Optional[str]:
@@ -291,13 +292,22 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         self.__decrypt_key_file(passphrase)
         self.key_file_path.unlink()
 
-    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
+    def sign_message(
+        self, msg: SignableMessage, passphrase: Optional[str] = None
+    ) -> Optional[ECSignature]:
         if not isinstance(msg, (list, tuple)):
             msg = [msg]
 
-        return sign_calldata(msg, self._get_key())
+        private_key = self._get_key(passphrase=passphrase)
+        return sign_calldata(msg, private_key)
 
-    def _get_key(self) -> int:
+    def change_password(self):
+        self.locked = True  # force entering passphrase to get key
+        original_passphrase = self._get_passphrase_from_prompt()
+        private_key = self._get_key(passphrase=original_passphrase)
+        self.write(private_key=private_key)
+
+    def _get_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:
             if not self.locked:
                 click.echo(f"Using cached key for '{self.alias}'")
@@ -305,23 +315,30 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             else:
                 self.__cached_key = None
 
-        passphrase = click.prompt(
-            f"Enter Passphrase to unlock '{self.alias}'",
-            hide_input=True,
-            default="",  # Just in case there's no passphrase
-        )
+        if passphrase is None:
+            passphrase = self._get_passphrase_from_prompt()
 
-        key = int(self.__decrypt_key_file(passphrase).hex(), 16)
-        if click.confirm(f"Leave '{self.alias}' unlocked?"):
+        key_hex_str = self.__decrypt_key_file(passphrase).hex()
+        key = int(key_hex_str, 16)
+        if self.locked and (
+            passphrase is not None or click.confirm(f"Leave '{self.alias}' unlocked?")
+        ):
             self.locked = False
             self.__cached_key = key
 
         return key
 
-    @classmethod
-    def __encrypt_key_file(cls, passphrase: str, private_key: int) -> Dict:
+    def _get_passphrase_from_prompt(self) -> str:
+        return click.prompt(
+            f"Enter passphrase to unlock '{self.alias}'",
+            hide_input=True,
+            default="",  # Just in case there's no passphrase
+        )
+
+    def __encrypt_key_file(self, new_passphrase: str, private_key: Optional[int] = None) -> Dict:
+        private_key = self._get_key() if private_key is None else private_key
         key_bytes = HexBytes(private_key)
-        passphrase_bytes = text_if_str(to_bytes, passphrase)
+        passphrase_bytes = text_if_str(to_bytes, new_passphrase)
         return create_keyfile_json(key_bytes, passphrase_bytes, kdf="scrypt")
 
     def __decrypt_key_file(self, passphrase: str) -> HexBytes:
@@ -329,4 +346,5 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         key_file_dict["address"] = key_file_dict["public_key"]
         del key_file_dict["public_key"]
         password_bytes = text_if_str(to_bytes, passphrase)
-        return HexBytes(decode_keyfile_json(key_file_dict, password_bytes))
+        decoded_json = decode_keyfile_json(key_file_dict, password_bytes)
+        return HexBytes(decoded_json)

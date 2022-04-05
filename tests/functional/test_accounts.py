@@ -1,11 +1,9 @@
-import io
-
 from eth_utils import remove_0x_prefix
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
 
 from ape_starknet._utils import is_hex_address
 
-from ..conftest import PUBLIC_KEY
+from ..conftest import PASSWORD, PUBLIC_KEY
 
 
 def test_address(existing_key_file_account):
@@ -16,12 +14,8 @@ def test_address(existing_key_file_account):
     assert is_hex_address(actual)
 
 
-def test_sign_message_using_key_file_account(existing_key_file_account, monkeypatch):
-    monkeypatch.setattr("sys.stdin", io.StringIO("a\ny"))
-    assert existing_key_file_account.sign_message(5)
-
-    # Ensure uses cached key by not requiring stdin again.
-    assert existing_key_file_account.sign_message(6)
+def test_sign_message_using_key_file_account(existing_key_file_account):
+    assert existing_key_file_account.sign_message(5, passphrase=PASSWORD)
 
 
 def test_contact_address(account):
