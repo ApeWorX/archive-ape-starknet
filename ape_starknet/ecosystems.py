@@ -144,6 +144,7 @@ class Starknet(EcosystemAPI):
             method_abi=abi,
             calldata=args,
             sender=kwargs.get("sender"),
+            max_fee=kwargs.get("max_fee", 0),
         )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
