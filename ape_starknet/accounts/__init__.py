@@ -155,16 +155,17 @@ class StarknetAccountContracts(AccountContainerAPI):
             # Only write keyfile if not in a local network
             path = self.data_folder.joinpath(f"{alias}.json")
             new_account = StarknetKeyfileAccount(key_file_path=path)
-            new_account.write(private_key=None, **deployment_data)
+            new_account.write(passphrase=None, private_key=None, **deployment_data)
 
         return receipt.contract_address
 
-    def delete_account(self, alias: str):
+    def delete_account(self, alias: str, network: Optional[str] = None):
+        network = network or self.provider.network.name
         if alias in self.ephemeral_accounts:
             del self.ephemeral_accounts[alias]
         else:
             account = self.load_key_file_account(alias)
-            account.delete()
+            account.delete(network)
 
 
 @dataclass
@@ -267,11 +268,13 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     locked: bool = True
     __cached_key: Optional[int] = None
 
-    def write(self, private_key: Optional[int] = None, **kwargs):
-        new_passphrase = click.prompt(
-            "Enter a new passphrase", hide_input=True, confirmation_prompt=True
+    def write(self, passphrase: Optional[str] = None, private_key: Optional[int] = None, **kwargs):
+        passphrase = (
+            click.prompt("Enter a new passphrase", hide_input=True, confirmation_prompt=True)
+            if passphrase is None
+            else passphrase
         )
-        key_file_data = self.__encrypt_key_file(new_passphrase, private_key=private_key)
+        key_file_data = self.__encrypt_key_file(passphrase, private_key=private_key)
         key_file_data["public_key"] = key_file_data["address"]
         del key_file_data["address"]
         account_data = {**key_file_data, **self.get_account_data(), **kwargs}
@@ -284,13 +287,19 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def get_account_data(self) -> Dict:
         return json.loads(self.key_file_path.read_text())
 
-    def delete(self):
+    def delete(self, network: str):
         passphrase = click.prompt(
-            f"Enter Passphrase to delete '{self.alias}'",
+            f"Enter passphrase to delete '{self.alias}'",
             hide_input=True,
         )
         self.__decrypt_key_file(passphrase)
-        self.key_file_path.unlink()
+
+        remaining_deployments = [vars(d) for d in self.deployments if d.network_name not in network]
+        if not remaining_deployments:
+            # Delete entire account JSON if no more deployments.
+            self.key_file_path.unlink()
+        else:
+            self.write(passphrase=passphrase, deployments=remaining_deployments)
 
     def sign_message(
         self, msg: SignableMessage, passphrase: Optional[str] = None
@@ -335,10 +344,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             default="",  # Just in case there's no passphrase
         )
 
-    def __encrypt_key_file(self, new_passphrase: str, private_key: Optional[int] = None) -> Dict:
-        private_key = self._get_key() if private_key is None else private_key
+    def __encrypt_key_file(self, passphrase: str, private_key: Optional[int] = None) -> Dict:
+        private_key = self._get_key(passphrase=passphrase) if private_key is None else private_key
         key_bytes = HexBytes(private_key)
-        passphrase_bytes = text_if_str(to_bytes, new_passphrase)
+        passphrase_bytes = text_if_str(to_bytes, passphrase)
         return create_keyfile_json(key_bytes, passphrase_bytes, kdf="scrypt")
 
     def __decrypt_key_file(self, passphrase: str) -> HexBytes:

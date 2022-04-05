@@ -1,6 +1,6 @@
 import pytest
 
-from ..conftest import ALIAS, EXISTING_KEY_FILE_ALIAS, PASSWORD
+from ..conftest import ALIAS, CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
 
 NEW_ALIAS = f"{ALIAS}new"
 
@@ -25,11 +25,45 @@ def test_create_and_delete(runner, ape_cli):
     )
     assert result.exit_code == 0, result.output
 
+    result = runner.invoke(ape_cli, ["starknet", "accounts", "list"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert NEW_ALIAS in result.output
+
     result = runner.invoke(
         ape_cli, ["starknet", "accounts", "delete", NEW_ALIAS], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     assert NEW_ALIAS in result.output
+    result = runner.invoke(ape_cli, ["starknet", "accounts", "list"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert NEW_ALIAS not in result.output
+
+
+def test_delete_single_deployment(runner, ape_cli, existing_key_file_account):
+    result = runner.invoke(
+        ape_cli,
+        [
+            "starknet",
+            "accounts",
+            "delete",
+            EXISTING_KEY_FILE_ALIAS,
+            "--network",
+            "starknet:mainnet",
+        ],
+        catch_exceptions=False,
+        input=f"{PASSWORD}\n",
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(ape_cli, ["starknet", "accounts", "list"], catch_exceptions=False)
+
+    # The account should still have a remaining deployment and thus still found in output
+    assert EXISTING_KEY_FILE_ALIAS in result.output
+
+    # Only the mainnet deployment should have gotten deleted
+    output_lines = result.output.split("\n")
+    for line in output_lines:
+        if line.startswith("Contract address (mainnet)"):
+            assert CONTRACT_ADDRESS not in line
 
 
 def test_list(runner, ape_cli, existing_key_file_account):

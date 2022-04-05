@@ -82,17 +82,18 @@ def _list(cli_ctx):
 
 
 @accounts.command(short_help="Delete an existing account")
-@existing_alias_argument(account_type=BaseStarknetAccount)
 @ape_cli_context()
-def delete(cli_ctx, alias):
+@existing_alias_argument(account_type=BaseStarknetAccount)
+@network_option(ecosystem=PLUGIN_NAME)
+def delete(cli_ctx, alias, network):
     container = _get_container(cli_ctx)
-    container.delete_account(alias)
-    cli_ctx.logger.success(f"Account '{alias}' has been deleted.")
+    container.delete_account(alias, network=network)
+    cli_ctx.logger.success(f"Account '{alias}' on network '{network}' has been deleted.")
 
 
 @accounts.command(short_help="Change the password of an existing account")
-@existing_alias_argument(account_type=StarknetKeyfileAccount)
 @ape_cli_context()
+@existing_alias_argument(account_type=StarknetKeyfileAccount)
 def change_password(cli_ctx, alias):
     account = cli_ctx.account_manager.load(alias)
     account.change_password()

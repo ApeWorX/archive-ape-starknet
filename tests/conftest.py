@@ -137,7 +137,11 @@ def key_file_account_data():
             {
                 "network_name": "testnet",
                 "contract_address": CONTRACT_ADDRESS,
-            }
+            },
+            {
+                "network_name": "mainnet",
+                "contract_address": CONTRACT_ADDRESS,
+            },
         ],
     }
 
