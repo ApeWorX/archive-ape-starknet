@@ -28,7 +28,38 @@ python3 setup.py install
 
 ## Quick Usage
 
-TODO: Describe library overview in code
+Deploy a new account:
+
+```bash
+ape starknet accounts create <ALIAS> --network starknet:testnet
+```
+
+You can deploy the same account to multiple networks.
+
+```bash
+ape starknet accounts create <ALIAS> --network starknet:mainnet
+```
+
+Now, when you look at this account, you will see it has multiple contract addresses:
+
+```bash
+ape starknet accounts list
+```
+
+shows:
+
+```bash
+Alias                      - <ALIAS>
+Public key                 - 0x123444444d716666dd88882bE2e99991555DE1c7
+Contract address (testnet) - 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183
+Contract address (mainnet) - 0x7873113A4111e5B2229c3332B66696388163440A373333143333B3833332122
+```
+
+Import an existing account:
+
+```bash
+ape starknet accounts import <ALIAS> --address 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183 --network testnet
+```
 
 ## Development
 

@@ -102,6 +102,38 @@ class StarknetAccountContracts(AccountContainerAPI):
 
         raise AccountsError(f"Starknet account '{alias}' not found.")
 
+    def import_account(
+        self,
+        alias: str,
+        network_name: str,
+        contract_address: str,
+        private_key: Union[int, str],
+    ):
+        if isinstance(private_key, str):
+            private_key = private_key.strip("'\"")
+            private_key = int(private_key, 16)
+
+        network_name = _clean_network_name(network_name)
+        key_pair = KeyPair.from_private_key(private_key)
+        deployment_data = {
+            "deployments": [
+                {"network_name": network_name, "contract_address": contract_address},
+            ],
+        }
+
+        if network_name == LOCAL_NETWORK_NAME:
+            account_data = {
+                "public_key": key_pair.public_key,
+                "private_key": key_pair.private_key,
+                **deployment_data,
+            }
+            self.ephemeral_accounts[alias] = account_data
+        else:
+            # Only write keyfile if not in a local network
+            path = self.data_folder.joinpath(f"{alias}.json")
+            new_account = StarknetKeyfileAccount(key_file_path=path)
+            new_account.write(passphrase=None, private_key=private_key, **deployment_data)
+
     def deploy_account(self, alias: str, private_key: Optional[int] = None) -> str:
         """
         Deploys an account contract for the given alias.
@@ -138,25 +170,7 @@ class StarknetAccountContracts(AccountContainerAPI):
         if not receipt.contract_address:
             raise AccountsError("Failed to deploy account contract.")
 
-        deployment_data = {
-            "deployments": [
-                {"network_name": network_name, "contract_address": receipt.contract_address},
-            ],
-        }
-
-        if self.provider.network.name == LOCAL_NETWORK_NAME:
-            account_data = {
-                "public_key": key_pair.public_key,
-                "private_key": key_pair.private_key,
-                **deployment_data,
-            }
-            self.ephemeral_accounts[alias] = account_data
-        else:
-            # Only write keyfile if not in a local network
-            path = self.data_folder.joinpath(f"{alias}.json")
-            new_account = StarknetKeyfileAccount(key_file_path=path)
-            new_account.write(passphrase=None, private_key=None, **deployment_data)
-
+        self.import_account(alias, network_name, receipt.contract_address, key_pair.private_key)
         return receipt.contract_address
 
     def delete_account(self, alias: str, network: Optional[str] = None):
@@ -233,6 +247,13 @@ class BaseStarknetAccount(AccountAPI):
     def deployments(self) -> List[StarknetAccountDeployment]:
         return [StarknetAccountDeployment(**d) for d in self.get_account_data()["deployments"]]
 
+    def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
+        for deployment in self.deployments:
+            if deployment.network_name in network_name:
+                return deployment
+
+        return None
+
     def check_signature(  # type: ignore
         self,
         data: int,
@@ -274,6 +295,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             if passphrase is None
             else passphrase
         )
+
         key_file_data = self.__encrypt_key_file(passphrase, private_key=private_key)
         key_file_data["public_key"] = key_file_data["address"]
         del key_file_data["address"]
@@ -285,7 +307,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return self.key_file_path.stem
 
     def get_account_data(self) -> Dict:
-        return json.loads(self.key_file_path.read_text())
+        if self.key_file_path.is_file():
+            return json.loads(self.key_file_path.read_text())
+
+        return {}
 
     def delete(self, network: str):
         passphrase = click.prompt(
@@ -315,6 +340,20 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         original_passphrase = self._get_passphrase_from_prompt()
         private_key = self._get_key(passphrase=original_passphrase)
         self.write(private_key=private_key)
+
+    def add_deployment(self, network_name: str, contract_address: AddressType):
+        passphrase = self._get_passphrase_from_prompt()
+        network_name = _clean_network_name(network_name)
+        deployments = [vars(d) for d in self.deployments if d.network_name not in network_name]
+        new_deployment = StarknetAccountDeployment(
+            network_name=network_name, contract_address=contract_address
+        )
+        deployments.append(vars(new_deployment))
+        self.write(
+            passphrase=passphrase,
+            private_key=self._get_key(passphrase=passphrase),
+            **{"deployments": deployments},
+        )
 
     def _get_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:
@@ -357,3 +396,11 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         password_bytes = text_if_str(to_bytes, passphrase)
         decoded_json = decode_keyfile_json(key_file_dict, password_bytes)
         return HexBytes(decoded_json)
+
+
+def _clean_network_name(network: str) -> str:
+    for net in ("local", "mainnet", "testnet"):
+        if net in network:
+            return net
+
+    return network

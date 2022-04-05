@@ -39,7 +39,12 @@ def test_create_and_delete(runner, ape_cli):
     assert NEW_ALIAS not in result.output
 
 
-def test_delete_single_deployment(runner, ape_cli, existing_key_file_account):
+def test_delete_and_re_import(runner, ape_cli, existing_key_file_account):
+    """
+    This integration test deletes a single deployment of an account and then
+    re-import it. The account never completely goes away because it is deployed on
+    multiple networks.
+    """
     result = runner.invoke(
         ape_cli,
         [
@@ -64,6 +69,70 @@ def test_delete_single_deployment(runner, ape_cli, existing_key_file_account):
     for line in output_lines:
         if line.startswith("Contract address (mainnet)"):
             assert CONTRACT_ADDRESS not in line
+
+    # Re-import the deployment
+    result = runner.invoke(
+        ape_cli,
+        [
+            "starknet",
+            "accounts",
+            "import",
+            EXISTING_KEY_FILE_ALIAS,
+            "--network",
+            "starknet:mainnet",
+            "--address",
+            CONTRACT_ADDRESS,
+        ],
+        catch_exceptions=False,
+        input=f"{PASSWORD}\n",
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(ape_cli, ["starknet", "accounts", "list"], catch_exceptions=False)
+
+    # Verify our mainnet deployment has returned
+    output_lines = result.output.split("\n")
+    did_find = False
+    for line in output_lines:
+        if CONTRACT_ADDRESS in line:
+            if "Contract address (mainnet)" in line:
+                did_find = True
+                break
+
+    assert did_find, f"Did not find deployment ... {result.output}"
+
+
+def test_import_new_account(runner, ape_cli, existing_key_file_account):
+    private_key = str(CONTRACT_ADDRESS)
+    valid_input = f"{private_key}\n{PASSWORD}\n{PASSWORD}"
+    result = runner.invoke(
+        ape_cli,
+        [
+            "starknet",
+            "accounts",
+            "import",
+            "__BRAND_NEW_ALIAS__",
+            "--network",
+            "starknet:testnet",
+            "--address",
+            CONTRACT_ADDRESS,
+        ],
+        catch_exceptions=False,
+        input=valid_input,
+    )
+    assert result.exit_code == 0
+    runner.invoke(
+        ape_cli,
+        [
+            "starknet",
+            "accounts",
+            "delete",
+            "__BRAND_NEW_ALIAS__",
+            "--network",
+            "starknet:testnet",
+        ],
+        catch_exceptions=False,
+        input=f"{PASSWORD}\n",
+    )
 
 
 def test_list(runner, ape_cli, existing_key_file_account):

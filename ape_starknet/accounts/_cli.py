@@ -27,17 +27,17 @@ def accounts():
 @click.argument("alias")
 @network_option(ecosystem=PLUGIN_NAME)
 def create(cli_ctx, alias, network):
-    """Deploy an account."""
+    """Deploy an account"""
     container = _get_container(cli_ctx)
 
     if alias in container.aliases:
         # Check if we have already deployed in this network.
         # The user will have to delete before they can deploy again.
         existing_account = container.load(alias)
-        if network in [d.network_name for d in existing_account.deployments]:
+        if existing_account.get_deployment(network):
             cli_ctx.abort(
                 f"Account already deployed to '{network}' network. "
-                f"Run 'ape starknet accounts delete <alias> --network {PLUGIN_NAME}:{network}' "
+                f"Run 'ape starknet accounts delete <alias> --network {network}' "
                 "first to re-deploy."
             )
 
@@ -81,20 +81,48 @@ def _list(cli_ctx):
             click.echo()
 
 
-@accounts.command(short_help="Delete an existing account")
+@accounts.command(name="import")
+@ape_cli_context()
+@click.argument("alias")
+@network_option(ecosystem=PLUGIN_NAME)
+@click.option(
+    "--address",
+    help="The contract address of the account",
+    callback=lambda ctx, param, value: ctx.obj.network_manager.starknet.decode_address(value),
+    required=True,
+)
+def _import(cli_ctx, alias, network, address):
+    """Add an existing account"""
+    container = _get_container(cli_ctx)
+    if alias in container.aliases:
+        existing_account = container.load(alias)
+        if existing_account.get_deployment(network):
+            cli_ctx.abort(f"Account already imported with '{network}' network.")
+
+        click.echo(f"Importing existing account to network '{network}'.")
+        existing_account.add_deployment(network, address)
+
+    else:
+        private_key = click.prompt("Enter private key", hide_input=True)
+        container.import_account(alias, network, address, private_key)
+
+
+@accounts.command()
 @ape_cli_context()
 @existing_alias_argument(account_type=BaseStarknetAccount)
 @network_option(ecosystem=PLUGIN_NAME)
 def delete(cli_ctx, alias, network):
+    """Delete an existing account"""
     container = _get_container(cli_ctx)
     container.delete_account(alias, network=network)
     cli_ctx.logger.success(f"Account '{alias}' on network '{network}' has been deleted.")
 
 
-@accounts.command(short_help="Change the password of an existing account")
+@accounts.command()
 @ape_cli_context()
 @existing_alias_argument(account_type=StarknetKeyfileAccount)
 def change_password(cli_ctx, alias):
+    """Change the password of an existing account"""
     account = cli_ctx.account_manager.load(alias)
     account.change_password()
     cli_ctx.logger.success(f"Password has been changed for account '{alias}'")
