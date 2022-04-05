@@ -48,6 +48,21 @@ def project(request, config):
     os.chdir(here)
 
 
+@pytest.fixture(scope="module")
+def my_contract_type(project):
+    return project.MyContract
+
+
+@pytest.fixture(scope="module")
+def my_contract(my_contract_type):
+    return my_contract_type.deploy()
+
+
+@pytest.fixture
+def initial_balance(my_contract):
+    return my_contract.get_balance()
+
+
 @pytest.fixture(scope="session")
 def provider() -> Iterator[ProviderAPI]:
     with ape.networks.parse_network_choice("starknet:local:starknet") as provider:

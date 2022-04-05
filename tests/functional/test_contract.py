@@ -1,21 +1,6 @@
 import pytest
 
 
-@pytest.fixture(scope="module")
-def my_contract_type(project):
-    return project.MyContract
-
-
-@pytest.fixture(scope="module")
-def my_contract(my_contract_type):
-    return my_contract_type.deploy()
-
-
-@pytest.fixture
-def initial_balance(my_contract):
-    return my_contract.get_balance()
-
-
 @pytest.fixture(scope="module", autouse=True)
 def connection(provider):
     yield

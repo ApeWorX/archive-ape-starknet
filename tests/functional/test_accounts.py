@@ -1,3 +1,5 @@
+import io
+
 from eth_utils import remove_0x_prefix
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
 
@@ -12,6 +14,14 @@ def test_address(existing_key_file_account):
     assert actual != expected, "Result is not checksummed"
     assert remove_0x_prefix(actual.lower()) == expected
     assert is_hex_address(actual)
+
+
+def test_sign_message_using_key_file_account(existing_key_file_account, monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO("a\ny"))
+    assert existing_key_file_account.sign_message(5)
+
+    # Ensure uses cached key by not requiring stdin again.
+    assert existing_key_file_account.sign_message(6)
 
 
 def test_contact_address(account):

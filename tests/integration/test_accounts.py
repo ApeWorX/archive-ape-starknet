@@ -1,6 +1,17 @@
+import pytest
+
 from ..conftest import ALIAS, EXISTING_KEY_FILE_ALIAS
 
 NEW_ALIAS = f"{ALIAS}new"
+
+
+@pytest.fixture
+def deployed_account(runner, ape_cli, account_container):
+    runner.invoke(ape_cli, ["starknet", "accounts", "create", NEW_ALIAS], catch_exceptions=False)
+
+    yield account_container.load(NEW_ALIAS)
+
+    runner.invoke(ape_cli, ["starknet", "accounts", "delete", NEW_ALIAS], catch_exceptions=False)
 
 
 def test_create_and_delete(runner, ape_cli):

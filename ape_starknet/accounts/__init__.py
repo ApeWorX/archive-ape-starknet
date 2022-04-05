@@ -10,7 +10,7 @@ from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage
-from ape.utils import abstractmethod, cached_property
+from ape.utils import abstractmethod
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
 from ethpm_types.abi import ConstructorABI
@@ -38,6 +38,8 @@ class StarknetAccountContracts(AccountContainerAPI):
     ephemeral_accounts: Dict[str, Dict] = {}
     """Local-network accounts that do not persist."""
 
+    cached_accounts: Dict[str, "StarknetKeyfileAccount"] = {}
+
     @property
     def _key_file_paths(self) -> Iterator[Path]:
         return self.data_folder.glob("*.json")
@@ -56,7 +58,12 @@ class StarknetAccountContracts(AccountContainerAPI):
             yield StarknetEphemeralAccount(raw_account_data=account_data, account_key=alias)
 
         for key_file_path in self._key_file_paths:
-            yield StarknetKeyfileAccount(key_file_path=key_file_path)
+            if key_file_path.stem in self.cached_accounts:
+                yield self.cached_accounts[key_file_path.stem]
+            else:
+                account = StarknetKeyfileAccount(key_file_path=key_file_path)
+                self.cached_accounts[key_file_path.stem] = account
+                yield account
 
     def __len__(self) -> int:
         return len([*self._key_file_paths])
@@ -75,16 +82,22 @@ class StarknetAccountContracts(AccountContainerAPI):
 
     def load(self, alias: str) -> "BaseStarknetAccount":
         if alias in self.ephemeral_accounts:
-            return StarknetEphemeralAccount(
+            account = StarknetEphemeralAccount(
                 raw_account_data=self.ephemeral_accounts[alias], account_key=alias
             )
+            return account
 
         return self.load_key_file_account(alias)
 
     def load_key_file_account(self, alias: str) -> "StarknetKeyfileAccount":
+        if alias in self.cached_accounts:
+            return self.cached_accounts[alias]
+
         for key_file_path in self._key_file_paths:
             if key_file_path.stem == alias:
-                return StarknetKeyfileAccount(key_file_path=key_file_path)
+                account = StarknetKeyfileAccount(key_file_path=key_file_path)
+                self.cached_accounts[alias] = account
+                return account
 
         raise AccountsError(f"Starknet account '{alias}' not found.")
 
@@ -164,7 +177,7 @@ class BaseStarknetAccount(AccountAPI):
         ...
 
     @abstractmethod
-    def account_data(self) -> Dict:
+    def get_account_data(self) -> Dict:
         ...
 
     @property
@@ -179,7 +192,7 @@ class BaseStarknetAccount(AccountAPI):
 
     @property
     def address(self) -> AddressType:
-        public_key = self.account_data["public_key"]
+        public_key = self.get_account_data()["public_key"]
         return self.network_manager.starknet.decode_address(public_key)
 
     def sign_transaction(self, txn: TransactionAPI) -> Optional[ECSignature]:
@@ -210,7 +223,7 @@ class BaseStarknetAccount(AccountAPI):
 
     @property
     def deployments(self) -> List[StarknetAccountDeployment]:
-        return [StarknetAccountDeployment(**d) for d in self.account_data["deployments"]]
+        return [StarknetAccountDeployment(**d) for d in self.get_account_data()["deployments"]]
 
     def check_signature(  # type: ignore
         self,
@@ -225,8 +238,7 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
     raw_account_data: Dict
     account_key: str
 
-    @property
-    def account_data(self) -> Dict:
+    def get_account_data(self) -> Dict:
         return self.raw_account_data
 
     @property
@@ -246,7 +258,7 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
 class StarknetKeyfileAccount(BaseStarknetAccount):
     key_file_path: Path
     locked: bool = True
-    __cached_key: Optional[HexBytes] = None
+    __cached_key: Optional[int] = None
 
     @classmethod
     def write(cls, path: Path, key_pair: KeyPair, **kwargs):
@@ -261,8 +273,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def alias(self) -> Optional[str]:
         return self.key_file_path.stem
 
-    @cached_property
-    def account_data(self) -> Dict:
+    def get_account_data(self) -> Dict:
         return json.loads(self.key_file_path.read_text())
 
     def delete(self):
@@ -279,7 +290,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         return sign_calldata(msg, self._get_key())
 
-    def _get_key(self) -> HexBytes:
+    def _get_key(self) -> int:
         if self.__cached_key is not None:
             if not self.locked:
                 click.echo(f"Using cached key for '{self.alias}'")
@@ -293,8 +304,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             default="",  # Just in case there's no passphrase
         )
 
-        key = self.__decrypt_key_file(passphrase)
-
+        key = int(self.__decrypt_key_file(passphrase).hex(), 16)
         if click.confirm(f"Leave '{self.alias}' unlocked?"):
             self.locked = False
             self.__cached_key = key
