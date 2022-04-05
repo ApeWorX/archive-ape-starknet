@@ -11,6 +11,11 @@ def my_contract(my_contract_type):
     return my_contract_type.deploy()
 
 
+@pytest.fixture
+def initial_balance(my_contract):
+    return my_contract.get_balance()
+
+
 @pytest.fixture(scope="module", autouse=True)
 def connection(provider):
     yield
@@ -37,13 +42,23 @@ def test_contract_transactions(my_contract):
     assert actual == expected
 
 
-def test_contract_signed_transactions(my_contract, account):
-    initial_amount = my_contract.get_balance()
+def test_contract_transaction_handles_non_felt_arguments(my_contract, account, initial_balance):
+    # NOTE: This test validates the account signature but the transaction
+    # is not directly sent from the account. Both are valid use-cases!
     increase_amount = 234
 
     signature = account.sign_message(increase_amount)
     my_contract.increase_balance_signed(account.address, increase_amount, signature)
 
     actual = my_contract.get_balance()
-    expected = initial_amount + increase_amount
+    expected = initial_balance + increase_amount
+    assert actual == expected
+
+
+def test_signed_contract_transaction(my_contract, account, initial_balance):
+    increase_amount = 123456
+    my_contract.increase_balance(increase_amount, sender=account)
+
+    actual = my_contract.get_balance()
+    expected = initial_balance + increase_amount
     assert actual == expected

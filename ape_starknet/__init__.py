@@ -1,11 +1,18 @@
 from ape import plugins
 from ape.api.networks import LOCAL_NETWORK_NAME, NetworkAPI, create_network_type
+from ape.types import AddressType
 
 from ape_starknet._utils import NETWORKS, PLUGIN_NAME
 from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
 from ape_starknet.config import StarknetConfig
+from ape_starknet.conversion import StarknetAddressConverter
 from ape_starknet.ecosystems import Starknet
 from ape_starknet.provider import StarknetProvider
+
+
+@plugins.register(plugins.ConversionPlugin)
+def converters():
+    yield AddressType, StarknetAddressConverter
 
 
 @plugins.register(plugins.Config)

@@ -71,13 +71,11 @@ class InvokeFunctionTransaction(StarknetTransaction):
     type: TransactionType = TransactionType.INVOKE_FUNCTION
     method_abi: MethodABI
     max_fee: int = 0
+    sender: Optional[AddressType] = None
 
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore
     receiver: AddressType = Field(alias="contract_address")
-
-    """Ignored"""
-    sender: AddressType = Field("", exclude=True)
 
     def as_starknet_object(self) -> InvokeFunction:
         from ape_starknet.ecosystems import Starknet
@@ -100,7 +98,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
             contract_address=contract_address,
             entry_point_selector=selector,
             calldata=call_data,
-            signature=[*self.signature] if self.signature else [],
+            signature=[],  # NOTE: Signatures are not supported on signing transactions
             max_fee=self.max_fee,
             version=self.version,
         )

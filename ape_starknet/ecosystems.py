@@ -8,10 +8,7 @@ from ape.api import (
     ReceiptAPI,
     TransactionAPI,
 )
-from ape.exceptions import AddressError
 from ape.types import AddressType, ContractLog, RawAddress
-from eth_typing import HexAddress, HexStr
-from eth_utils import add_0x_prefix, encode_hex, hexstr_if_str, keccak, remove_0x_prefix, to_hex
 from eth_utils.hexadecimal import is_0x_prefixed
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
@@ -23,6 +20,7 @@ from starkware.starknet.definitions.transaction_type import TransactionType  # t
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
 
+from ape_starknet._utils import to_checksum_address
 from ape_starknet.exceptions import StarknetEcosystemError
 from ape_starknet.transactions import (
     DeployTransaction,
@@ -64,25 +62,7 @@ class Starknet(EcosystemAPI):
         Returns:
             ``AddressType``: The converted address.
         """
-        try:
-            hex_address = hexstr_if_str(to_hex, raw_address).lower()
-        except AttributeError:
-            raise AddressError(f"Value must be any string, instead got type {type(hex_address)}")
-
-        cleaned_address = remove_0x_prefix(HexStr(hex_address))
-        address_hash = encode_hex(keccak(text=cleaned_address))
-
-        checksum_address = add_0x_prefix(
-            HexStr(
-                "".join(
-                    (hex_address[i].upper() if int(address_hash[i], 16) > 7 else hex_address[i])
-                    for i in range(2, len(hex_address))
-                )
-            )
-        )
-
-        hex_address = HexAddress(checksum_address)
-        return AddressType(hex_address)
+        return to_checksum_address(raw_address)
 
     @classmethod
     def encode_address(cls, address: AddressType) -> RawAddress:
@@ -159,7 +139,12 @@ class Starknet(EcosystemAPI):
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
-        return InvokeFunctionTransaction(contract_address=address, method_abi=abi, calldata=args)
+        return InvokeFunctionTransaction(
+            contract_address=address,
+            method_abi=abi,
+            calldata=args,
+            sender=kwargs.get("sender"),
+        )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = kwargs.pop("type")

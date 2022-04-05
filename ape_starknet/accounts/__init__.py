@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Union
 
 import click
 from ape.api import AccountAPI, AccountContainerAPI, TransactionAPI
@@ -10,12 +10,13 @@ from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage
-from ape.utils import cached_property
+from ape.utils import abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
 from ethpm_types.abi import ConstructorABI
 from hexbytes import HexBytes
 from starknet_py.net import KeyPair  # type: ignore
+from starknet_py.net.account.account_client import AccountClient  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
     COMPILED_ACCOUNT_CONTRACT,
 )
@@ -24,8 +25,11 @@ from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.feeder_gateway.response_objects import (
+    TransactionInfo,  # type: ignore
+)
 
-from ape_starknet._utils import PLUGIN_NAME
+from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.transactions import InvokeFunctionTransaction
 
 
@@ -62,6 +66,12 @@ class StarknetAccountContracts(AccountContainerAPI):
 
     def __delitem__(self, address: AddressType):
         pass
+
+    def __getitem__(self, item: Union[str, int]) -> "BaseStarknetAccount":
+        address = (
+            self.network_manager.starknet.decode_address(item) if isinstance(item, int) else item
+        )
+        return super().__getitem__(address)
 
     def load(self, alias: str) -> "BaseStarknetAccount":
         if alias in self.ephemeral_accounts:
@@ -149,20 +159,23 @@ class StarknetAccountDeployment:
 
 
 class BaseStarknetAccount(AccountAPI):
-    @property
-    def __key(self) -> int:
-        """Override"""
-        return 0
+    @abstractmethod
+    def _get_key(self) -> int:
+        ...
 
-    @property
+    @abstractmethod
     def account_data(self) -> Dict:
-        """Override"""
-        return {}
+        ...
 
     @property
     def contract_address(self) -> AddressType:
-        address = self.account_data["contract_address"]
-        return self.network_manager.starknet.decode_address(address)
+        network = self.provider.network
+        for deployment in self.deployments:
+            if deployment.network_name == network.name:
+                address = deployment.contract_address
+                return network.ecosystem.decode_address(address)
+
+        raise AccountsError(f"Account '{self.alias}' is not deployed on network '{network.name}'.")
 
     @property
     def address(self) -> AddressType:
@@ -178,6 +191,22 @@ class BaseStarknetAccount(AccountAPI):
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)
+
+    @handle_client_errors
+    def send_transaction(self, txn: TransactionAPI) -> TransactionInfo:
+        network = self.provider.network
+        key_pair = KeyPair(
+            public_key=network.ecosystem.encode_address(self.address),
+            private_key=self._get_key(),
+        )
+        chain_id = get_chain_id(network.name)
+        account_client = AccountClient(
+            self.contract_address,
+            key_pair,
+            self.provider.uri,
+            chain=chain_id,
+        )
+        return account_client.add_transaction_sync(txn.as_starknet_object())
 
     @property
     def deployments(self) -> List[StarknetAccountDeployment]:
@@ -204,12 +233,14 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
     def alias(self) -> Optional[str]:
         return self.account_key
 
+    def _get_key(self) -> int:
+        return self.raw_account_data["private_key"]
+
     def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
         if not isinstance(msg, (list, tuple)):
             msg = [msg]
 
-        key = self.raw_account_data["private_key"]
-        return sign_calldata(msg, key)
+        return sign_calldata(msg, self._get_key())
 
 
 class StarknetKeyfileAccount(BaseStarknetAccount):
@@ -246,10 +277,9 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         if not isinstance(msg, (list, tuple)):
             msg = [msg]
 
-        return sign_calldata(msg, self.__key)
+        return sign_calldata(msg, self._get_key())
 
-    @property
-    def __key(self) -> HexBytes:
+    def _get_key(self) -> HexBytes:
         if self.__cached_key is not None:
             if not self.locked:
                 click.echo(f"Using cached key for '{self.alias}'")

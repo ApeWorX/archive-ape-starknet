@@ -10,7 +10,6 @@ from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
 from ethpm_types.abi import EventABI
 from starknet_py.net import Client as StarknetClient  # type: ignore
-from starknet_py.net.client import BadRequest  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
@@ -18,22 +17,11 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     InvokeSpecificInfo,
 )
 
-from ape_starknet._utils import PLUGIN_NAME, get_chain_id
+from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.config import StarknetConfig
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
 DEFAULT_PORT = 8545
-
-
-def handle_client_errors(f):
-    def func(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except BadRequest as err:
-            msg = err.text if hasattr(err, "text") else str(err)
-            raise ProviderError(msg) from err
-
-    return func
 
 
 class StarknetProvider(SubprocessProvider, ProviderAPI):
@@ -100,7 +88,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @property
     def chain_id(self) -> int:
-        return get_chain_id(self.network.name)
+        return get_chain_id(self.network.name).value
 
     def get_balance(self, address: str) -> int:
         # TODO
@@ -166,11 +154,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
-        try:
-            self.starknet_client.wait_for_tx_sync(txn_hash)
-        except Exception as err:
-            raise ProviderError(str(err)) from err
-
+        self.starknet_client.wait_for_tx_sync(txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
         receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash).transaction
@@ -195,12 +179,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
                 "Unable to send non-Starknet transaction using a Starknet provider."
             )
 
-        starknet_txn = txn.as_starknet_object()
-        result = self.starknet_client.add_transaction_sync(starknet_txn)
+        if txn.sender:
+            # If using a sender, send the transaction from your sender's account contract.
+            result = self.account_manager[txn.sender].send_transaction(txn)
 
-        if result.get("error"):
-            message = result["error"].get("message") or "Transaction failed"
-            raise ProviderError(message)
+        else:
+            result = self.starknet_client.add_transaction_sync(txn.as_starknet_object())
 
         txn_hash = result["transaction_hash"]
         return self.get_transaction(txn_hash)
