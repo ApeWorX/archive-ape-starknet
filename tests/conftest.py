@@ -5,9 +5,7 @@ from typing import Iterator, cast
 
 import ape
 import pytest
-from ape._cli import cli
 from ape.api import EcosystemAPI, ProviderAPI
-from click.testing import CliRunner
 
 from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
@@ -87,16 +85,6 @@ def ecosystem(provider) -> EcosystemAPI:
     return provider.network.ecosystem
 
 
-@pytest.fixture
-def runner():
-    return CliRunner()
-
-
-@pytest.fixture
-def ape_cli():
-    return cli
-
-
 @pytest.fixture(autouse=True)
 def clean_cache(project):
     """
@@ -116,7 +104,7 @@ def clean_cache(project):
 @pytest.fixture
 def key_file_account_data():
     return {
-        "public_key": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
+        "address": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
         "crypto": {
             "cipher": "aes-128-ctr",
             "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
@@ -133,16 +121,19 @@ def key_file_account_data():
         },
         "id": "393bb446-55fb-42ec-bd35-ada0b25e17cf",
         "version": 3,
-        "deployments": [
-            {
-                "network_name": "testnet",
-                "contract_address": CONTRACT_ADDRESS,
-            },
-            {
-                "network_name": "mainnet",
-                "contract_address": CONTRACT_ADDRESS,
-            },
-        ],
+        "ape-starknet": {
+            "version": "0.1.0",
+            "deployments": [
+                {
+                    "network_name": "testnet",
+                    "contract_address": CONTRACT_ADDRESS,
+                },
+                {
+                    "network_name": "mainnet",
+                    "contract_address": CONTRACT_ADDRESS,
+                },
+            ],
+        },
     }
 
 

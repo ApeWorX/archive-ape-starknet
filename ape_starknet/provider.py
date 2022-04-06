@@ -91,8 +91,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         return get_chain_id(self.network.name).value
 
     def get_balance(self, address: str) -> int:
-        # TODO
-        return 0
+        """
+        Get the balance of an account.
+        **NOTE**: Address refers to the contract address of the account; not the public key.
+
+        Args:
+            address (str): The contract address of the account.
+
+        Returns:
+            int: The amount of tokens the account holds.
+        """
+        return 0  # TODO
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:

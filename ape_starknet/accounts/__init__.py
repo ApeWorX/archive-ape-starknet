@@ -33,6 +33,13 @@ from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.provider import StarknetProvider
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
+APP_KEY_FILE_KEY = "ape-starknet"
+"""
+The key-file stanza containing custom properties
+specific to the ape-starknet plugin.
+"""
+APP_KEY_FILE_VERSION = "0.1.0"
+
 
 class StarknetAccountContracts(AccountContainerAPI):
 
@@ -115,24 +122,20 @@ class StarknetAccountContracts(AccountContainerAPI):
 
         network_name = _clean_network_name(network_name)
         key_pair = KeyPair.from_private_key(private_key)
-        deployment_data = {
-            "deployments": [
-                {"network_name": network_name, "contract_address": contract_address},
-            ],
-        }
+        deployments = [{"network_name": network_name, "contract_address": contract_address}]
 
         if network_name == LOCAL_NETWORK_NAME:
             account_data = {
-                "public_key": key_pair.public_key,
+                "address": key_pair.public_key,
                 "private_key": key_pair.private_key,
-                **deployment_data,
+                **_create_key_file_app_data(deployments),
             }
             self.ephemeral_accounts[alias] = account_data
         else:
             # Only write keyfile if not in a local network
             path = self.data_folder.joinpath(f"{alias}.json")
             new_account = StarknetKeyfileAccount(key_file_path=path)
-            new_account.write(passphrase=None, private_key=private_key, **deployment_data)
+            new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
 
     def deploy_account(self, alias: str, private_key: Optional[int] = None) -> str:
         """
@@ -173,13 +176,15 @@ class StarknetAccountContracts(AccountContainerAPI):
         self.import_account(alias, network_name, receipt.contract_address, key_pair.private_key)
         return receipt.contract_address
 
-    def delete_account(self, alias: str, network: Optional[str] = None):
-        network = network or self.provider.network.name
+    def delete_account(
+        self, alias: str, network: Optional[str] = None, passphrase: Optional[str] = None
+    ):
+        network = _clean_network_name(network) if network else self.provider.network.name
         if alias in self.ephemeral_accounts:
             del self.ephemeral_accounts[alias]
         else:
             account = self.load_key_file_account(alias)
-            account.delete(network)
+            account.delete(network, passphrase=passphrase)
 
 
 @dataclass
@@ -200,7 +205,7 @@ class BaseStarknetAccount(AccountAPI):
     @property
     def contract_address(self) -> AddressType:
         network = self.provider.network
-        for deployment in self.deployments:
+        for deployment in self.get_deployments():
             if deployment.network_name == network.name:
                 address = deployment.contract_address
                 return network.ecosystem.decode_address(address)
@@ -209,8 +214,17 @@ class BaseStarknetAccount(AccountAPI):
 
     @property
     def address(self) -> AddressType:
-        public_key = self.get_account_data()["public_key"]
+        public_key = self.get_account_data()["address"]
         return self.network_manager.starknet.decode_address(public_key)
+
+    @property
+    def provider(self) -> StarknetProvider:
+        provider = super().provider
+        if not isinstance(provider, StarknetProvider):
+            # Mostly for mypy
+            raise AccountsError("Must use a Starknet provider.")
+
+        return provider
 
     def sign_transaction(self, txn: TransactionAPI) -> Optional[ECSignature]:
         if not isinstance(txn, InvokeFunctionTransaction):
@@ -224,31 +238,29 @@ class BaseStarknetAccount(AccountAPI):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI) -> TransactionInfo:
-        provider = self.provider
-        if not isinstance(txn, StarknetTransaction) or not isinstance(provider, StarknetProvider):
+        if not isinstance(txn, StarknetTransaction):
             # Mostly for mypy
             raise AccountsError("Can only send Starknet transactions.")
 
-        network = provider.network
+        account_client = self.create_account_client()
+        return account_client.add_transaction_sync(txn.as_starknet_object())
+
+    def create_account_client(self) -> AccountClient:
+        network = self.provider.network
         key_pair = KeyPair(
             public_key=network.ecosystem.encode_address(self.address),
             private_key=self._get_key(),
         )
         chain_id = get_chain_id(network.name)
-        account_client = AccountClient(
+        return AccountClient(
             self.contract_address,
             key_pair,
-            provider.uri,
+            self.provider.uri,
             chain=chain_id,
         )
-        return account_client.add_transaction_sync(txn.as_starknet_object())
-
-    @property
-    def deployments(self) -> List[StarknetAccountDeployment]:
-        return [StarknetAccountDeployment(**d) for d in self.get_account_data()["deployments"]]
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
-        for deployment in self.deployments:
+        for deployment in self.get_deployments():
             if deployment.network_name in network_name:
                 return deployment
 
@@ -261,6 +273,10 @@ class BaseStarknetAccount(AccountAPI):
     ) -> bool:
         int_address = self.network_manager.get_ecosystem(PLUGIN_NAME).encode_address(self.address)
         return verify_ecdsa_sig(int_address, data, signature)
+
+    def get_deployments(self) -> List[StarknetAccountDeployment]:
+        plugin_key_file_data = self.get_account_data()[APP_KEY_FILE_KEY]
+        return [StarknetAccountDeployment(**d) for d in plugin_key_file_data["deployments"]]
 
 
 class StarknetEphemeralAccount(BaseStarknetAccount):
@@ -275,6 +291,9 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
         return self.account_key
 
     def _get_key(self) -> int:
+        if "private_key" not in self.raw_account_data:
+            raise AccountsError("This account cannot sign.")
+
         return self.raw_account_data["private_key"]
 
     def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
@@ -289,17 +308,26 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     locked: bool = True
     __cached_key: Optional[int] = None
 
-    def write(self, passphrase: Optional[str] = None, private_key: Optional[int] = None, **kwargs):
+    def write(
+        self,
+        passphrase: Optional[str] = None,
+        private_key: Optional[int] = None,
+        deployments: Optional[List[Dict]] = None,
+    ):
         passphrase = (
             click.prompt("Enter a new passphrase", hide_input=True, confirmation_prompt=True)
             if passphrase is None
             else passphrase
         )
-
         key_file_data = self.__encrypt_key_file(passphrase, private_key=private_key)
-        key_file_data["public_key"] = key_file_data["address"]
-        del key_file_data["address"]
-        account_data = {**key_file_data, **self.get_account_data(), **kwargs}
+        account_data = self.get_account_data()
+        if deployments:
+            if APP_KEY_FILE_KEY not in account_data:
+                account_data[APP_KEY_FILE_KEY] = {}
+
+            account_data[APP_KEY_FILE_KEY]["deployments"] = deployments
+
+        account_data = {**account_data, **key_file_data}
         self.key_file_path.write_text(json.dumps(account_data))
 
     @property
@@ -312,17 +340,31 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         return {}
 
-    def delete(self, network: str):
-        passphrase = click.prompt(
-            f"Enter passphrase to delete '{self.alias}'",
-            hide_input=True,
+    def delete(self, network: str, passphrase: Optional[str] = None):
+        passphrase = (
+            click.prompt(
+                f"Enter passphrase to delete '{self.alias}'",
+                hide_input=True,
+            )
+            if passphrase is None
+            else passphrase
         )
-        self.__decrypt_key_file(passphrase)
 
-        remaining_deployments = [vars(d) for d in self.deployments if d.network_name not in network]
+        try:
+            self.__decrypt_key_file(passphrase)
+        except FileNotFoundError:
+            return
+
+        network = _clean_network_name(network)
+        remaining_deployments = [
+            vars(d) for d in self.get_deployments() if d.network_name != network
+        ]
         if not remaining_deployments:
             # Delete entire account JSON if no more deployments.
-            self.key_file_path.unlink()
+            # The user has to agree to an additional prompt since this may be very destructive.
+
+            if click.confirm("Completely delete local key for account '{self.address}'?"):
+                self.key_file_path.unlink()
         else:
             self.write(passphrase=passphrase, deployments=remaining_deployments)
 
@@ -339,20 +381,23 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         self.locked = True  # force entering passphrase to get key
         original_passphrase = self._get_passphrase_from_prompt()
         private_key = self._get_key(passphrase=original_passphrase)
-        self.write(private_key=private_key)
+        self.write(passphrase=None, private_key=private_key)
 
     def add_deployment(self, network_name: str, contract_address: AddressType):
         passphrase = self._get_passphrase_from_prompt()
         network_name = _clean_network_name(network_name)
-        deployments = [vars(d) for d in self.deployments if d.network_name not in network_name]
+        deployments = [
+            vars(d) for d in self.get_deployments() if d.network_name not in network_name
+        ]
         new_deployment = StarknetAccountDeployment(
             network_name=network_name, contract_address=contract_address
         )
         deployments.append(vars(new_deployment))
+
         self.write(
             passphrase=passphrase,
             private_key=self._get_key(passphrase=passphrase),
-            **{"deployments": deployments},
+            deployments=deployments,
         )
 
     def _get_key(self, passphrase: Optional[str] = None) -> int:
@@ -391,8 +436,6 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
     def __decrypt_key_file(self, passphrase: str) -> HexBytes:
         key_file_dict = json.loads(self.key_file_path.read_text())
-        key_file_dict["address"] = key_file_dict["public_key"]
-        del key_file_dict["public_key"]
         password_bytes = text_if_str(to_bytes, passphrase)
         decoded_json = decode_keyfile_json(key_file_dict, password_bytes)
         return HexBytes(decoded_json)
@@ -404,3 +447,14 @@ def _clean_network_name(network: str) -> str:
             return net
 
     return network
+
+
+def _create_key_file_app_data(deployments: List[Dict[str, str]]) -> Dict:
+    return {APP_KEY_FILE_KEY: {"version": APP_KEY_FILE_VERSION, "deployments": deployments}}
+
+
+__all__ = [
+    "StarknetAccountContracts",
+    "StarknetEphemeralAccount",
+    "StarknetKeyfileAccount",
+]
