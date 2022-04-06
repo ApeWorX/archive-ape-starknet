@@ -112,10 +112,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
         address_int = parse_address(address)
-        if not self.client:
-            raise ProviderNotConnectedError()
-
-        code = self.client.get_code_sync(address_int)
+        code = self.starknet_client.get_code_sync(address_int)
         return code["abi"]
 
     @handle_client_errors
