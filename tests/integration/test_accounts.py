@@ -1,3 +1,7 @@
+import json
+import tempfile
+from pathlib import Path
+
 import pytest
 
 from ..conftest import ALIAS, CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
@@ -10,6 +14,14 @@ def deployed_account(account_container):
     account_container.deploy_account(NEW_ALIAS)
     yield account_container.load(NEW_ALIAS)
     account_container.delete_account(NEW_ALIAS)
+
+
+@pytest.fixture
+def argent_x_backup(argent_x_key_file_account_data):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        key_file_path = Path(temp_dir) / "argent-x-backup.json"
+        key_file_path.write_text(json.dumps(argent_x_key_file_account_data))
+        yield key_file_path
 
 
 def test_create(runner):
@@ -102,6 +114,11 @@ def test_import(runner, existing_key_file_account, account_container):
         network,
         input=f"{PASSWORD}\ny\n",
     )
+
+
+def test_import_argent_key_file(runner, argent_x_backup):
+    output = runner.invoke("import", "__TEST_ARGENT_X_BACKUP__", "--keyfile", str(argent_x_backup))
+    assert "SUCCESS" in output
 
 
 def test_list(runner, existing_key_file_account):

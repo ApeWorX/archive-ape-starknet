@@ -1,7 +1,13 @@
 from typing import List, cast
 
 import click
-from ape.cli import NetworkBoundCommand, ape_cli_context, existing_alias_argument, network_option
+from ape.cli import (
+    NetworkBoundCommand,
+    Path,
+    ape_cli_context,
+    existing_alias_argument,
+    network_option,
+)
 from ape.cli.options import ApeCliContextObject
 from ape.utils import add_padding_to_strings
 
@@ -88,10 +94,12 @@ def _list(cli_ctx):
 @click.option(
     "--address",
     help="The contract address of the account",
-    callback=lambda ctx, param, value: ctx.obj.network_manager.starknet.decode_address(value),
-    required=True,
+    callback=lambda ctx, param, value: ctx.obj.network_manager.starknet.decode_address(value)
+    if value
+    else None,
 )
-def _import(cli_ctx, alias, network, address):
+@click.option("--keyfile", help="Import an existing key-file", type=Path())
+def _import(cli_ctx, alias, network, address, keyfile):
     """Add an existing account"""
     container = _get_container(cli_ctx)
     if alias in container.aliases:
@@ -102,9 +110,15 @@ def _import(cli_ctx, alias, network, address):
         click.echo(f"Importing existing account to network '{network}'.")
         existing_account.add_deployment(network, address)
 
-    else:
+    elif keyfile:
+        container.import_account_from_key_file(alias, keyfile)
+    elif address:
         private_key = click.prompt("Enter private key", hide_input=True)
         container.import_account(alias, network, address, private_key)
+    else:
+        cli_ctx.abort("Please provide either --keyfile or --address to import this account.")
+
+    cli_ctx.logger.success(f"Import account '{alias}'.")
 
 
 @accounts.command()

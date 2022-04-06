@@ -138,6 +138,38 @@ def key_file_account_data():
 
 
 @pytest.fixture
+def argent_x_key_file_account_data():
+    return {
+        "address": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
+        "crypto": {
+            "cipher": "aes-128-ctr",
+            "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
+            "ciphertext": "78789f5d4fc5054c18342f020473ecd7c8f75ff2050cdee548121446b40a8ffb",
+            "kdf": "scrypt",
+            "kdfparams": {
+                "dklen": 32,
+                "n": 262144,
+                "r": 1,
+                "p": 8,
+                "salt": "c1bbae92537eb53d9ffa3790740bcdb4",
+            },
+            "mac": "9684c62113753054fc893ffa1b7ae704c65a454f5f89c3b55cc986798d8d5a58",
+        },
+        "id": "393bb446-55fb-42ec-bd35-ada0b25e17cf",
+        "version": 3,
+        "argent": {
+            "version": "0.1.0",
+            "accounts": [
+                {
+                    "network": "goerli-alpha",
+                    "address": CONTRACT_ADDRESS,
+                },
+            ],
+        },
+    }
+
+
+@pytest.fixture
 def ephemeral_account_data():
     return {
         "private_key": 509219664670742235607272813021130138373595301613956902800973975925797957544,
