@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
 
 import click
-from ape.api import AccountAPI, AccountContainerAPI, TransactionAPI
+from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
+from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError
@@ -31,6 +32,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
 
 from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.provider import StarknetProvider
+from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -86,6 +88,17 @@ class StarknetAccountContracts(AccountContainerAPI):
         address: AddressType = (
             self.network_manager.starknet.decode_address(item) if isinstance(item, int) else item
         )
+
+        # First, assume it is the contract address
+        for account in self.accounts:
+            if not isinstance(account, BaseStarknetAccount):
+                continue
+
+            contract_address = account.contract_address
+            if contract_address and contract_address == address:
+                return super().__getitem__(account.address)
+
+        # First, use the account's public key (what Ape is used to).
         return super().__getitem__(address)
 
     def load(self, alias: str) -> "BaseStarknetAccount":
@@ -218,6 +231,8 @@ class StarknetAccountDeployment:
 
 
 class BaseStarknetAccount(AccountAPI):
+    token_manager: TokenManager = TokenManager()
+
     @abstractmethod
     def _get_key(self) -> int:
         ...
@@ -227,14 +242,14 @@ class BaseStarknetAccount(AccountAPI):
         ...
 
     @property
-    def contract_address(self) -> AddressType:
+    def contract_address(self) -> Optional[AddressType]:
         network = self.provider.network
         for deployment in self.get_deployments():
             if deployment.network_name == network.name:
                 address = deployment.contract_address
                 return network.ecosystem.decode_address(address)
 
-        raise AccountsError(f"Account '{self.alias}' is not deployed on network '{network.name}'.")
+        return None
 
     @property
     def address(self) -> AddressType:
@@ -256,6 +271,29 @@ class BaseStarknetAccount(AccountAPI):
 
         starknet_object = txn.as_starknet_object()
         return self.sign_message(starknet_object.calldata)
+
+    def transfer(
+        self,
+        account: Union[str, AddressType, BaseAddress],
+        value: Union[str, int, None] = None,
+        data: Union[bytes, str, None] = None,
+        **kwargs,
+    ) -> ReceiptAPI:
+        value = self.conversion_manager.convert(value, int)
+        if not isinstance(value, int):
+            if value.isnumeric():
+                value = str(value)
+            else:
+                raise ValueError("value is not an integer.")
+
+        if hasattr(account, "contract_address"):
+            account = account.contract_address
+
+        if not isinstance(account, int):
+            account = self.provider.network.ecosystem.encode_address(account)
+
+        sender = self.provider.network.ecosystem.encode_address(self.contract_address)
+        return self.token_manager.transfer(sender, account, value, **kwargs)
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)

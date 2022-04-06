@@ -1,3 +1,4 @@
+import pytest
 from eth_utils import remove_0x_prefix
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
 
@@ -31,12 +32,17 @@ def test_sign_message_and_check_signature(account):
     assert result, "Failed to validate signature"
 
 
-def test_access_account_by_address(account, account_container, ecosystem):
-    actual = account_container[account.address]
-    assert actual == account
-
-    # Ensure also works with int version of address
-    address = ecosystem.encode_address(account.address)
+@pytest.mark.parametrize(
+    "get_address",
+    [
+        lambda a, _: a.address,
+        lambda a, e: e.encode_address(a.address),
+        lambda a, _: a.contract_address,
+        lambda a, e: e.encode_address(a.contract_address),
+    ],
+)
+def test_access_account_by_str_address(account, account_container, ecosystem, get_address):
+    address = get_address(account, ecosystem)
     assert account_container[address] == account
 
 
