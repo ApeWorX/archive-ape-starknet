@@ -88,7 +88,7 @@ def test_delete(runner, existing_key_file_account):
 
 def test_import(runner, existing_key_file_account, account_container):
     network = "starknet:testnet"  # NOTE: Does not actually connect
-    account_path = account_container.data_folder / "starknet" / f"{NEW_ALIAS}.json"
+    account_path = account_container.data_folder / f"{NEW_ALIAS}.json"
 
     if account_path.is_file():
         # Corrupted from previous test
@@ -116,9 +116,23 @@ def test_import(runner, existing_key_file_account, account_container):
     )
 
 
-def test_import_argent_key_file(runner, argent_x_backup):
-    output = runner.invoke("import", "__TEST_ARGENT_X_BACKUP__", "--keyfile", str(argent_x_backup))
+def test_import_argent_x_key_file(runner, argent_x_backup, account_container):
+    alias = "__TEST_ARGENT_X_BACKUP__"
+    account_path = account_container.data_folder / f"{alias}.json"
+
+    if account_path.is_file():
+        # Corrupted from previous test
+        account_path.unlink()
+
+    output = runner.invoke(
+        "import",
+        alias,
+        "--keyfile",
+        str(argent_x_backup),
+        input=f"{PASSWORD}\n",
+    )
     assert "SUCCESS" in output
+    account_path.unlink()
 
 
 def test_list(runner, existing_key_file_account):
