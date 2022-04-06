@@ -279,14 +279,15 @@ class BaseStarknetAccount(AccountAPI):
         data: Union[bytes, str, None] = None,
         **kwargs,
     ) -> ReceiptAPI:
-        value = self.conversion_manager.convert(value, int)
+        value = value or 0
+        value = self.conversion_manager.convert(value, int) or 0
         if not isinstance(value, int):
             if value.isnumeric():
                 value = str(value)
             else:
                 raise ValueError("value is not an integer.")
 
-        if hasattr(account, "contract_address"):
+        if not isinstance(account, str) and hasattr(account, "contract_address"):
             account = account.contract_address
 
         if not isinstance(account, int):

@@ -13,8 +13,8 @@ extras_require = {
     "lint": [
         "black>=21.12b0,<22.0",  # auto-formatter and linter
         "mypy>=0.910,<1.0",  # Static type analyzer
-        "flake8>=3.8.3,<4.0",  # Style linter
-        "isort>=5.9.3,<6.0",  # Import sorting linter
+        "flake8>=3.9.2,<4.0",  # Style linter
+        "isort>=5.10.1,<6.0",  # Import sorting linter
         "types-pkg-resources>=0.1.3,<0.2",
     ],
     "release": [  # `release` GitHub Action job uses this

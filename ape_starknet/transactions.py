@@ -90,10 +90,11 @@ class InvokeFunctionTransaction(StarknetTransaction):
             # **NOTE**: This check is mostly done for mypy.
             raise ProviderError("Must be connected to a Starknet provider.")
 
+        method_abi = self.method_abi.dict()
         contract_address = ecosystem.encode_address(self.receiver)
-        contract_abi = self.provider.client.get_code_sync(contract_address=contract_address)["abi"]
-        call_data = ecosystem.encode_call_data(contract_abi, self.method_abi.dict(), self.data)
-        selector = get_selector_from_name(self.method_abi.name)
+        contract_abi = self.provider.get_abi(contract_address)
+        call_data = ecosystem.encode_call_data(contract_abi, method_abi, self.data)
+        selector = get_selector_from_name(method_abi["name"])
         return InvokeFunction(
             contract_address=contract_address,
             entry_point_selector=selector,

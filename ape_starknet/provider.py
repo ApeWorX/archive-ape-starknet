@@ -32,6 +32,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     # Gets set when 'connect()' is called.
     client: Optional[StarknetClient] = None
+    token_manager: TokenManager = TokenManager()
 
     @property
     def process_name(self) -> str:
@@ -100,14 +101,22 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
         account = self.account_manager[address]
         account_contract_address = account.contract_address
-        token_manager = TokenManager(self)
-        return token_manager.get_balance(account_contract_address)
+        return self.token_manager.get_balance(account_contract_address)
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
         address_int = parse_address(address)
-        code = self.starknet_client.get_code_sync(address_int)["bytecode"]  # type: ignore
-        return code
+        code = self.starknet_client.get_code_sync(address_int)
+        return code["bytecode"]  # type: ignore
+
+    @handle_client_errors
+    def get_abi(self, address: str) -> List[Dict]:
+        address_int = parse_address(address)
+        if not self.client:
+            raise ProviderNotConnectedError()
+
+        code = self.client.get_code_sync(address_int)
+        return code["abi"]
 
     @handle_client_errors
     def get_nonce(self, address: str) -> int:

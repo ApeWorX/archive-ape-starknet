@@ -8,6 +8,9 @@ from ape_starknet.config import StarknetConfig
 from ape_starknet.conversion import StarknetAddressConverter
 from ape_starknet.ecosystems import Starknet
 from ape_starknet.provider import StarknetProvider
+from ape_starknet.tokens import TokenManager
+
+tokens = TokenManager()
 
 
 @plugins.register(plugins.ConversionPlugin)
