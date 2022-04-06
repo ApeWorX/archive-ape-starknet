@@ -9,7 +9,6 @@ from ape.exceptions import ProviderError, ProviderNotConnectedError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
 from ethpm_types.abi import EventABI
-from starknet_py.contract import Contract
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
@@ -20,6 +19,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
 
 from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.config import StarknetConfig
+from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
 DEFAULT_PORT = 8545
@@ -98,20 +98,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             # Fees / balances are currently not supported in local
             return 0
 
-        # NOTE: Fees are currently paid in ETH, which is an ERC20 on Starknet.
-        token_address_map = {
-            "testnet": "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458ce245bc10",
-            "mainnet": "0x06a09ccb1caaecf3d9683efe335a667b2169a409d19c589ba1eb771cd210af75",
-        }
-        contract_address = token_address_map[network]
-        token_contract = Contract.from_address_sync(contract_address, self.client)
-
         account = self.account_manager[address]
         account_contract_address = account.contract_address
-        address_arg = self.network.ecosystem.encode_address(account_contract_address)
-
-        result = token_contract.functions["balanceOf"].call_sync(address_arg)
-        return result.balance
+        token_manager = TokenManager(self)
+        return token_manager.get_balance(account_contract_address)
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:

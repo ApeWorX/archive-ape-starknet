@@ -2,7 +2,7 @@ import re
 from typing import Any, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import AddressError, ProviderError, VirtualMachineError
+from ape.exceptions import AddressError, ApeException, ProviderError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -73,7 +73,6 @@ def handle_client_errors(f):
     def func(*args, **kwargs):
         try:
             result = f(*args, **kwargs)
-
             if isinstance(result, dict) and result.get("error"):
                 message = result["error"].get("message") or "Transaction failed"
                 raise ProviderError(message)
@@ -83,10 +82,13 @@ def handle_client_errors(f):
         except BadRequest as err:
             msg = err.text if hasattr(err, "text") else str(err)
             raise ProviderError(msg) from err
+        except ApeException:
+            # Don't catch ApeExceptions, let them raise as they would.
+            raise
         except Exception as err:
             if "rejected" in str(err):
                 raise VirtualMachineError(base_err=err) from err
-            else:
-                raise ProviderError(str(err)) from err
+
+            raise  # Original exception
 
     return func
