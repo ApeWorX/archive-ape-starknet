@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from tempfile import mkdtemp
 from typing import Iterator, cast
 
 import ape
@@ -13,6 +14,10 @@ from ape_starknet.accounts import (
     StarknetEphemeralAccount,
     StarknetKeyfileAccount,
 )
+
+# NOTE: Ensure that we don't use local paths for these
+ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
+ape.config.PROJECT_FOLDER = Path(mkdtemp()).resolve()
 
 projects_directory = Path(__file__).parent / "projects"
 project_names = [p.stem for p in projects_directory.iterdir() if p.is_dir()]
@@ -47,18 +52,18 @@ def project(request, config):
 
 
 @pytest.fixture(scope="module")
-def my_contract_type(project):
+def contract_type(project):
     return project.MyContract
 
 
 @pytest.fixture(scope="module")
-def my_contract(my_contract_type):
-    return my_contract_type.deploy()
+def contract(contract_type):
+    return contract_type.deploy()
 
 
 @pytest.fixture
-def initial_balance(my_contract):
-    return my_contract.get_balance()
+def initial_balance(contract):
+    return contract.get_balance()
 
 
 @pytest.fixture(scope="session")

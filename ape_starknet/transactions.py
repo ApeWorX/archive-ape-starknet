@@ -143,6 +143,7 @@ class StarknetReceipt(ReceiptAPI):
 
     """Aliased"""
     txn_hash: str = Field(alias="transaction_hash")
+    logs: List[dict] = Field(alias="events")
 
     @property
     def ran_out_of_gas(self) -> bool:

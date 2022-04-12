@@ -5,21 +5,16 @@ from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
 from ethpm_types.abi import MethodABI
 
-from ape_starknet import PLUGIN_NAME
-
 if TYPE_CHECKING:
     from ape_starknet.provider import StarknetProvider
 
 
 def _select_method_abi(name: str, abi: List[Dict]) -> Optional[Dict]:
     for sub_abi in abi:
-        if sub_abi["type"] == "constructor":
-            if name == "constructor":
-                return sub_abi
+        if sub_abi["type"] == "constructor" and name == "constructor":
+            return sub_abi
 
-            continue
-
-        if sub_abi["name"] == name:
+        elif hasattr(sub_abi, "name") and sub_abi["name"] == name:
             return sub_abi
 
     return None
@@ -63,8 +58,7 @@ class TokenManager(ManagerAccessMixin):
         transaction = self.provider.network.ecosystem.encode_transaction(
             contract_address, method_abi, receiver, amount
         )
-        account = self.account_manager.containers[PLUGIN_NAME][sender]
-        return account.send_transaction(transaction)
+        return self.account_manager[sender].send_transaction(transaction)
 
     def _get_contract_address(self, token: str = "eth") -> AddressType:
         network = self.provider.network.name

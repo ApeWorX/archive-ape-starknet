@@ -44,11 +44,4 @@ def test_sign_message_and_check_signature(account):
 def test_access_account_by_str_address(account, account_container, ecosystem, get_address):
     address = get_address(account, ecosystem)
     assert account_container[address] == account
-
-
-def test_contains(account, account_container, ecosystem):
-    assert account.address in account_container
-
-    # Ensure also works with int version of address
-    address = ecosystem.encode_address(account.address)
     assert address in account_container

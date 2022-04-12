@@ -184,6 +184,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         ecosytem = self.provider.network.ecosystem
         receipt_dict["contract_address"] = ecosytem.decode_address(txn_info.contract_address)
         receipt_dict["type"] = txn_type
+        receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
         return self.network.ecosystem.decode_receipt(receipt_dict)
 
     @handle_client_errors
@@ -197,7 +198,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if txn.sender:
             # If using a sender, send the transaction from your sender's account contract.
             result = self.account_manager[txn.sender].send_transaction(txn)
-
         else:
             result = self.starknet_client.add_transaction_sync(txn.as_starknet_object())
 

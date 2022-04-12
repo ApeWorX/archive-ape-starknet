@@ -12,6 +12,10 @@ from starkware.cairo.common.signature import (
 func balance() -> (res : felt):
 end
 
+@event
+func balance_increased(amount : felt):
+end
+
 # Increases the balance by the given amount.
 @external
 func increase_balance{
@@ -19,6 +23,7 @@ func increase_balance{
         range_check_ptr}(amount : felt):
     let (res) = balance.read()
     balance.write(res + amount)
+    balance_increased.emit(amount)
     return ()
 end
 

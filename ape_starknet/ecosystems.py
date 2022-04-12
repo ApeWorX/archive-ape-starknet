@@ -158,4 +158,13 @@ class Starknet(EcosystemAPI):
         return txn_cls(**kwargs)
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
-        raise NotImplementedError("TODO")
+        for log in raw_logs:
+            breakpoint()
+            yield ContractLog(
+                name=abi.name,
+                event_arguments=log["data"],
+                transaction_hash="",
+                block_number=1,
+                block_hash="",
+                index=1,
+            )
