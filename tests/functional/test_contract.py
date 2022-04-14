@@ -16,6 +16,7 @@ def test_deploy(project):
     assert deployment
 
 
+@pytest.mark.skip("Unsigned transactions suddenly not working in starknet-devnet :'(")
 def test_contract_transactions(contract):
     initial_amount = contract.get_balance()
     increase_amount = 100
@@ -55,5 +56,6 @@ def test_logs(contract, account, ecosystem):
     assert len(receipt.logs) == 1
     assert receipt.logs[0]["data"] == [increase_amount]
 
-    log_sender_address = ecosystem.decode_address(receipt.logs[0]["from_address"])
-    assert log_sender_address == account.address
+    from_address = receipt.logs[0]["from_address"]
+    log_sender_address = ecosystem.decode_address(from_address)
+    assert log_sender_address == contract.address
