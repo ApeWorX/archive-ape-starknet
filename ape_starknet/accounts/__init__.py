@@ -4,13 +4,7 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
 
 import click
-from ape.api import (
-    AccountAPI,
-    AccountContainerAPI,
-    ReceiptAPI,
-    TestAccountContainerAPI,
-    TransactionAPI,
-)
+from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
@@ -49,7 +43,7 @@ specific to the ape-starknet plugin.
 APP_KEY_FILE_VERSION = "0.1.0"
 
 
-class StarknetAccountContracts(TestAccountContainerAPI, AccountContainerAPI):
+class StarknetAccountContracts(AccountContainerAPI):
 
     ephemeral_accounts: Dict[str, Dict] = {}
     """Local-network accounts that do not persist."""
@@ -246,6 +240,9 @@ class BaseStarknetAccount(AccountAPI):
     @abstractmethod
     def get_account_data(self) -> Dict:
         ...
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.contract_address}>"
 
     @property
     def contract_address(self) -> Optional[AddressType]:

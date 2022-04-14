@@ -197,9 +197,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
         if txn.sender:
             # If using a sender, send the transaction from your sender's account contract.
-            result = self.account_manager[txn.sender].send_transaction(txn)
+            container = self.account_manager.containers["starknet"]
+            result = container[txn.sender].send_transaction(txn)
         else:
-            result = self.starknet_client.add_transaction_sync(txn.as_starknet_object())
+            starknet_txn = txn.as_starknet_object()
+            result = self.starknet_client.add_transaction_sync(starknet_txn)
 
         txn_hash = result["transaction_hash"]
         return self.get_transaction(txn_hash)

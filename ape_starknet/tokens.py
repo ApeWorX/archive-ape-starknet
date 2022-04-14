@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 from ape.exceptions import ProviderError
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
-from eth_typing import HexAddress, HexStr
 from ethpm_types.abi import MethodABI
 
 if TYPE_CHECKING:
@@ -63,8 +62,7 @@ class TokenManager(ManagerAccessMixin):
 
     def _get_contract_address(self, token: str = "eth") -> AddressType:
         network = self.provider.network.name
-        raw_address = HexAddress(HexStr(self.TOKEN_ADDRESS_MAP[token.lower()][network]))
-        return AddressType(raw_address)
+        return AddressType(self.TOKEN_ADDRESS_MAP[token.lower()][network])
 
     def _get_method_abi(self, method_name: str, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)
