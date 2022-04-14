@@ -128,6 +128,15 @@ def _import(cli_ctx, alias, network, address, keyfile):
 def delete(cli_ctx, alias, network):
     """Delete an existing account"""
     container = _get_container(cli_ctx)
+
+    if network == "starknet":
+        # Did not specify a network and should use normally use default
+        # However, if the account only exists on a single network, assume that one.
+        account = container.load(alias)
+        deployments = account.get_deployments()
+        if len(deployments) == 1:
+            network = deployments[0].network_name
+
     container.delete_account(alias, network=network)
     cli_ctx.logger.success(f"Account '{alias}' on network '{network}' has been deleted.")
 
