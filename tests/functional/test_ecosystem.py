@@ -16,9 +16,9 @@ def raw_logs():
             "data": ["4321"],
             "from_address": "0x14acf3b7e92f97adee4d5359a7de3d673582f0ce03d33879cdbdbf03ec7fa5d",
             "keys": [],
-            "transactionHash": "0x7ccac756aafe0df416ee4f4ca74b42cdd7399ebae5aa31d92132dfbee445370",
-            "blockNumber": 5,
-            "blockHash": "0x7032c67f8741c6ce547175c2101d5ccdf468ca6ea0642bafccea04080726a06",
+            "transaction_hash": "0x7ccac756aafe0df416ee4f4ca74b42cdd7399ebae5aa31d92132dfbee445370",
+            "block_number": 5,
+            "block_hash": "0x7032c67f8741c6ce547175c2101d5ccdf468ca6ea0642bafccea04080726a06",
         }
     ]
 
@@ -42,3 +42,4 @@ def test_encode_and_decode_address(value, ecosystem):
 def test_decode_logs(ecosystem, event_abi, raw_logs):
     actual = [log for log in ecosystem.decode_logs(event_abi, raw_logs)]
     assert len(actual) == 1
+    assert actual[0].amount == "4321"
