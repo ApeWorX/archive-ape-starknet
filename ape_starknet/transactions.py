@@ -1,4 +1,4 @@
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
@@ -135,6 +135,8 @@ class StarknetReceipt(ReceiptAPI):
 
     type: TransactionType
     status: TxStatus
+    block_hash: str
+    block_number: int
 
     """Ignored"""
     sender: str = Field("", exclude=True)
@@ -163,6 +165,14 @@ class StarknetReceipt(ReceiptAPI):
         """
         if not isinstance(abi, EventABI):
             abi = abi.abi
+
+        log_data_items: List[Dict] = []
+        for log in self.logs:
+            log_data = {**log}
+            log_data["blockHash"] = self.block_hash
+            log_data["transactionHash"] = self.txn_hash
+            log_data["blockNumber"] = self.block_number
+            log_data_items.append(log_data)
 
         yield from self.provider.network.ecosystem.decode_logs(abi, self.logs)
 
