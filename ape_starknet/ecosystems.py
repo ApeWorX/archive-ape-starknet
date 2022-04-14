@@ -166,8 +166,8 @@ class Starknet(EcosystemAPI):
                 name=abi.name,
                 index=index,
                 event_arguments=event_args,
-                transaction_hash=log["transactionHash"],
-                block_hash=log["blockHash"],
-                block_number=log["blockNumber"],
+                transaction_hash=log["transaction_hash"],
+                block_hash=log["block_hash"],
+                block_number=log["block_number"],
             )  # type: ignore
             index += 1
