@@ -14,7 +14,7 @@ def _select_method_abi(name: str, abi: List[Dict]) -> Optional[Dict]:
         if sub_abi["type"] == "constructor" and name == "constructor":
             return sub_abi
 
-        elif hasattr(sub_abi, "name") and sub_abi["name"] == name:
+        elif sub_abi.get("name") == name:
             return sub_abi
 
     return None
@@ -64,23 +64,25 @@ class TokenManager(ManagerAccessMixin):
         network = self.provider.network.name
         return AddressType(self.TOKEN_ADDRESS_MAP[token.lower()][network])
 
-    def _get_method_abi(self, method_name: str, token: str = "eth"):
+    def _get_method_abi(self, method_name: str, token: str = "eth") -> Optional[Dict]:
         contract_address = self._get_contract_address(token=token)
         abi = self.provider.get_abi(contract_address)
         selected_abi = _select_method_abi(method_name, abi)
-        if not selected_abi:
-            # Check if proxy
-            implementation_abi = _select_method_abi("implementation", abi)
-            method_abi = MethodABI.parse_obj(implementation_abi)
-            ecosystem = self.provider.network.ecosystem
-            transaction = ecosystem.encode_transaction(contract_address, method_abi)
-            return_data = self.provider.send_call(transaction)
-            result = ecosystem.decode_return_data(method_abi, return_data)
-            actual_contract_address = result[0]
-            actual_abi = self.provider.get_abi(actual_contract_address)
-            selected_abi = _select_method_abi(method_name, actual_abi)
 
-        if not selected_abi:
+        if selected_abi:
+            return selected_abi
+
+        # Check if proxy
+        implementation_abi = _select_method_abi("implementation", abi)
+        if not implementation_abi:
             raise ValueError(f"No method found with name '{method_name}'.")
 
+        method_abi = MethodABI.parse_obj(implementation_abi)
+        ecosystem = self.provider.network.ecosystem
+        transaction = ecosystem.encode_transaction(contract_address, method_abi)
+        return_data = self.provider.send_call(transaction)
+        result = ecosystem.decode_return_data(method_abi, return_data)
+        actual_contract_address = result[0]
+        actual_abi = self.provider.get_abi(actual_contract_address)
+        selected_abi = _select_method_abi(method_name, actual_abi)
         return selected_abi
