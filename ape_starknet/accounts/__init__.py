@@ -425,6 +425,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             return
 
         network = _clean_network_name(network)
+        deployments = self.get_deployments()
+        if network not in [d.network_name for d in deployments]:
+            raise AccountsError(f"Account '{self.alias}' not deployed to network '{network}'.")
+
         remaining_deployments = [
             vars(d) for d in self.get_deployments() if d.network_name != network
         ]
@@ -432,7 +436,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             # Delete entire account JSON if no more deployments.
             # The user has to agree to an additional prompt since this may be very destructive.
 
-            if click.confirm("Completely delete local key for account '{self.address}'?"):
+            if click.confirm(f"Completely delete local key for account '{self.address}'?"):
                 self.key_file_path.unlink()
         else:
             self.write(passphrase=passphrase, deployments=remaining_deployments)
