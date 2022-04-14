@@ -13,22 +13,16 @@ EVENT_NAME = "balance_increased"
 def raw_logs():
     return [
         {
-            "data": ["0", "4321"],
+            "data": ["4321"],
             "from_address": "0x14acf3b7e92f97adee4d5359a7de3d673582f0ce03d33879cdbdbf03ec7fa5d",
-            "keys": [
-                "1744303484486821561902174603220722448499782664094942993128426674277214273437"
-            ],
+            "keys": [],
         }
     ]
 
 
 @pytest.fixture
-def event_abi_dict():
-    return {
-        "type": "event",
-        "name": "Upgraded",
-        "inputs": [{"name": "implementation", "type": "felt", "indexed": False}],
-    }
+def event_abi(contract):
+    return contract.balance_increased.abi
 
 
 @pytest.mark.parametrize("value", (INT_ADDRESS, STR_ADDRESS, HEXBYTES_ADDRESS))
@@ -42,6 +36,6 @@ def test_encode_and_decode_address(value, ecosystem):
     assert re_encoded_address == INT_ADDRESS
 
 
-def test_decode_logs(ecosystem, event_abi_dict, raw_logs):
-    actual = [log for log in ecosystem.decode_logs(event_abi_dict, raw_logs)]
+def test_decode_logs(ecosystem, event_abi, raw_logs):
+    actual = [log for log in ecosystem.decode_logs(event_abi, raw_logs)]
     assert len(actual) == 1

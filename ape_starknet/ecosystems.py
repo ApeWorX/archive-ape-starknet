@@ -1,3 +1,4 @@
+import itertools
 from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 
 from ape.api import (
@@ -8,9 +9,12 @@ from ape.api import (
     ReceiptAPI,
     TransactionAPI,
 )
+from ape.contracts._utils import LogInputABICollection
+from ape.exceptions import DecodingError
 from ape.types import AddressType, ContractLog, RawAddress
-from eth_utils.hexadecimal import is_0x_prefixed
-from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
+from eth_abi.abi import decode_abi, decode_single
+from eth_utils import hexstr_if_str, is_0x_prefixed, keccak, to_bytes
+from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from starknet_py.net.models.address import parse_address  # type: ignore
 from starknet_py.net.models.chains import StarknetChainId  # type: ignore
@@ -157,14 +161,57 @@ class Starknet(EcosystemAPI):
 
         return txn_cls(**kwargs)
 
-    def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
-        for log in raw_logs:
-            breakpoint()
-            yield ContractLog(
-                name=abi.name,
-                event_arguments=log["data"],
-                transaction_hash="",
-                block_number=1,
-                block_hash="",
-                index=1,
+    def decode_logs(self, abi: EventABI, data: List[Dict]) -> Iterator[ContractLog]:
+        if not abi.anonymous:
+            event_id_bytes = keccak(to_bytes(text=abi.selector))
+            matching_logs = [log for log in data if log["topics"][0] == event_id_bytes]
+        else:
+            matching_logs = data
+
+        topics_list: List[EventABIType] = []
+        data_list: List[EventABIType] = []
+        for abi_input in abi.inputs:
+            if abi_input.indexed:
+                topics_list.append(abi_input)
+            else:
+                data_list.append(abi_input)
+
+        abi_topics = LogInputABICollection(abi, topics_list)
+        abi_data = LogInputABICollection(abi, data_list)
+
+        duplicate_names = set(abi_topics.names).intersection(abi_data.names)
+        if duplicate_names:
+            duplicate_names_str = ", ".join([n for n in duplicate_names if n])
+            raise DecodingError(
+                "The following argument names are duplicated "
+                f"between event inputs: '{duplicate_names_str}'."
             )
+
+        for log in matching_logs:
+            indexed_data = log["topics"] if log.get("anonymous", False) else log["topics"][1:]
+            log_data = hexstr_if_str(to_bytes, log["data"])  # type: ignore
+
+            if len(indexed_data) != len(abi_topics.types):
+                raise DecodingError(
+                    f"Expected '{len(indexed_data)}' log topics.  Got '{len(abi_topics.types)}'."
+                )
+
+            decoded_topic_data = [
+                decode_single(topic_type, topic_data)  # type: ignore
+                for topic_type, topic_data in zip(abi_topics.types, indexed_data)
+            ]
+            decoded_log_data = decode_abi(abi_data.types, log_data)  # type: ignore
+            event_args = dict(
+                itertools.chain(
+                    zip(abi_topics.names, decoded_topic_data),
+                    zip(abi_data.names, decoded_log_data),
+                )
+            )
+            yield ContractLog(  # type: ignore
+                name=abi.name,
+                index=log["logIndex"],
+                event_arguments=event_args,
+                transaction_hash=log["transactionHash"],
+                block_hash=log["blockHash"],
+                block_number=log["blockNumber"],
+            )  # type: ignore
