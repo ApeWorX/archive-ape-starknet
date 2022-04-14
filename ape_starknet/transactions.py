@@ -1,10 +1,11 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
+from ape.contracts import ContractEvent
 from ape.exceptions import ProviderError
-from ape.types import AddressType
+from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod
-from ethpm_types.abi import MethodABI
+from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field
 from starknet_py.constants import TxStatus  # type: ignore
@@ -149,6 +150,21 @@ class StarknetReceipt(ReceiptAPI):
     def ran_out_of_gas(self) -> bool:
         # TODO: Handle fees
         return False
+
+    def decode_logs(self, abi: Union[EventABI, ContractEvent]) -> Iterator[ContractLog]:
+        """
+        Decode the logs on the receipt.
+
+        Args:
+            abi (``EventABI``): The ABI of the event to decode into logs.
+
+        Returns:
+            Iterator[:class:`~ape.types.ContractLog`]
+        """
+        if not isinstance(abi, EventABI):
+            abi = abi.abi
+
+        yield from self.provider.network.ecosystem.decode_logs(abi, self.logs)
 
 
 __all__ = [

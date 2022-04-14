@@ -288,13 +288,16 @@ class BaseStarknetAccount(AccountAPI):
                 raise ValueError("value is not an integer.")
 
         if not isinstance(account, str) and hasattr(account, "contract_address"):
-            account = account.contract_address
+            account = account.contract_address  # type: ignore
 
         if not isinstance(account, int):
-            account = self.provider.network.ecosystem.encode_address(account)
+            account = self.provider.network.ecosystem.encode_address(account)  # type: ignore
+
+        if self.contract_address is None:
+            raise ValueError("Contract address cannot be None")
 
         sender = self.provider.network.ecosystem.encode_address(self.contract_address)
-        return self.token_manager.transfer(sender, account, value, **kwargs)
+        return self.token_manager.transfer(sender, account, value, **kwargs)  # type: ignore
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)
