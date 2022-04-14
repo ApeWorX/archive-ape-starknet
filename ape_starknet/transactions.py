@@ -135,8 +135,8 @@ class StarknetReceipt(ReceiptAPI):
 
     type: TransactionType
     status: TxStatus
-    block_hash: str
-    block_number: int
+    block_hash: Optional[str] = None  # NOTE: Might be a backend bug causing this to be None
+    block_number: Optional[int] = None  # NOTE: Might be a backend bug causing this to be None
 
     """Ignored"""
     sender: str = Field("", exclude=True)
