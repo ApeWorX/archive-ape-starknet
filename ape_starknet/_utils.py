@@ -2,7 +2,7 @@ import re
 from typing import Any, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import AddressError, ApeException, ProviderError, VirtualMachineError
+from ape.exceptions import AddressError, ApeException, ContractLogicError, ProviderError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -86,8 +86,19 @@ def handle_client_errors(f):
             # Don't catch ApeExceptions, let them raise as they would.
             raise
         except Exception as err:
-            if "rejected" in str(err):
-                raise VirtualMachineError(base_err=err) from err
+            err_msg = str(err)
+            if "rejected" in err_msg:
+                if "Error message: " in err_msg:
+                    err_msg = err_msg.split("Error message: ")[-1]
+                    if "Error at pc=" in err_msg:
+                        err_msg = err_msg.split("Error at pc=")[0]
+
+                    # Fix escaping newline issue with error message.
+                    err_msg = err_msg.replace("\\n", "")
+                else:
+                    err_msg = "Transaction failed."
+
+                raise ContractLogicError(revert_message=err_msg) from err
 
             raise  # Original exception
 
