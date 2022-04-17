@@ -45,3 +45,7 @@ def test_access_account_by_str_address(account, account_container, ecosystem, ge
     address = get_address(account, ecosystem)
     assert account_container[address] == account
     assert address in account_container
+
+
+def test_balance(account):
+    assert account.balance == 0
