@@ -1,4 +1,5 @@
 import pytest
+from ape.exceptions import ContractLogicError
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -59,3 +60,19 @@ def test_logs(contract, account, ecosystem):
     from_address = receipt.logs[0]["from_address"]
     log_sender_address = ecosystem.decode_address(from_address)
     assert log_sender_address == contract.address
+
+
+def test_revert_message(contract):
+    with pytest.raises(ContractLogicError) as err:
+        # Already initialized from fixture
+        contract.initialize()
+
+    assert str(err.value) == "Already initialized"
+
+
+def test_revert_no_message(contract):
+    contract.reset()
+    with pytest.raises(ContractLogicError) as err:
+        contract.increase_balance(123)
+
+    assert str(err.value) == "Transaction failed."

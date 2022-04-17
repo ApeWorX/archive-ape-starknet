@@ -6,14 +6,44 @@ from starkware.cairo.common.cairo_builtins import (
 from starkware.cairo.common.hash import hash2
 from starkware.cairo.common.signature import (
     verify_ecdsa_signature)
+from starkware.cairo.common.bool import TRUE, FALSE
 
 # Define a storage variable.
 @storage_var
 func balance() -> (res : felt):
 end
 
+@storage_var
+func is_initialized() -> (initialized: felt):
+end
+
 @event
 func balance_increased(amount : felt):
+end
+
+@external
+func initialize{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }():
+    let (initialized) = is_initialized.read()
+    with_attr error_message("Already initialized"):
+        assert initialized = FALSE
+    end
+
+    is_initialized.write(TRUE)
+    return ()
+end
+
+@external
+func reset{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }():
+    is_initialized.write(FALSE)
+    return ()
 end
 
 # Increases the balance by the given amount.
@@ -21,6 +51,9 @@ end
 func increase_balance{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
         range_check_ptr}(amount : felt):
+    let (initialized) = is_initialized.read()
+    assert initialized = TRUE
+
     let (res) = balance.read()
     balance.write(res + amount)
     balance_increased.emit(amount)
