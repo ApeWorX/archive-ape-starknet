@@ -47,9 +47,8 @@ class TokenManager(ManagerAccessMixin):
         ecosystem = self.provider.network.ecosystem
         method_abi = MethodABI.parse_obj(method_abi)
         transaction = ecosystem.encode_transaction(token_contract_address, method_abi, account)
-        return_data = self.provider.send_call(transaction)
-        result = ecosystem.decode_return_data(method_abi, return_data)
-        return result[0]
+        call_data = self.provider.send_call(transaction)
+        return call_data[0]
 
     def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)
