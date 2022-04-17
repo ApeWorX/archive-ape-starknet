@@ -5,9 +5,11 @@ from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractInstance
 from ape.exceptions import ProviderError, ProviderNotConnectedError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
+from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
@@ -105,15 +107,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        address_int = parse_address(address)
-        code = self.starknet_client.get_code_sync(address_int)
-        return code["bytecode"]  # type: ignore
+        return self._get_code(address)["bytecode"]  # type: ignore
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
-        address_int = parse_address(address)
-        code = self.starknet_client.get_code_sync(address_int)
-        return code["abi"]
+        return self._get_code(address)["abi"]  # type: ignore
 
     @handle_client_errors
     def get_nonce(self, address: str) -> int:
@@ -181,8 +179,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         else:
             raise ValueError(f"No value found for '{txn_info}'.")
 
-        ecosytem = self.provider.network.ecosystem
-        receipt_dict["contract_address"] = ecosytem.decode_address(txn_info.contract_address)
+        ecosystem = self.provider.network.ecosystem
+        receipt_dict["contract_address"] = ecosystem.decode_address(txn_info.contract_address)
         receipt_dict["type"] = txn_type
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
         return self.network.ecosystem.decode_receipt(receipt_dict)
@@ -224,6 +222,20 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             txn.max_fee = self.estimate_gas_cost(txn)
 
         return txn
+
+    def _get_code(self, address: AddressType):
+        address_int = parse_address(address)
+        return self.starknet_client.get_code_sync(address_int)
+
+    def contract_at(self, address: AddressType) -> ContractInstance:
+        code = self._get_code(address)
+        contract_type = ContractType.parse_obj(code)
+
+        if "implementation" in [m.name for m in contract_type.view_methods]:
+            contract_address = ContractInstance(address, contract_type).implementation()
+            return self.contract_at(contract_address)
+        else:
+            return ContractInstance(address, contract_type)
 
 
 __all__ = ["StarknetProvider"]

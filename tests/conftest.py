@@ -6,7 +6,7 @@ from typing import Iterator, cast
 
 import ape
 import pytest
-from ape.api import EcosystemAPI, ProviderAPI
+from ape.api import EcosystemAPI
 
 from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
@@ -14,6 +14,7 @@ from ape_starknet.accounts import (
     StarknetEphemeralAccount,
     StarknetKeyfileAccount,
 )
+from ape_starknet.provider import StarknetProvider
 
 # NOTE: Ensure that we don't use local paths for these
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
@@ -69,7 +70,7 @@ def initial_balance(contract):
 
 
 @pytest.fixture(scope="session")
-def provider() -> Iterator[ProviderAPI]:
+def provider() -> Iterator[StarknetProvider]:
     with ape.networks.parse_network_choice("starknet:local:starknet") as provider:
         yield provider
 
