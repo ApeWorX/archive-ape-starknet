@@ -7,6 +7,7 @@ from typing import Iterator, cast
 import ape
 import pytest
 from ape.api import EcosystemAPI
+from ape.api.networks import LOCAL_NETWORK_NAME
 
 from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
@@ -65,13 +66,14 @@ def contract(contract_type):
 
 
 @pytest.fixture
-def initial_balance(contract):
-    return contract.get_balance()
+def initial_balance(contract, account):
+    return contract.get_balance(account.address)
 
 
 @pytest.fixture(scope="session")
 def provider() -> Iterator[StarknetProvider]:
-    with ape.networks.parse_network_choice("starknet:local:starknet") as provider:
+    network = f"{PLUGIN_NAME}:{LOCAL_NETWORK_NAME}:{PLUGIN_NAME}"
+    with ape.networks.parse_network_choice(network) as provider:
         yield provider
 
 
