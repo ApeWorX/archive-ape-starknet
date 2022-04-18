@@ -43,7 +43,7 @@ class TokenManager(ManagerAccessMixin):
     def get_balance(self, account: AddressType, token: str = "eth") -> int:
         contract_address = self._get_contract_address(token=token)
         instance = self.provider.contract_at(contract_address)
-        return instance.balanceOf(account)
+        return instance.balanceOf(account.lower())[0]
 
     def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)

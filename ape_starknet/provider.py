@@ -163,7 +163,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if not self.client:
             raise ProviderNotConnectedError()
 
-        return self.client.call_contract_sync(txn.as_starknet_object())
+        starknet_obj = txn.as_starknet_object()
+        return self.client.call_contract_sync(starknet_obj)
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
@@ -227,12 +228,16 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         address_int = parse_address(address)
         return self.starknet_client.get_code_sync(address_int)
 
-    def contract_at(self, address: AddressType) -> ContractInstance:
+    def contract_at(self, address: Union[AddressType, int]) -> ContractInstance:
+        if isinstance(address, int):
+            address = self.network.ecosystem.decode_address(address)
+
         code = self._get_code(address)
         contract_type = ContractType.parse_obj(code)
 
         if "implementation" in [m.name for m in contract_type.view_methods]:
-            contract_address = ContractInstance(address, contract_type).implementation()
+            proxy_instance = ContractInstance(address, contract_type)
+            contract_address = proxy_instance.implementation()
             return self.contract_at(contract_address)
         else:
             return ContractInstance(address, contract_type)
