@@ -10,7 +10,7 @@ from starkware.cairo.common.bool import TRUE, FALSE
 
 # Define a storage variable.
 @storage_var
-func balance() -> (res : felt):
+func balance(user : felt) -> (res : felt):
 end
 
 @storage_var
@@ -50,12 +50,12 @@ end
 @external
 func increase_balance{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
-        range_check_ptr}(amount : felt):
+        range_check_ptr}(user : felt, amount : felt):
     let (initialized) = is_initialized.read()
     assert initialized = TRUE
 
-    let (res) = balance.read()
-    balance.write(res + amount)
+    let (res) = balance.read(user=user)
+    balance.write(user, res + amount)
     balance_increased.emit(amount)
     return ()
 end
@@ -77,8 +77,8 @@ func increase_balance_signed{
         signature_r=sig[0],
         signature_s=sig[1])
 
-    let (res) = balance.read()
-    balance.write(res + amount)
+    let (res) = balance.read(user=user)
+    balance.write(user, res + amount)
     return ()
 end
 
@@ -86,7 +86,7 @@ end
 @view
 func get_balance{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
-        range_check_ptr}() -> (res : felt):
-    let (res) = balance.read()
+        range_check_ptr}(user : felt) -> (res : felt):
+    let (res) = balance.read(user=user)
     return (res)
 end

@@ -17,43 +17,31 @@ def test_deploy(project):
     assert deployment
 
 
-@pytest.mark.skip("Unsigned transactions suddenly not working in starknet-devnet :'(")
-def test_contract_transactions(contract):
-    initial_amount = contract.get_balance()
-    increase_amount = 100
-
-    contract.increase_balance(increase_amount)
-
-    actual = contract.get_balance()
-    expected = initial_amount + increase_amount
-    assert actual == expected
-
-
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):
     # NOTE: This test validates the account signature but the transaction
-    # is not directly sent from the account. Both are valid use-cases!
+    # is not directly sent from the account.
     increase_amount = 234
 
     signature = account.sign_message(increase_amount)
     contract.increase_balance_signed(account.address, increase_amount, signature)
 
-    actual = contract.get_balance()
+    actual = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual == expected
 
 
 def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
-    contract.increase_balance(increase_amount, sender=account)
+    contract.increase_balance(account.address, increase_amount, sender=account)
 
-    actual = contract.get_balance()
+    actual = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual == expected
 
 
 def test_logs(contract, account, ecosystem):
     increase_amount = 9933
-    receipt = contract.increase_balance(increase_amount, sender=account)
+    receipt = contract.increase_balance(account.address, increase_amount, sender=account)
     assert len(receipt.logs) == 1
     assert receipt.logs[0]["data"] == [increase_amount]
 
@@ -70,9 +58,9 @@ def test_revert_message(contract):
     assert str(err.value) == "Already initialized"
 
 
-def test_revert_no_message(contract):
+def test_revert_no_message(contract, account):
     contract.reset()
     with pytest.raises(ContractLogicError) as err:
-        contract.increase_balance(123)
+        contract.increase_balance(account.address, 123)
 
     assert str(err.value) == "Transaction failed."
