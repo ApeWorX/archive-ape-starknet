@@ -234,13 +234,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
         code = self._get_code(address)
         contract_type = ContractType.parse_obj(code)
-
-        if "implementation" in [m.name for m in contract_type.view_methods]:
-            proxy_instance = ContractInstance(address, contract_type)
-            contract_address = proxy_instance.implementation()
-            return self.contract_at(contract_address)
-        else:
-            return ContractInstance(address, contract_type)
+        return ContractInstance(address, contract_type)
 
 
 __all__ = ["StarknetProvider"]
