@@ -63,6 +63,11 @@ class StarknetAccountContracts(AccountContainerAPI):
             yield key_file.stem
 
     @property
+    def public_key_addresses(self) -> Iterator[AddressType]:
+        for account in self.accounts:
+            yield account.address
+
+    @property
     def accounts(self) -> Iterator[AccountAPI]:
         for alias, account_data in self.ephemeral_accounts.items():
             yield StarknetEphemeralAccount(raw_account_data=account_data, account_key=alias)

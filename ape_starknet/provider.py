@@ -115,8 +115,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_nonce(self, address: str) -> int:
-        # TODO: is this possible? usually the contract manages the nonce.
-        return 0
+        # Check if passing a public-key address of a local account
+        container = self.account_manager.containers["starknet"]
+        if address in container.public_key_addresses:
+            address = container[address].contract_address
+
+        contract = self.contract_at(address)
+        return contract.get_nonce()
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
@@ -228,7 +233,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         address_int = parse_address(address)
         return self.starknet_client.get_code_sync(address_int)
 
-    def contract_at(self, address: Union[AddressType, int]) -> ContractInstance:
+    def contract_at(self, address: Union[AddressType, int, str]) -> ContractInstance:
         if isinstance(address, int):
             address = self.network.ecosystem.decode_address(address)
 

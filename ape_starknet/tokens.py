@@ -41,7 +41,7 @@ class TokenManager(ManagerAccessMixin):
 
         return provider
 
-    def get_balance(self, account: AddressType, token: str = "test_token") -> int:
+    def get_balance(self, account: AddressType, token: str = "eth") -> int:
         contract_address = self._get_contract_address(token=token)
         contract = self.provider.contract_at(contract_address)
         if "balanceOf" in [m.name for m in contract._contract_type.view_methods]:
@@ -76,12 +76,6 @@ class TokenManager(ManagerAccessMixin):
     def _get_method_abi(self, method_name: str, token: str = "eth") -> Optional[Dict]:
         contract_address = self._get_contract_address(token=token)
         abi = self.provider.get_abi(contract_address)
-        selected_abi = _select_method_abi(method_name, abi)
-
-        if selected_abi:
-            return selected_abi
-
-        # Check if proxy
         implementation_abi = _select_method_abi("implementation", abi)
         if not implementation_abi:
             raise ValueError(f"No method found with name '{method_name}'.")
@@ -90,8 +84,12 @@ class TokenManager(ManagerAccessMixin):
         ecosystem = self.provider.network.ecosystem
         transaction = ecosystem.encode_transaction(contract_address, method_abi)
         return_data = self.provider.send_call(transaction)
-        result = ecosystem.decode_return_data(method_abi, return_data)
-        actual_contract_address = result[0]
+        actual_contract_address_int = self.provider.network.ecosystem.decode_return_data(
+            return_data
+        )
+        actual_contract_address = self.provider.network.ecosystem.decode_address(
+            actual_contract_address_int
+        )
         actual_abi = self.provider.get_abi(actual_contract_address)
         selected_abi = _select_method_abi(method_name, actual_abi)
         return selected_abi

@@ -57,7 +57,7 @@ class Starknet(EcosystemAPI):
         non-length 42 addresses.
 
         Args:
-            value (Union[int, str, bytes]): The value to convert.
+            raw_address (Union[int, str, bytes]): The value to convert.
 
         Returns:
             ``AddressType``: The converted address.
@@ -76,7 +76,9 @@ class Starknet(EcosystemAPI):
         return starknet_object.deserialize()
 
     def decode_return_data(self, abi: MethodABI, raw_data: bytes) -> List[Any]:
-        # TODO: I think this may only handle integers right now
+        if isinstance(raw_data, (list, tuple)) and len(raw_data) == 1:
+            return raw_data[0]
+
         return raw_data  # type: ignore
 
     def encode_call_data(

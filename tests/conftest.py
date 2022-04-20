@@ -59,7 +59,7 @@ def contract_type(project):
 
 
 @pytest.fixture(scope="module")
-def contract(contract_type):
+def contract(contract_type, provider):
     deployed_contract = contract_type.deploy()
     deployed_contract.initialize()
     return deployed_contract
