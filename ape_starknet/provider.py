@@ -229,7 +229,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
         return txn
 
-    def _get_code(self, address: AddressType):
+    def _get_code(self, address: Union[str, AddressType]):
         address_int = parse_address(address)
         return self.starknet_client.get_code_sync(address_int)
 
@@ -239,7 +239,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
         code = self._get_code(address)
         contract_type = ContractType.parse_obj(code)
-        return ContractInstance(address, contract_type)
+        return ContractInstance(address, contract_type)  # type: ignore
 
 
 __all__ = ["StarknetProvider"]
