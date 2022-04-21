@@ -72,6 +72,11 @@ class TokenManager(ManagerAccessMixin):
             raise ContractError(f"Contract has no method named '{abi_name}'.")
 
         method_abi_obj = MethodABI.parse_obj(method_abi)
+
+        for abi_input in method_abi_obj.inputs:
+            if abi_input.type == "Uint256":
+                abi_input.type = "felt"
+
         transaction = self.provider.network.ecosystem.encode_transaction(
             contract_address, method_abi_obj, receiver, amount
         )
