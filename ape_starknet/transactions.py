@@ -150,7 +150,7 @@ class StarknetReceipt(ReceiptAPI):
 
     @property
     def ran_out_of_gas(self) -> bool:
-        # TODO: Handle fees
+        # Errors elsewhere if we run out of gas.
         return False
 
     def decode_logs(self, abi: Union[EventABI, ContractEvent]) -> Iterator[ContractLog]:
