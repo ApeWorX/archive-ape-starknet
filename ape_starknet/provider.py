@@ -101,8 +101,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             # Fees / balances are currently not supported in local
             return 0
 
-        account = self.account_manager.containers["starknet"][address]
-        account_contract_address = account.contract_address
+        account = self.account_manager.containers["starknet"][address]  # type: ignore
+        account_contract_address = account.contract_address  # type: ignore
         return self.token_manager.get_balance(account_contract_address)
 
     @handle_client_errors
