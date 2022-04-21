@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from ape.exceptions import ProviderError
+from ape.exceptions import ContractError, ProviderError
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
 from ethpm_types.abi import MethodABI
@@ -48,10 +48,14 @@ class TokenManager(ManagerAccessMixin):
             return contract.balanceOf(account)[0]
 
         # Handle proxy-implementation (not yet supported in ape-core)
-        method_abi = self._get_method_abi("balanceOf")
+        abi_name = "balanceOf"
+        method_abi = self._get_method_abi(abi_name)
+        if not method_abi:
+            raise ContractError(f"Contract has no method '{abi_name}'.")
+
         ecosystem = self.provider.network.ecosystem
-        method_abi = MethodABI.parse_obj(method_abi)
-        transaction = ecosystem.encode_transaction(contract_address, method_abi, account)
+        method_abi_obj = MethodABI.parse_obj(method_abi)
+        transaction = ecosystem.encode_transaction(contract_address, method_abi_obj, account)
         call_data = self.provider.send_call(transaction)
         return call_data[0]
 
@@ -62,10 +66,14 @@ class TokenManager(ManagerAccessMixin):
             return contract.transfer(receiver, amount)
 
         # Handle proxy-implementation (not yet supported in ape-core)
-        method_abi = self._get_method_abi("transfer", token=token)
-        method_abi = MethodABI.parse_obj(method_abi)
+        abi_name = "transfer"
+        method_abi = self._get_method_abi(abi_name, token=token)
+        if not method_abi:
+            raise ContractError(f"Contract has no method named '{abi_name}'.")
+
+        method_abi_obj = MethodABI.parse_obj(method_abi)
         transaction = self.provider.network.ecosystem.encode_transaction(
-            contract_address, method_abi, receiver, amount
+            contract_address, method_abi_obj, receiver, amount
         )
         return self.account_manager[sender].send_transaction(transaction)
 
