@@ -79,7 +79,7 @@ class TokenManager(ManagerAccessMixin):
 
     def _get_contract_address(self, token: str = "eth") -> AddressType:
         network = self.provider.network.name
-        return AddressType(self.TOKEN_ADDRESS_MAP[token.lower()][network])
+        return AddressType(self.TOKEN_ADDRESS_MAP[token.lower()][network])  # type: ignore
 
     def _get_method_abi(self, method_name: str, token: str = "eth") -> Optional[Dict]:
         contract_address = self._get_contract_address(token=token)
@@ -92,8 +92,8 @@ class TokenManager(ManagerAccessMixin):
         ecosystem = self.provider.network.ecosystem
         transaction = ecosystem.encode_transaction(contract_address, method_abi)
         return_data = self.provider.send_call(transaction)
-        actual_contract_address_int = self.provider.network.ecosystem.decode_return_data(
-            return_data
+        actual_contract_address_int = self.provider.network.ecosystem.decode_returndata(
+            method_abi, return_data
         )
         actual_contract_address = self.provider.network.ecosystem.decode_address(
             actual_contract_address_int
