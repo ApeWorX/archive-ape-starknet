@@ -101,7 +101,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             # Fees / balances are currently not supported in local
             return 0
 
-        account = self.account_manager[address]
+        account = self.account_manager.containers["starknet"][address]
         account_contract_address = account.contract_address
         return self.token_manager.get_balance(account_contract_address)
 
@@ -117,8 +117,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     def get_nonce(self, address: str) -> int:
         # Check if passing a public-key address of a local account
         container = self.account_manager.containers["starknet"]
-        if address in container.public_key_addresses:
-            address = container[address].contract_address
+        if address in container.public_key_addresses:  # type: ignore
+            address = container[address].contract_address  # type: ignore
 
         contract = self.contract_at(address)
         return contract.get_nonce()
@@ -202,7 +202,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if txn.sender:
             # If using a sender, send the transaction from your sender's account contract.
             container = self.account_manager.containers["starknet"]
-            result = container[txn.sender].send_transaction(txn)
+            result = container[txn.sender].send_transaction(txn)  # type: ignore
         else:
             starknet_txn = txn.as_starknet_object()
             result = self.starknet_client.add_transaction_sync(starknet_txn)

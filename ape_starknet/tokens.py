@@ -75,7 +75,8 @@ class TokenManager(ManagerAccessMixin):
         transaction = self.provider.network.ecosystem.encode_transaction(
             contract_address, method_abi_obj, receiver, amount
         )
-        return self.account_manager[sender].send_transaction(transaction)
+        account = self.account_manager.containers["starknet"][sender]
+        return account.send_transaction(transaction)
 
     def _get_contract_address(self, token: str = "eth") -> AddressType:
         network = self.provider.network.name
