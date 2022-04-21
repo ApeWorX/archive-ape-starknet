@@ -75,7 +75,7 @@ class Starknet(EcosystemAPI):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_return_data(self, abi: MethodABI, raw_data: bytes) -> List[Any]:
+    def decode_returndata(self, abi: MethodABI, raw_data: bytes) -> List[Any]:
         if isinstance(raw_data, (list, tuple)) and len(raw_data) == 1:
             return raw_data[0]
 
@@ -114,7 +114,7 @@ class Starknet(EcosystemAPI):
             block_hash=data["block_hash"],
             events=data.get("events", []),
             contract_address=data.get("contract_address"),
-            receiver=data.get("receiver", ""),  # TODO: What should receiver be when Deploy?
+            receiver=data.get("receiver", ""),
         )
 
     def decode_block(self, data: dict) -> BlockAPI:
