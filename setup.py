@@ -45,9 +45,8 @@ with open("./README.md") as readme:
 
 setup(
     name="ape-starknet",
-    version="0.1.0a0",
-    # use_scm_version=True,
-    # setup_requires=["setuptools_scm"],
+    use_scm_version=True,
+    setup_requires=["setuptools_scm"],
     description="""ape-starknet: An ape plugin for the StarkNet networks""",
     long_description=long_description,
     long_description_content_type="text/markdown",
