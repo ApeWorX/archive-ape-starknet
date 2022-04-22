@@ -92,12 +92,11 @@ def handle_client_errors(f):
                     err_msg = err_msg.split("Error message: ")[-1]
                     if "Error at pc=" in err_msg:
                         err_msg = err_msg.split("Error at pc=")[0]
+                elif "error_message=" in err_msg:
+                    err_msg = err_msg.split("error_message=")[-1].strip("'")
 
-                    # Fix escaping newline issue with error message.
-                    err_msg = err_msg.replace("\\n", "")
-                else:
-                    err_msg = "Transaction failed."
-
+                # Fix escaping newline issue with error message.
+                err_msg = err_msg.replace("\\n", "")
                 raise ContractLogicError(revert_message=err_msg) from err
 
             raise  # Original exception

@@ -26,9 +26,6 @@ from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
-from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
-    TransactionInfo,
-)
 
 from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.provider import StarknetProvider
@@ -313,13 +310,15 @@ class BaseStarknetAccount(AccountAPI):
         return contract.deploy(sender=self)
 
     @handle_client_errors
-    def send_transaction(self, txn: TransactionAPI) -> TransactionInfo:
+    def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         if not isinstance(txn, StarknetTransaction):
             # Mostly for mypy
             raise AccountsError("Can only send Starknet transactions.")
 
         account_client = self.create_account_client()
-        return account_client.add_transaction_sync(txn.as_starknet_object())
+        txn_info = account_client.add_transaction_sync(txn.as_starknet_object())
+        txn_hash = txn_info["transaction_hash"]
+        return self.provider.get_transaction(txn_hash)
 
     def create_account_client(self) -> AccountClient:
         network = self.provider.network
