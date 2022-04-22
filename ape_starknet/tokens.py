@@ -43,6 +43,9 @@ class TokenManager(ManagerAccessMixin):
 
     def get_balance(self, account: AddressType, token: str = "eth") -> int:
         contract_address = self._get_contract_address(token=token)
+        if not contract_address:
+            return 0
+
         contract = self.provider.contract_at(contract_address)
         if "balanceOf" in [m.name for m in contract._contract_type.view_methods]:
             return contract.balanceOf(account)[0]
@@ -61,6 +64,9 @@ class TokenManager(ManagerAccessMixin):
 
     def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)
+        if not contract_address:
+            return
+
         contract = self.provider.contract_at(contract_address)
         sender_address = self.provider.network.ecosystem.decode_address(sender)
         if "transfer" in [m.name for m in contract._contract_type.mutable_methods]:
@@ -79,12 +85,15 @@ class TokenManager(ManagerAccessMixin):
         account = self.account_manager.containers["starknet"][sender_address]  # type: ignore
         return account.send_transaction(transaction)  # type: ignore
 
-    def _get_contract_address(self, token: str = "eth") -> AddressType:
+    def _get_contract_address(self, token: str = "eth") -> Optional[AddressType]:
         network = self.provider.network.name
-        return AddressType(self.TOKEN_ADDRESS_MAP[token.lower()][network])  # type: ignore
+        return AddressType(self.TOKEN_ADDRESS_MAP[token.lower()].get(network))  # type: ignore
 
     def _get_method_abi(self, method_name: str, token: str = "eth") -> Optional[Dict]:
         contract_address = self._get_contract_address(token=token)
+        if not contract_address:
+            return None
+
         abi = self.provider.get_abi(contract_address)
         implementation_abi = _select_method_abi("implementation", abi)
         if not implementation_abi:
