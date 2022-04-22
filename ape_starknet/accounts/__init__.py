@@ -251,11 +251,13 @@ class BaseStarknetAccount(AccountAPI):
 
     @property
     def contract_address(self) -> Optional[AddressType]:
-        network = self.provider.network
+        ecosystem = self.network_manager.ecosystems[PLUGIN_NAME]
         for deployment in self.get_deployments():
-            if deployment.network_name == network.name:
+            network_name = deployment.network_name
+            network = ecosystem.networks[network_name]
+            if network_name == network.name:
                 address = deployment.contract_address
-                return network.ecosystem.decode_address(address)
+                return ecosystem.decode_address(address)
 
         return None
 

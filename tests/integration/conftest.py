@@ -13,8 +13,9 @@ def ape_cli():
 class ApeStarknetCliRunner:
     runner = CliRunner()
 
-    def __init__(self, cli):
+    def __init__(self, cli, base_cmd: List[str]):
         self._cli = cli
+        self.base_cmd = base_cmd
 
     def invoke(self, *cmd, input=None, ensure_successful: bool = True):
         ape_cmd = self._get_cmd(*cmd)
@@ -28,11 +29,5 @@ class ApeStarknetCliRunner:
 
         return result.output
 
-    @staticmethod
-    def _get_cmd(*args) -> List[str]:
-        return ["starknet", "accounts", *args]
-
-
-@pytest.fixture
-def runner(ape_cli):
-    return ApeStarknetCliRunner(ape_cli)
+    def _get_cmd(self, *args) -> List[str]:
+        return [*self.base_cmd, *args]
