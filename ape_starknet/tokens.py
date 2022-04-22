@@ -62,8 +62,9 @@ class TokenManager(ManagerAccessMixin):
     def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)
         contract = self.provider.contract_at(contract_address)
+        sender_address = self.provider.network.ecosystem.decode_address(sender)
         if "transfer" in [m.name for m in contract._contract_type.mutable_methods]:
-            return contract.transfer(receiver, amount)
+            return contract.transfer(receiver, amount, sender=sender_address)
 
         # Handle proxy-implementation (not yet supported in ape-core)
         abi_name = "transfer"
@@ -72,15 +73,10 @@ class TokenManager(ManagerAccessMixin):
             raise ContractError(f"Contract has no method named '{abi_name}'.")
 
         method_abi_obj = MethodABI.parse_obj(method_abi)
-
-        for abi_input in method_abi_obj.inputs:
-            if abi_input.type == "Uint256":
-                abi_input.type = "felt"
-
         transaction = self.provider.network.ecosystem.encode_transaction(
             contract_address, method_abi_obj, receiver, amount
         )
-        account = self.account_manager.containers["starknet"][sender]  # type: ignore
+        account = self.account_manager.containers["starknet"][sender_address]  # type: ignore
         return account.send_transaction(transaction)  # type: ignore
 
     def _get_contract_address(self, token: str = "eth") -> AddressType:
