@@ -42,6 +42,11 @@ def accounts():
 
 
 @pytest.fixture(scope="session")
+def networks():
+    return ape.networks
+
+
+@pytest.fixture(scope="session")
 def project(request, config):
     here = Path(__file__).parent
     project_path = here / "projects" / "project"
