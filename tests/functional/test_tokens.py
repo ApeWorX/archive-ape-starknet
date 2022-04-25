@@ -1,4 +1,5 @@
 import pytest
+from ape.api.networks import LOCAL_NETWORK_NAME
 
 from ape_starknet import tokens as _tokens
 from tests.conftest import TOKEN_INITIAL_SUPPLY
@@ -6,7 +7,7 @@ from tests.conftest import TOKEN_INITIAL_SUPPLY
 
 @pytest.fixture
 def tokens(token_contract, provider, account):
-    _tokens.TOKEN_ADDRESS_MAP["test_token"]["local"] = token_contract.address
+    _tokens.TOKEN_ADDRESS_MAP["test_token"][LOCAL_NETWORK_NAME] = token_contract.address
     return _tokens
 
 
