@@ -1,11 +1,14 @@
 import pytest
+from ape.api.networks import LOCAL_NETWORK_NAME
 
 from .conftest import ApeStarknetCliRunner
 
 
 @pytest.fixture
 def console_runner(ape_cli):
-    return ApeStarknetCliRunner(ape_cli, ["console"])
+    return ApeStarknetCliRunner(
+        ape_cli, ["console", "--network", f"ethereum:{LOCAL_NETWORK_NAME}:test"]
+    )
 
 
 def test_console_accounts_object(ape_cli, console_runner, existing_key_file_account, networks):

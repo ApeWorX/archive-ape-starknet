@@ -21,14 +21,17 @@ from ape_starknet.provider import StarknetProvider
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
 ape.config.PROJECT_FOLDER = Path(mkdtemp()).resolve()
 
+_HERE = Path(__file__).parent
 projects_directory = Path(__file__).parent / "projects"
 project_names = [p.stem for p in projects_directory.iterdir() if p.is_dir()]
 ALIAS = "__TEST_ALIAS__"
+SECOND_ALIAS = "__TEST_ALIAS_2__"
 EXISTING_KEY_FILE_ALIAS = f"{ALIAS}existing_key_file"
 EXISTING_EPHEMERAL_ALIAS = f"{ALIAS}existing_ephemeral"
 PASSWORD = "123"
 PUBLIC_KEY = "140dfbab0d711a23dd58842be2ee16318e3de1c7"
 CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B387463a183"
+TOKEN_INITIAL_SUPPLY = 10000000000
 
 
 @pytest.fixture(scope="session")
@@ -48,14 +51,13 @@ def networks():
 
 @pytest.fixture(scope="session")
 def project(request, config):
-    here = Path(__file__).parent
-    project_path = here / "projects" / "project"
+    project_path = _HERE / "projects" / "project"
     os.chdir(project_path)
 
     with config.using_project(project_path):
         yield ape.project
 
-    os.chdir(here)
+    os.chdir(_HERE)
 
 
 @pytest.fixture(scope="module")
@@ -93,6 +95,14 @@ def account(account_container, provider):
     account_container.deploy_account(ALIAS)
     yield account_container.load(ALIAS)
     account_container.delete_account(ALIAS)
+
+
+@pytest.fixture(scope="session")
+def second_account(account_container, provider):
+    _ = provider  # Need connection to deploy account.
+    account_container.deploy_account(SECOND_ALIAS)
+    yield account_container.load(SECOND_ALIAS)
+    account_container.delete_account(SECOND_ALIAS)
 
 
 @pytest.fixture
@@ -214,3 +224,14 @@ def existing_ephemeral_account(config, ephemeral_account_data):
     return StarknetEphemeralAccount(
         account_key=EXISTING_EPHEMERAL_ALIAS, raw_account_data=ephemeral_account_data
     )
+
+
+@pytest.fixture
+def token_contract(config, account):
+    project_path = _HERE / "projects" / "token"
+    os.chdir(project_path)
+
+    with config.using_project(project_path):
+        yield ape.project.TestToken.deploy(
+            123123, 321321, TOKEN_INITIAL_SUPPLY, account.contract_address
+        )
