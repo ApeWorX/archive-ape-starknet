@@ -30,6 +30,7 @@ class TokenManager(ManagerAccessMixin):
             "mainnet": "0x06a09ccb1caaecf3d9683efe335a667b2169a409d19c589ba1eb771cd210af75",
         },
     }
+    DEFAULT_TOKEN = "eth"
 
     @property
     def provider(self) -> "StarknetProvider":

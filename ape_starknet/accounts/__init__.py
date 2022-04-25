@@ -14,7 +14,6 @@ from ape.types import AddressType, SignableMessage
 from ape.utils import abstractmethod
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
-from ethpm_types.abi import ConstructorABI
 from hexbytes import HexBytes
 from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.account_client import AccountClient  # type: ignore
@@ -25,7 +24,6 @@ from starknet_py.utils.crypto.cpp_bindings import ECSignature  # type: ignore
 from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
 
 from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
 from ape_starknet.provider import StarknetProvider
@@ -197,23 +195,11 @@ class StarknetAccountContracts(AccountContainerAPI):
         private_key = private_key or get_random_private_key()
         key_pair = KeyPair.from_private_key(private_key)
 
-        account_contract = ContractDefinition.loads(COMPILED_ACCOUNT_CONTRACT)
-        constructor_abi_data: Dict = next(
-            (member for member in account_contract.abi if member["type"] == "constructor"),
-            {},
+        contract_address = self.provider._deploy(  # type: ignore
+            COMPILED_ACCOUNT_CONTRACT, key_pair.public_key
         )
-
-        constructor_abi = ConstructorABI(**constructor_abi_data)
-        transaction = self.provider.network.ecosystem.encode_deployment(
-            HexBytes(account_contract.serialize()), constructor_abi, key_pair.public_key
-        )
-        receipt = self.provider.send_transaction(transaction)
-
-        if not receipt.contract_address:
-            raise AccountsError("Failed to deploy account contract.")
-
-        self.import_account(alias, network_name, receipt.contract_address, key_pair.private_key)
-        return receipt.contract_address
+        self.import_account(alias, network_name, contract_address, key_pair.private_key)
+        return contract_address
 
     def delete_account(
         self, alias: str, network: Optional[str] = None, passphrase: Optional[str] = None

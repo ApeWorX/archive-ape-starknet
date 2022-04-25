@@ -10,10 +10,12 @@ from ape.exceptions import ProviderError, ProviderNotConnectedError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
 from ethpm_types import ContractType
-from ethpm_types.abi import EventABI
+from ethpm_types.abi import ConstructorABI, EventABI
+from hexbytes import HexBytes
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
+from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
     DeploySpecificInfo,
     InvokeSpecificInfo,
@@ -239,6 +241,31 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         code = self._get_code(address)
         contract_type = ContractType.parse_obj(code)
         return ContractInstance(address, contract_type)  # type: ignore
+
+    def _deploy(self, contract_data: Union[str, Dict], *args) -> str:
+        """
+        Helper for deploying a Starknet-compiled artifact, such as imported
+        compiled account contracts from OZ.
+        """
+        if isinstance(contract_data, dict):
+            definition = ContractDefinition.load(contract_data)
+        else:
+            definition = ContractDefinition.loads(contract_data)
+
+        data: Dict = next(
+            (member for member in definition.abi if member["type"] == "constructor"),
+            {},
+        )
+        ctor_abi = ConstructorABI(**data)
+        transaction = self.provider.network.ecosystem.encode_deployment(
+            HexBytes(definition.serialize()), ctor_abi, *args
+        )
+        receipt = self.provider.send_transaction(transaction)
+        address = receipt.contract_address
+        if not address:
+            raise ProviderError("Failed to deploy contract.")
+
+        return address
 
 
 __all__ = ["StarknetProvider"]
