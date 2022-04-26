@@ -58,7 +58,7 @@ setup(
         "ecdsa",  # Not directly used, but part of install instructions for cairo-lang
         "fastecdsa",  # Not directly used, but part of install instructions for cairo-lang
         "sympy",  # Not directly used, but part of install instructions for cairo-lang
-        "cairo-lang>=0.8.1,<0.9",
+        "cairo-lang",
         "hexbytes>=0.2.2,<1.0.0",
         "pytest>=6.0,<7.0",  # For 'ape test' integration
         "pytest-asyncio",  # For 'ape test' integration
