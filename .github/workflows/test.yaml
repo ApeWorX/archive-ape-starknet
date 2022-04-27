@@ -52,10 +52,8 @@ jobs:
 
         strategy:
             matrix:
-                #os: [ubuntu-latest, macos-latest]   # eventually add `windows-latest`
-                #python-version: [3.7, 3.8]
-                os: [macos-latest]
-                python-version: [3.7]
+                os: [ubuntu-latest, macos-latest]   # eventually add `windows-latest`
+                python-version: [3.7, 3.8]
 
         steps:
         - uses: actions/checkout@v2
@@ -71,4 +69,6 @@ jobs:
             pip install .[test]
 
         - name: Run Tests
-          run: pytest -m "not fuzzing" -n 0 -s --cov
+          run: |
+            echo "DEVNET_PORT=8545" >> $GITHUB_ENV
+            pytest -m "not fuzzing" -n 0 -s --cov
