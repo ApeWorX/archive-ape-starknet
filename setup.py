@@ -58,22 +58,22 @@ setup(
         "ecdsa",  # Not directly used, but part of install instructions for cairo-lang
         "fastecdsa",  # Not directly used, but part of install instructions for cairo-lang
         "sympy",  # Not directly used, but part of install instructions for cairo-lang
-        "cairo-lang>=0.8.0,<0.9",
+        "cairo-lang",
         "hexbytes>=0.2.2,<1.0.0",
         "pytest>=6.0,<7.0",  # For 'ape test' integration
         "pytest-asyncio",  # For 'ape test' integration
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
-        "ethpm-types>=0.1.1,<0.2.0",
+        "ethpm-types>=0.1.1,<0.3.0",
         "eth-ape>=0.2.1,<0.3.0",
         "pydantic>=1.9.0,<2.0",
-        "starknet.py>=0.2.0a0,<0.3.0",
-        "starknet-devnet>=0.1.19,<0.2",
+        "starknet.py==0.2.2a0",
+        "starknet-devnet>=0.1.23",
         "importlib-metadata ; python_version<'3.8'",
     ],  # NOTE: Add 3rd party libraries here
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
-    python_requires=">=3.7.2,<3.10",
+    python_requires=">=3.7.2,<3.9",
     extras_require=extras_require,
     py_modules=["ape_starknet"],
     license="Apache-2.0",
@@ -91,6 +91,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
     ],
 )

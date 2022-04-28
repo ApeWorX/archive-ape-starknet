@@ -94,7 +94,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
         method_abi = self.method_abi.dict()
         contract_address = ecosystem.encode_address(self.receiver)
         contract_abi = self.provider.get_abi(contract_address)
-        call_data = ecosystem.encode_call_data(contract_abi, method_abi, self.data)
+        call_data = ecosystem.encode_calldata(contract_abi, method_abi, self.data)
         selector = get_selector_from_name(method_abi["name"])
         return InvokeFunction(
             contract_address=contract_address,

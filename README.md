@@ -40,7 +40,7 @@ You can deploy the same account to multiple networks.
 ape starknet accounts create <ALIAS> --network starknet:mainnet
 ```
 
-Now, when you look at this account, you will see it has multiple contract addresses:
+See your accounts and all of their deployment addresses:
 
 ```bash
 ape starknet accounts list
@@ -58,8 +58,22 @@ Contract address (mainnet) - 0x7873113A4111e5B2229c3332B66696388163440A373333143
 Import an existing account:
 
 ```bash
-ape starknet accounts import <ALIAS> --address 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183 --network testnet
+ape starknet accounts import <ALIAS> --address 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183 --network starknet:testnet
 ```
+
+You can also import an account by key-file, including a key-file you exported from your [Argent-X browser wallet](https://www.argent.xyz/argent-x/):
+
+```bash
+ape starknet accounts import <ALIAS> --keyfile path/to/keyfile.json
+```
+
+You can also delete accounts:
+
+```bash
+ape starknet accounts delete <ALIAS> --network starknet:testnet
+```
+
+**NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
 ## Development
 

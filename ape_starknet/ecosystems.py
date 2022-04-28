@@ -81,7 +81,7 @@ class Starknet(EcosystemAPI):
 
         return raw_data  # type: ignore
 
-    def encode_call_data(
+    def encode_calldata(
         self, full_abi: List, entry_point_abi: Dict, call_args: Union[List, Tuple]
     ) -> List:
         id_manager = identifier_manager_from_abi(full_abi)
@@ -134,7 +134,7 @@ class Starknet(EcosystemAPI):
             salt = ContractAddressSalt.get_random_value()
 
         contract = ContractDefinition.deserialize(deployment_bytecode)
-        calldata = self.encode_call_data(contract.abi, abi.dict(), args)
+        calldata = self.encode_calldata(contract.abi, abi.dict(), args)
         return DeployTransaction(
             salt=salt, constructor_calldata=calldata, contract_code=contract.dumps()
         )
