@@ -302,7 +302,8 @@ class BaseStarknetAccount(AccountAPI):
             raise AccountsError("Can only send Starknet transactions.")
 
         account_client = self.create_account_client()
-        txn_info = account_client.add_transaction_sync(txn.as_starknet_object())
+        starknet_txn = txn.as_starknet_object()
+        txn_info = account_client.add_transaction_sync(starknet_txn)
         txn_hash = txn_info["transaction_hash"]
         return self.provider.get_transaction(txn_hash)
 
