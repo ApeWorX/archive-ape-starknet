@@ -32,7 +32,8 @@ def accounts():
 @ape_cli_context()
 @click.argument("alias")
 @network_option(ecosystem=PLUGIN_NAME)
-def create(cli_ctx, alias, network):
+@click.option("--token", help="Used for deploying contracts in Alpha MainNet.")
+def create(cli_ctx, alias, network, token):
     """Deploy an account"""
     container = _get_container(cli_ctx)
 
@@ -47,7 +48,7 @@ def create(cli_ctx, alias, network):
                 "first to re-deploy."
             )
 
-    contract_address = container.deploy_account(alias)
+    contract_address = container.deploy_account(alias, token=token)
     contract_address = click.style(contract_address, bold=True)
     cli_ctx.logger.success(f"Account successfully deployed to '{contract_address}'.")
 
