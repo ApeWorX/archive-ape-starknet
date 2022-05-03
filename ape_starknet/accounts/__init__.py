@@ -306,7 +306,11 @@ class BaseStarknetAccount(AccountAPI):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
-        token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
+        if not token and hasattr(txn, "token") and txn.token:  # type: ignore
+            token = txn.token  # type: ignore
+        else:
+            token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
+
         if not isinstance(txn, StarknetTransaction):
             # Mostly for mypy
             raise AccountsError("Can only send Starknet transactions.")
