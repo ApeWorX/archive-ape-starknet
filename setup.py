@@ -66,7 +66,7 @@ setup(
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
         "ethpm-types>=0.1.1,<0.3.0",
-        "eth-ape>=0.2.1,<0.3.0",
+        "eth-ape>=0.2.2,<0.3.0",
         "pydantic>=1.9.0,<2.0",
         "starknet.py==0.2.2a0",
         "starknet-devnet>=0.1.23",
