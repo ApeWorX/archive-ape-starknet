@@ -202,8 +202,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
         txn = self.prepare_transaction(txn)
-        if not token and hasattr(txn, "token") and txn.token:
-            token = txn.token
+        if not token and hasattr(txn, "token") and txn.token:  # type: ignore
+            token = txn.token  # type: ignore
         else:
             token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
 
