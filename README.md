@@ -28,6 +28,8 @@ python3 setup.py install
 
 ## Quick Usage
 
+### Account Management
+
 Deploy a new account:
 
 ```bash
@@ -74,6 +76,29 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 ```
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
+
+### Mainnet Alpha Whitelist Deployment Token
+
+Currently, to deploy to Alpha-Mainnet, your contract needs to be whitelisted.
+You can provide your WL token in a variety of ways.
+
+Via Python code:
+
+```python
+my_contract = project.MyContract.deploy(token="MY_TOKEN")
+```
+
+Via an Environment Variable:
+
+```bash
+export ALPHA_MAINNET_WL_DEPLOY_TOKEN="MY_TOKEN"
+```
+
+Or, via the `--token` flag when deploying an account:
+
+```bash
+ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
+```
 
 ## Development
 

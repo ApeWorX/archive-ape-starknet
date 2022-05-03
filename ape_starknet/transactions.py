@@ -52,6 +52,7 @@ class DeployTransaction(StarknetTransaction):
     salt: int
     constructor_calldata: List[int] = []
     caller_address: int = 0
+    token: Optional[str] = None
 
     """Aliases"""
     data: bytes = Field(alias="contract_code")  # type: ignore

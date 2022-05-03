@@ -25,6 +25,7 @@ NETWORKS = {
 }
 _HEX_ADDRESS_REG_EXP = re.compile("(0x)?[0-9a-f]*", re.IGNORECASE | re.ASCII)
 """Same as from eth-utils except not limited length."""
+ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
 
 
 def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:

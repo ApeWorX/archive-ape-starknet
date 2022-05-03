@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -21,7 +22,12 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     InvokeSpecificInfo,
 )
 
-from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
+from ape_starknet._utils import (
+    ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
+    PLUGIN_NAME,
+    get_chain_id,
+    handle_client_errors,
+)
 from ape_starknet.config import StarknetConfig
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
@@ -194,8 +200,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         return self.network.ecosystem.decode_receipt(receipt_dict)
 
     @handle_client_errors
-    def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
+    def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
         txn = self.prepare_transaction(txn)
+        if not token and hasattr(txn, "token") and txn.token:
+            token = txn.token
+        else:
+            token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
+
         if not isinstance(txn, StarknetTransaction):
             raise ProviderError(
                 "Unable to send non-Starknet transaction using a Starknet provider."
@@ -204,10 +215,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if txn.sender:
             # If using a sender, send the transaction from your sender's account contract.
             container = self.account_manager.containers["starknet"]
-            return container[txn.sender].send_transaction(txn)  # type: ignore
+            return container[txn.sender].send_transaction(txn, token=token)  # type: ignore
         else:
             starknet_txn = txn.as_starknet_object()
-            result = self.starknet_client.add_transaction_sync(starknet_txn)
+            result = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
             txn_hash = result["transaction_hash"]
             return self.get_transaction(txn_hash)
 
@@ -242,7 +253,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         contract_type = ContractType.parse_obj(code)
         return ContractInstance(address, contract_type)  # type: ignore
 
-    def _deploy(self, contract_data: Union[str, Dict], *args) -> str:
+    def _deploy(self, contract_data: Union[str, Dict], *args, token: Optional[str] = None) -> str:
         """
         Helper for deploying a Starknet-compiled artifact, such as imported
         compiled account contracts from OZ.
@@ -257,10 +268,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             {},
         )
         ctor_abi = ConstructorABI(**data)
-        transaction = self.provider.network.ecosystem.encode_deployment(
+        transaction = self.network.ecosystem.encode_deployment(
             HexBytes(definition.serialize()), ctor_abi, *args
         )
-        receipt = self.provider.send_transaction(transaction)
+        wl_token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
+        receipt = self.send_transaction(transaction, token=wl_token)
         address = receipt.contract_address
         if not address:
             raise ProviderError("Failed to deploy contract.")

@@ -136,7 +136,10 @@ class Starknet(EcosystemAPI):
         contract = ContractDefinition.deserialize(deployment_bytecode)
         calldata = self.encode_calldata(contract.abi, abi.dict(), args)
         return DeployTransaction(
-            salt=salt, constructor_calldata=calldata, contract_code=contract.dumps()
+            salt=salt,
+            constructor_calldata=calldata,
+            contract_code=contract.dumps(),
+            token=kwargs.get("token"),
         )
 
     def encode_transaction(
