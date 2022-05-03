@@ -1,4 +1,5 @@
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
@@ -25,7 +26,12 @@ from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 
-from ape_starknet._utils import PLUGIN_NAME, get_chain_id, handle_client_errors
+from ape_starknet._utils import (
+    ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
+    PLUGIN_NAME,
+    get_chain_id,
+    handle_client_errors,
+)
 from ape_starknet.provider import StarknetProvider
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
@@ -174,13 +180,16 @@ class StarknetAccountContracts(AccountContainerAPI):
             new_account = StarknetKeyfileAccount(key_file_path=path)
             new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
 
-    def deploy_account(self, alias: str, private_key: Optional[int] = None) -> str:
+    def deploy_account(
+        self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
+    ) -> str:
         """
         Deploys an account contract for the given alias.
 
         Args:
             alias (str): The alias to use to reference the account in ``ape``.
             private_key (Optional[int]): Optionally provide your own private key.`
+            token (Optional[str]): Used for deploying contracts in Alpha MainNet.
 
         Returns:
             str: The contract address of the account.
@@ -196,7 +205,7 @@ class StarknetAccountContracts(AccountContainerAPI):
         key_pair = KeyPair.from_private_key(private_key)
 
         contract_address = self.provider._deploy(  # type: ignore
-            COMPILED_ACCOUNT_CONTRACT, key_pair.public_key
+            COMPILED_ACCOUNT_CONTRACT, key_pair.public_key, token=token
         )
         self.import_account(alias, network_name, contract_address, key_pair.private_key)
         return contract_address
@@ -296,14 +305,19 @@ class BaseStarknetAccount(AccountAPI):
         return contract.deploy(sender=self)
 
     @handle_client_errors
-    def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
+    def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
+        if not token and hasattr(txn, "token") and txn.token:  # type: ignore
+            token = txn.token  # type: ignore
+        else:
+            token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
+
         if not isinstance(txn, StarknetTransaction):
             # Mostly for mypy
             raise AccountsError("Can only send Starknet transactions.")
 
         account_client = self.create_account_client()
         starknet_txn = txn.as_starknet_object()
-        txn_info = account_client.add_transaction_sync(starknet_txn)
+        txn_info = account_client.add_transaction_sync(starknet_txn, token=token)
         txn_hash = txn_info["transaction_hash"]
         return self.provider.get_transaction(txn_hash)
 
