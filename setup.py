@@ -12,7 +12,7 @@ extras_require = {
     ],
     "lint": [
         "black>=22.3.0,<23.0",  # auto-formatter and linter
-        "mypy>=0.910,<1.0",  # Static type analyzer
+        "mypy>=0.950,<1.0",  # Static type analyzer
         "flake8>=3.9.2,<4.0",  # Style linter
         "isort>=5.10.1,<6.0",  # Import sorting linter
         "types-pkg-resources>=0.1.3,<0.2",
@@ -65,8 +65,8 @@ setup(
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
-        "ethpm-types>=0.1.1,<0.3.0",
-        "eth-ape>=0.2.2,<0.3.0",
+        "eth-ape>=0.2.4,<0.3.0",
+        "ethpm-types",  # Use same as `eth-ape`.
         "pydantic>=1.9.0,<2.0",
         "starknet.py==0.2.2a0",
         "starknet-devnet>=0.1.23",
