@@ -82,21 +82,45 @@ class Starknet(EcosystemAPI):
         return raw_data  # type: ignore
 
     def encode_calldata(
-        self, full_abi: List, entry_point_abi: Dict, call_args: Union[List, Tuple]
+        self,
+        full_abi: List,
+        method_abi: Union[ConstructorABI, MethodABI],
+        call_args: Union[List, Tuple],
     ) -> List:
+        def encode_primitive_value(val):
+            if isinstance(val, str) and is_0x_prefixed(val):
+                return int(val, 16)
+            elif isinstance(val, HexBytes):
+                return int(val.hex(), 16)
+
+            return val
+
         id_manager = identifier_manager_from_abi(full_abi)
-        transformer = DataTransformer(entry_point_abi, id_manager)
+        transformer = DataTransformer(method_abi.dict(), id_manager)
+        encoded_args = []
+        index = 0
+        last_index = len(method_abi.inputs) - 1
+        for call_arg, input_type in zip(call_args, method_abi.inputs):
+            if str(input_type.type).endswith("*"):
+                # (arrays) Was processed the iteration before.
+                continue
 
-        cleaned_args = []
-        for arg in call_args:
-            if isinstance(arg, str) and is_0x_prefixed(arg):
-                cleaned_args.append(int(arg, 16))
-            elif isinstance(arg, HexBytes):
-                cleaned_args.append(int(arg.hex(), 16))
+            elif (
+                input_type.name == "arr_len"
+                and index < last_index
+                and str(method_abi.inputs[index + 1].type).endswith("*")
+            ):
+                # Handle arrays.
+                array_arg = [encode_primitive_value(v) for v in call_args[index + 1]]
+                encoded_args.append(array_arg)
+
             else:
-                cleaned_args.append(arg)
+                encoded_arg = encode_primitive_value(call_arg)
+                encoded_args.append(encoded_arg)
 
-        calldata, _ = transformer.from_python(*cleaned_args)
+            index += 1
+
+        calldata, _ = transformer.from_python(*encoded_args)
         return calldata
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
@@ -134,7 +158,7 @@ class Starknet(EcosystemAPI):
             salt = ContractAddressSalt.get_random_value()
 
         contract = ContractDefinition.deserialize(deployment_bytecode)
-        calldata = self.encode_calldata(contract.abi, abi.dict(), args)
+        calldata = self.encode_calldata(contract.abi, abi, args)
         return DeployTransaction(
             salt=salt,
             constructor_calldata=calldata,
