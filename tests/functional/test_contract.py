@@ -67,6 +67,9 @@ def test_revert_no_message(contract, account):
 
 
 def test_array_inputs(contract, account):
-    # This test makes sure we can pass python lists as argumentso
+    # This test makes sure we can pass python lists as arguments
     # to Cairo methods that accept arrays.
-    assert contract.array_sum([1, 2, 3]) == 6
+    contract.store_sum(3, [1, 2, 3])
+    actual = contract.get_last_sum()
+    expected = 6
+    assert actual == expected
