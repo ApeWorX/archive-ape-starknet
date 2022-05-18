@@ -114,7 +114,7 @@ The ``deploy`` method returns a contract instance from which you can call method
 
 ```python
 receipt = contract.my_mutable_method(123)
-value = contract.my_vew_method()
+value = contract.my_view_method()
 ```
 
 Include a sender to delegate the transaction to an account contract:
