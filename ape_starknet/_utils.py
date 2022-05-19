@@ -32,10 +32,10 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
     if isinstance(network_id, int):
         return StarknetChainId(network_id)
 
-    if network_id == LOCAL_NETWORK_NAME:
+    elif network_id == LOCAL_NETWORK_NAME:
         return StarknetChainId.TESTNET  # Use TESTNET chain ID for local network
 
-    if network_id not in NETWORKS:
+    elif network_id not in NETWORKS:
         raise ValueError(f"Unknown network '{network_id}'.")
 
     return StarknetChainId(NETWORKS[network_id][0])
