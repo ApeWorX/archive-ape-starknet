@@ -8,9 +8,12 @@ from starkware.cairo.common.signature import (
     verify_ecdsa_signature)
 from starkware.cairo.common.bool import TRUE, FALSE
 
-# Define a storage variable.
 @storage_var
 func balance(user : felt) -> (res : felt):
+end
+
+@storage_var
+func last_sum() -> (sum: felt):
 end
 
 @storage_var
@@ -58,6 +61,33 @@ func increase_balance{
     balance.write(user, res + amount)
     balance_increased.emit(amount)
     return ()
+end
+
+@external
+func store_sum{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}(arr_len: felt, arr : felt*) -> (sum):
+    let (calc) = array_sum(arr_len, arr)
+    last_sum.write(calc)
+    return (calc)
+end
+
+func array_sum(arr_len: felt, arr : felt*) -> (sum):
+    if arr_len == 0:
+        return (sum=0)
+    end
+
+    # size is not zero.
+    let (sum_of_rest) = array_sum(arr_len=arr_len - 1, arr=arr + 1)
+    return (sum=[arr] + sum_of_rest)
+end
+
+@view
+func get_last_sum{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (res : felt):
+    let (res) = last_sum.read()
+    return (res)
 end
 
 # Increases the balance of the given user by the given amount.

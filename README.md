@@ -100,6 +100,38 @@ Or, via the `--token` flag when deploying an account:
 ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
 ```
 
+### Contracts
+
+First, deploy your contract:
+
+```python
+from ape import project
+
+contract = project.MyContract.deploy()
+```
+
+The ``deploy`` method returns a contract instance from which you can call methods on:
+
+```python
+receipt = contract.my_mutable_method(123)
+value = contract.my_view_method()
+```
+
+Include a sender to delegate the transaction to an account contract:
+
+```python
+from ape import accounts
+
+account = accounts.load("my_account")
+receipt = contract.my_mutable_method(123, sender=account)
+```
+
+**NOTE**: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:
+
+```python
+receipt = contract.store_my_list(3, [1, 2, 3])
+```
+
 ## Development
 
 This project is in development and should be considered a beta.
