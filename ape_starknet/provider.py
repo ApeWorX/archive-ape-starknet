@@ -7,7 +7,7 @@ from urllib.request import urlopen
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
-from ape.exceptions import ProviderError, ProviderNotConnectedError
+from ape.exceptions import ProviderError, ProviderNotConnectedError, VirtualMachineError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
 from ethpm_types import ContractType
@@ -26,6 +26,7 @@ from ape_starknet._utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     PLUGIN_NAME,
     get_chain_id,
+    get_virtual_machine_error,
     handle_client_errors,
 )
 from ape_starknet.config import StarknetConfig
@@ -240,6 +241,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             txn.max_fee = self.estimate_gas_cost(txn)
 
         return txn
+
+    def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
+        return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
     def _get_code(self, address: Union[str, AddressType]):
         address_int = parse_address(address)

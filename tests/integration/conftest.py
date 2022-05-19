@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Union
 
 import pytest
 from ape._cli import cli
@@ -17,11 +17,14 @@ class ApeStarknetCliRunner:
         self._cli = cli
         self.base_cmd = base_cmd
 
-    def invoke(self, *cmd, input=None, ensure_successful: bool = True):
+    def invoke(
+        self, *cmd, input: Optional[Union[str, List[str]]] = None, ensure_successful: bool = True
+    ):
+        input_str = "\n".join(input) if isinstance(input, list) else (input or "")
         ape_cmd = self._get_cmd(*cmd)
         catch_exceptions = not ensure_successful
         result = self.runner.invoke(
-            self._cli, ape_cmd, catch_exceptions=catch_exceptions, input=input
+            self._cli, ape_cmd, catch_exceptions=catch_exceptions, input=input_str
         )
 
         if ensure_successful:
