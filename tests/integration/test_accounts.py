@@ -61,7 +61,7 @@ def test_delete(accounts_runner, existing_key_file_account):
         EXISTING_KEY_FILE_ALIAS,
         "--network",
         "starknet:testnet",
-        input=f"{PASSWORD}\n",
+        input=PASSWORD,
     )
     assert EXISTING_KEY_FILE_ALIAS in output
     output = accounts_runner.invoke("list")
@@ -93,7 +93,7 @@ def test_delete(accounts_runner, existing_key_file_account):
         "starknet:testnet",
         "--address",
         CONTRACT_ADDRESS,
-        input=f"{PASSWORD}\n",
+        input=PASSWORD,
     )
 
 
@@ -106,7 +106,6 @@ def test_import(accounts_runner, existing_key_file_account, account_container):
         account_path.unlink()
 
     private_key = str(CONTRACT_ADDRESS)
-    valid_input = f"{private_key}\n{PASSWORD}\n{PASSWORD}"
     accounts_runner.invoke(
         "import",
         NEW_ALIAS,
@@ -114,7 +113,7 @@ def test_import(accounts_runner, existing_key_file_account, account_container):
         network,
         "--address",
         CONTRACT_ADDRESS,
-        input=valid_input,
+        input=[private_key, PASSWORD, PASSWORD],
     )
 
     # Clean-up
@@ -123,7 +122,7 @@ def test_import(accounts_runner, existing_key_file_account, account_container):
         NEW_ALIAS,
         "--network",
         network,
-        input=f"{PASSWORD}\ny\n",
+        input=[PASSWORD, "y"],
     )
 
 
@@ -140,7 +139,7 @@ def test_import_argent_x_key_file(accounts_runner, argent_x_backup, account_cont
         alias,
         "--keyfile",
         str(argent_x_backup),
-        input=f"{PASSWORD}\n",
+        input=PASSWORD,
     )
     assert "SUCCESS" in output
     account_path.unlink()
@@ -158,10 +157,8 @@ def test_core_accounts_list_all(root_accounts_runner, existing_key_file_account)
 def test_change_password(accounts_runner, existing_key_file_account):
     new_password = "321"
     assert "SUCCESS" in accounts_runner.invoke(
-        "change-password",
-        EXISTING_KEY_FILE_ALIAS,
-        input=f"{PASSWORD}\n{new_password}\n{new_password}",
+        "change-password", EXISTING_KEY_FILE_ALIAS, input=[PASSWORD, new_password, new_password]
     )
     assert "SUCCESS" in accounts_runner.invoke(
-        "change-password", EXISTING_KEY_FILE_ALIAS, input=f"{new_password}\n{PASSWORD}\n{PASSWORD}"
+        "change-password", EXISTING_KEY_FILE_ALIAS, input=[new_password, PASSWORD, PASSWORD]
     )

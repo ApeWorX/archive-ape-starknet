@@ -47,7 +47,14 @@ class TokenManager(ManagerAccessMixin):
             return 0
 
         contract = self.provider.contract_at(contract_address)
-        if "balanceOf" in [m.name for m in contract._contract_type.view_methods]:
+
+        contract_type = (
+            contract._contract_type
+            if hasattr(contract, "_contract_type")
+            else contract.contract_type
+        )
+
+        if "balanceOf" in [m.name for m in contract_type.view_methods]:
             return contract.balanceOf(account)[0]
 
         # Handle proxy-implementation (not yet supported in ape-core)
@@ -69,7 +76,14 @@ class TokenManager(ManagerAccessMixin):
 
         contract = self.provider.contract_at(contract_address)
         sender_address = self.provider.network.ecosystem.decode_address(sender)
-        if "transfer" in [m.name for m in contract._contract_type.mutable_methods]:
+
+        contract_type = (
+            contract._contract_type
+            if hasattr(contract, "_contract_type")
+            else contract.contract_type
+        )
+
+        if "transfer" in [m.name for m in contract_type.mutable_methods]:
             return contract.transfer(receiver, amount, sender=sender_address)
 
         # Handle proxy-implementation (not yet supported in ape-core)
