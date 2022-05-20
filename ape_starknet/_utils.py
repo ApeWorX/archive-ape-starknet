@@ -1,8 +1,14 @@
 import re
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import AddressError, ApeException, ContractLogicError, ProviderError
+from ape.exceptions import (
+    AddressError,
+    ApeException,
+    ContractLogicError,
+    ProviderError,
+    VirtualMachineError,
+)
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -32,10 +38,10 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
     if isinstance(network_id, int):
         return StarknetChainId(network_id)
 
-    if network_id == LOCAL_NETWORK_NAME:
+    elif network_id == LOCAL_NETWORK_NAME:
         return StarknetChainId.TESTNET  # Use TESTNET chain ID for local network
 
-    if network_id not in NETWORKS:
+    elif network_id not in NETWORKS:
         raise ValueError(f"Unknown network '{network_id}'.")
 
     return StarknetChainId(NETWORKS[network_id][0])
@@ -87,19 +93,27 @@ def handle_client_errors(f):
             # Don't catch ApeExceptions, let them raise as they would.
             raise
         except Exception as err:
-            err_msg = str(err)
-            if "rejected" in err_msg:
-                if "Error message: " in err_msg:
-                    err_msg = err_msg.split("Error message: ")[-1]
-                    if "Error at pc=" in err_msg:
-                        err_msg = err_msg.split("Error at pc=")[0]
-                elif "error_message=" in err_msg:
-                    err_msg = err_msg.split("error_message=")[-1].strip("'")
-
-                # Fix escaping newline issue with error message.
-                err_msg = err_msg.replace("\\n", "")
-                raise ContractLogicError(revert_message=err_msg) from err
+            vm_error = get_virtual_machine_error(err)
+            if vm_error:
+                raise vm_error from err
 
             raise  # Original exception
 
     return func
+
+
+def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
+    err_msg = str(err)
+    if "rejected" not in err_msg:
+        return None
+
+    if "Error message: " in err_msg:
+        err_msg = err_msg.split("Error message: ")[-1]
+        if "Error at pc=" in err_msg:
+            err_msg = err_msg.split("Error at pc=")[0]
+    elif "error_message=" in err_msg:
+        err_msg = err_msg.split("error_message=")[-1].strip("'")
+
+    # Fix escaping newline issue with error message.
+    err_msg = err_msg.replace("\\n", "").strip()
+    return ContractLogicError(revert_message=err_msg)
