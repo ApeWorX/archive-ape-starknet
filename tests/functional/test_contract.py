@@ -47,7 +47,7 @@ def test_decode_logs(contract, account, ecosystem):
     assert len(logs) == 1
     assert logs[0].amount == increase_amount
 
-    from_address = logs[0].from_address
+    from_address = receipt.logs[0]["from_address"]
     log_sender_address = ecosystem.decode_address(from_address)
     assert log_sender_address == contract.address
 

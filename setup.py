@@ -69,7 +69,7 @@ setup(
         "ethpm-types",  # Use same as `eth-ape`.
         "pydantic>=1.9.0,<2.0",
         "starknet.py>=0.2.3a0,<0.2.4",
-        "starknet-devnet>=0.2.2",
+        "starknet-devnet==0.2.1",
         "importlib-metadata ; python_version<'3.8'",
     ],  # NOTE: Add 3rd party libraries here
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
