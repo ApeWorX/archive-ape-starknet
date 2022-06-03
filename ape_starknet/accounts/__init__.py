@@ -9,7 +9,7 @@ from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
-from ape.exceptions import AccountsError
+from ape.exceptions import AccountsError, ProviderError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage
 from ape.utils import abstractmethod
@@ -179,8 +179,15 @@ class StarknetAccountContracts(AccountContainerAPI):
             new_account = StarknetKeyfileAccount(key_file_path=path)
             new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
 
-        contract_type = self.provider.network.explorer.get_contract_type(contract_address)
-        self.chain_manager.contracts[contract_address] = contract_type
+        ecosystem = self.network_manager.starknet
+        address = ecosystem.decode_address(contract_address)
+
+        try:
+            contract_type = self.provider.network.explorer.get_contract_type(address)
+            self.chain_manager.contracts[address] = contract_type
+        except ProviderError:
+            # Unable to store contract type.
+            pass
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None

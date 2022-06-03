@@ -80,8 +80,11 @@ def test_array_inputs(contract, account):
 def test_unable_to_afford_transaction(contract, account, provider):
     # This also indirectly tests `estimate_gas_cost()`.
 
-    provider.default_gas_cost = 123321123321
-    with pytest.raises(AccountsError) as err:
-        contract.increase_balance(account.address, 1, sender=account)
+    try:
+        provider.default_gas_cost = 123321123321
+        with pytest.raises(AccountsError) as err:
+            contract.increase_balance(account.address, 1, sender=account)
 
-    assert "Transfer value meets or exceeds account balance." in str(err.value)
+        assert "Transfer value meets or exceeds account balance." in str(err.value)
+    finally:
+        provider.default_gas_cost = 0
