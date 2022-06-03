@@ -34,7 +34,7 @@ def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     contract.increase_balance(account.address, increase_amount, sender=account)
 
-    # Verify the storage variables was updated.
+    # Verify the storage variable was updated.
     actual = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual == expected
