@@ -147,7 +147,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             raise ProviderNotConnectedError()
 
         result = self.client.estimate_fee_sync(starknet_object)
-        breakpoint()
         return result
 
     @property
