@@ -6,6 +6,7 @@ from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractInstance
 from ape.exceptions import ProviderError, ProviderNotConnectedError, VirtualMachineError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
@@ -129,7 +130,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if address in container.public_key_addresses:  # type: ignore
             address = container[address].contract_address  # type: ignore
 
-        contract = self.chain_manager.contracts.instance_at(address)
+        checksum_address = self.network.ecosystem.decode_address(address)
+        contract = self.chain_manager.contracts.instance_at(checksum_address)
+
+        if not isinstance(contract, ContractInstance):
+            raise ProviderError(f"Account contract '{checksum_address}' not found.")
+
         return contract.get_nonce()
 
     @handle_client_errors
