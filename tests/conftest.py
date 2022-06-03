@@ -51,6 +51,11 @@ def networks():
 
 
 @pytest.fixture(scope="session")
+def chain():
+    return ape.chain
+
+
+@pytest.fixture(scope="session")
 def project(request, config):
     project_path = _HERE / "projects" / "project"
     build_dir = project_path / ".build"
@@ -236,11 +241,16 @@ def existing_ephemeral_account(config, ephemeral_account_data):
 
 
 @pytest.fixture
-def token_contract(config, account):
+def token_initial_supply():
+    return TOKEN_INITIAL_SUPPLY
+
+
+@pytest.fixture
+def token_contract(config, account, token_initial_supply):
     project_path = _HERE / "projects" / "token"
     os.chdir(project_path)
 
     with config.using_project(project_path):
         yield ape.project.TestToken.deploy(
-            123123, 321321, TOKEN_INITIAL_SUPPLY, account.contract_address
+            123123, 321321, token_initial_supply, account.contract_address
         )

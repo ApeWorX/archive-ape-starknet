@@ -77,30 +77,17 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
-### Mainnet Alpha Whitelist Deployment Token
+### Contract Interaction
 
-Currently, to deploy to Alpha-Mainnet, your contract needs to be whitelisted.
-You can provide your WL token in a variety of ways.
-
-Via Python code:
+You can deploy contracts by doing:
 
 ```python
-my_contract = project.MyContract.deploy(token="MY_TOKEN")
+from ape import project
+
+my_contract = project.MyContract.deploy()
 ```
 
-Via an Environment Variable:
-
-```bash
-export ALPHA_MAINNET_WL_DEPLOY_TOKEN="MY_TOKEN"
-```
-
-Or, via the `--token` flag when deploying an account:
-
-```bash
-ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
-```
-
-### Contracts
+### Contract Interaction
 
 First, deploy your contract:
 
@@ -130,6 +117,55 @@ receipt = contract.my_mutable_method(123, sender=account)
 
 ```python
 receipt = contract.store_my_list(3, [1, 2, 3])
+```
+
+### Paying Fees
+
+Starknet fees are currently paid in ETH, which is an ERC-20 on the Starknet chain.
+To check your account balance (in ETH), use the `balance` property on the account:
+
+```python
+from ape import accounts
+
+acct = accounts.load("Alias")
+print(acct.balance)
+```
+
+If your account has a positive balance, you can begin paying fees!
+
+To pay fees, you can either manually set the `max_fee` kwarg on an invoke-transaction:
+
+```python
+receipt = contract.my_mutable_method(123, max_fee=2900000000000)
+```
+
+**NOTE**: By not setting the `max_fee`, it will automatically get set to the value returned from the provider `estimate_gas_cost()` call.
+You do **not** need to call `estimate_gas_cost()` explicitly.
+Currently, for `local` networks, the estimated gas is always `0` as it is not yet required.
+
+### Mainnet Alpha Whitelist Deployment Token
+
+Currently, to deploy to Alpha-Mainnet, your contract needs to be whitelisted.
+You can provide your WL token in a variety of ways.
+
+Via Python code:
+
+```python
+from ape import project
+
+my_contract = project.MyContract.deploy(token="MY_TOKEN")
+```
+
+Via an Environment Variable:
+
+```bash
+export ALPHA_MAINNET_WL_DEPLOY_TOKEN="MY_TOKEN"
+```
+
+Or, via the `--token` flag when deploying an account:
+
+```bash
+ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
 ```
 
 ## Development
