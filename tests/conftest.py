@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Iterator, cast
@@ -53,20 +52,12 @@ def networks():
 @pytest.fixture(scope="session")
 def project(request, config):
     project_path = _HERE / "projects" / "project"
-    build_dir = project_path / ".build"
-
-    def clean():
-        if build_dir.is_dir():
-            shutil.rmtree(build_dir)
-
-    clean()
     os.chdir(project_path)
 
     with config.using_project(project_path):
         yield ape.project
 
     os.chdir(_HERE)
-    clean()
 
 
 @pytest.fixture(scope="module")
