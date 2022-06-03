@@ -42,6 +42,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     # Gets set when 'connect()' is called.
     client: Optional[StarknetClient] = None
     token_manager: TokenManager = TokenManager()
+    default_gas_cost: int = 0
 
     @property
     def process_name(self) -> str:
@@ -133,7 +134,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     @handle_client_errors
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
         if self.network.name == LOCAL_NETWORK_NAME:
-            return 0
+            return self.default_gas_cost
 
         if not isinstance(txn, StarknetTransaction):
             raise ProviderError(
