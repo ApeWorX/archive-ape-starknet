@@ -21,8 +21,7 @@ from starknet_py.net.account.account_client import AccountClient  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
     COMPILED_ACCOUNT_CONTRACT,
 )
-from starknet_py.utils.crypto.cpp_bindings import ECSignature  # type: ignore
-from starknet_py.utils.crypto.facade import sign_calldata  # type: ignore
+from starknet_py.utils.crypto.facade import ECSignature, sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 
