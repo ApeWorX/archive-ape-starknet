@@ -46,7 +46,7 @@ class TokenManager(ManagerAccessMixin):
         if not contract_address:
             return 0
 
-        contract = self.provider.contract_at(contract_address)
+        contract = self.chain_manager.contracts.instance_at(contract_address)
 
         if "balanceOf" in [m.name for m in contract.contract_type.view_methods]:
             return contract.balanceOf(account)[0]
@@ -68,7 +68,7 @@ class TokenManager(ManagerAccessMixin):
         if not contract_address:
             return
 
-        contract = self.provider.contract_at(contract_address)
+        contract = self.chain_manager.contracts.instance_at(contract_address)
         sender_address = self.provider.network.ecosystem.decode_address(sender)
 
         if "transfer" in [m.name for m in contract.contract_type.mutable_methods]:

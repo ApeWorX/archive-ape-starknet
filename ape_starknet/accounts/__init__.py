@@ -180,6 +180,9 @@ class StarknetAccountContracts(AccountContainerAPI):
             new_account = StarknetKeyfileAccount(key_file_path=path)
             new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
 
+        contract_type = self.provider.network.explorer.get_contract_type(contract_address)
+        self.chain_manager.contracts[contract_address] = contract_type
+
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
     ) -> str:

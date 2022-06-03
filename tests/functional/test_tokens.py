@@ -2,7 +2,6 @@ import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
 
 from ape_starknet import tokens as _tokens
-from tests.conftest import TOKEN_INITIAL_SUPPLY
 
 
 @pytest.fixture
@@ -11,8 +10,8 @@ def tokens(token_contract, provider, account):
     return _tokens
 
 
-def test_get_balance(tokens, account):
-    assert tokens.get_balance(account.contract_address, token="test_token") == TOKEN_INITIAL_SUPPLY
+def test_get_balance(tokens, account, token_initial_supply):
+    assert tokens.get_balance(account.contract_address, token="test_token") == token_initial_supply
 
 
 def test_transfer(tokens, account, second_account):

@@ -30,7 +30,23 @@ python3 setup.py install
 
 ### Account Management
 
-Deploy a new account:
+Accounts are used to execute transactions and sign call data.
+Accounts are smart contracts in Starknet.
+
+Out of the box, `ape-starknet` comes with development accounts.
+Access them like this:
+
+```python
+from ape import accounts
+
+container = accounts.containers["starknet"]
+owner = container.test_accounts[0]
+```
+
+See the section below about [Testing](#Testing) to learn more about test accounts.
+
+However, when using a live network, you have to deploy the accounts yourself.
+To deploy a new account:
 
 ```bash
 ape starknet accounts create <ALIAS> --network starknet:testnet
@@ -77,9 +93,90 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
-### Contracts
+#### Auto-Sign Message
 
-First, deploy your contract:
+While generally bad practice, sometimes it is necessary to have unlocked keyfile accounts auto-signing messages.
+An example would be during testnet automated deployments.
+To achieve this, use the ``set_autosign()`` method available on the keyfile accounts:
+
+```python
+import keyring
+from ape import accounts
+
+# Use keyring package to store secrets
+password = keyring.get_password("starknet-testnet-automations", "ci-shared-account")
+testnet_account = accounts.load("starknet-testnet-account")
+testnet_account.set_autosign(True, passphrase=password)
+
+# Won't prompt for signing or unlocking
+testnet_account.sign_message([123])
+```
+
+### Declare and Deploy Contracts
+
+In Starknet, you can declare contract types by publishing them to the chain.
+This allows other contracts to create instances of them using the [deploy system call](https://www.cairo-lang.org/docs/hello_starknet/deploying_from_contracts.html).
+
+To declare a contract using `ape-starknet`, do the following (in a script or console):
+
+```python
+from ape import project, networks
+
+provider = networks.active_provider
+declaration = provider.declare(project.MyContract)
+print(declaration.class_hash)
+```
+
+Then, you can use the class hash in a deploy system call in a factory contract:
+
+```cairo
+from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.syscalls import deploy
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+
+@external
+func deploy_my_contract{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+    let (current_salt) = salt.read()
+    let (class_hash) = ownable_class_hash.read()
+    let (calldata_ptr) = alloc()
+    let (contract_address) = deploy(
+        class_hash=class_hash,
+        contract_address_salt=current_salt,
+        constructor_calldata_size=0,
+        constructor_calldata=calldata_ptr,
+    )
+    salt.write(value=current_salt + 1)
+```
+
+After deploying the factory contract, you can use it to create contract instances:
+
+```python
+from ape import Contract, networks, project
+
+declaration = project.provider.declare(project.MyContract)
+
+# NOTE: Assuming you have a contract named 'ContractFactory'.
+factory = project.ContractFactory.deploy(declaration.class_hash)
+
+call_result = factory.deploy_my_contract()
+contract_address = networks.starknet.decode_address(call_result)
+contract = Contract(contract_address, contract_type=project.MyContract.contract_type)
+```
+
+You can also `deploy()` from the declaration receipt (which uses the legacy deploy transaction):
+
+```python
+from ape import accounts, project
+
+declaration = project.provider.declare(project.MyContract)
+receipt = declaration.deploy(1, 2, sender=accounts.load("MyAccount"))
+```
+
+Otherwise, you can use the legacy deploy system which works the same as Ethereum in ape except no sender is needed:
 
 ```python
 from ape import project
@@ -87,9 +184,17 @@ from ape import project
 contract = project.MyContract.deploy()
 ```
 
-The ``deploy`` method returns a contract instance from which you can call methods on:
+### Contract Interaction
+
+After you have deployed your contracts, you can begin interacting with them.
+``deploy`` methods return a contract instance from which you can call methods on:
 
 ```python
+from ape import project
+
+contract = project.MyContract.deploy()
+
+# Interact with deployed contract
 receipt = contract.my_mutable_method(123)
 value = contract.my_view_method()
 ```
@@ -98,7 +203,7 @@ You can access the return data from a mutable method's receipt:
 
 ```python
 receipt = contract.my_mutable_method(123)
-result = receipt.return_data
+result = receipt.return_value
 ```
 
 Include a sender to delegate the transaction to an account contract:
@@ -116,6 +221,76 @@ receipt = contract.my_mutable_method(123, sender=account)
 receipt = contract.store_my_list(3, [1, 2, 3])
 ```
 
+### Testing
+
+#### Accounts
+
+You can use ``starknet-devnet`` accounts in your tests.
+
+```python
+import pytest
+import ape
+
+
+@pytest.fixture
+def devnet_accounts():
+    return ape.accounts.containers["starknet"].test_accounts
+
+
+@pytest.fixture
+def owner(devnet_accounts):
+    return devnet_accounts[0]
+```
+
+Additionally, any accounts deployed in the local network are **not** saved to disk and are ephemeral.
+
+```python
+import pytest
+import ape
+
+
+@pytest.fixture(scope="session")
+def ephemeral_account():
+    accounts = ape.accounts.containers["starknet"]
+    accounts.deploy_account("ALIAS")
+
+    # This account only exists in the devnet and is not a key-file account.
+    return accounts.load("ALIAS")
+```
+
+### Mainnet Alpha Whitelist Deployment Token
+
+You can deploy contracts by doing:
+
+```python
+from ape import project
+
+my_contract = project.MyContract.deploy()
+```
+
+### Paying Fees
+
+Starknet fees are currently paid in ETH, which is an ERC-20 on the Starknet chain.
+To check your account balance (in ETH), use the `balance` property on the account:
+
+```python
+from ape import accounts
+
+acct = accounts.load("Alias")
+print(acct.balance)
+```
+
+If your account has a positive balance, you can begin paying fees!
+
+To pay fees, you can either manually set the `max_fee` kwarg on an invoke-transaction:
+
+```python
+receipt = contract.my_mutable_method(123, max_fee=2900000000000)
+```
+
+**NOTE**: By not setting the `max_fee`, it will automatically get set to the value returned from the provider `estimate_gas_cost()` call.
+You do **not** need to call `estimate_gas_cost()` explicitly.
+
 ### Mainnet Alpha Whitelist Deployment Token
 
 Currently, to deploy to Alpha-Mainnet, your contract needs to be whitelisted.
@@ -124,6 +299,8 @@ You can provide your WL token in a variety of ways.
 Via Python code:
 
 ```python
+from ape import project
+
 my_contract = project.MyContract.deploy(token="MY_TOKEN")
 ```
 

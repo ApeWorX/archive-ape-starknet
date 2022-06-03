@@ -7,10 +7,12 @@ from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccou
 from ape_starknet.config import StarknetConfig
 from ape_starknet.conversion import StarknetAddressConverter
 from ape_starknet.ecosystems import Starknet
+from ape_starknet.explorer import StarknetExplorer
 from ape_starknet.provider import StarknetProvider
 from ape_starknet.tokens import TokenManager
 
 tokens = TokenManager()
+network_names = [LOCAL_NETWORK_NAME] + [k for k in NETWORKS.keys()]
 
 
 @plugins.register(plugins.ConversionPlugin)
@@ -39,7 +41,6 @@ def networks():
 
 @plugins.register(plugins.ProviderPlugin)
 def providers():
-    network_names = [LOCAL_NETWORK_NAME] + [k for k in NETWORKS.keys()]
     for network_name in network_names:
         yield PLUGIN_NAME, network_name, StarknetProvider
 
@@ -47,3 +48,9 @@ def providers():
 @plugins.register(plugins.AccountPlugin)
 def account_types():
     return StarknetAccountContracts, StarknetKeyfileAccount
+
+
+@plugins.register(plugins.ExplorerPlugin)
+def explorers():
+    for network_name in network_names:
+        yield PLUGIN_NAME, network_name, StarknetExplorer

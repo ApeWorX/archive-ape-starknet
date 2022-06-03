@@ -64,7 +64,7 @@ setup(
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
-        "eth-ape>=0.2.4,<0.3.0",
+        "eth-ape>=0.2.7,<0.3.0",
         "ethpm-types",  # Use same as `eth-ape`.
         "starknet.py>=0.2.3a0,<0.3",
         "starknet-devnet==0.2.1",
