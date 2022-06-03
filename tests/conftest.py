@@ -239,7 +239,6 @@ def token_initial_supply():
 @pytest.fixture(scope="session")
 def token_contract(config, account, token_initial_supply):
     project_path = _HERE / "projects" / "token"
-    os.chdir(project_path)
 
     with config.using_project(project_path):
         yield ape.project.TestToken.deploy(
@@ -248,11 +247,8 @@ def token_contract(config, account, token_initial_supply):
 
 
 @pytest.fixture(scope="session")
-def proxy_token_contract(config, account, token_initial_supply):
-    project_path = _HERE / "projects" / "token"
-    os.chdir(project_path)
+def proxy_token_contract(config, account, token_initial_supply, token_contract):
+    project_path = _HERE / "projects" / "proxy"
 
     with config.using_project(project_path):
-        yield ape.project.TestToken.deploy(
-            123123, 321321, token_initial_supply, account.contract_address
-        )
+        return ape.project.Proxy.deploy(token_contract.address)
