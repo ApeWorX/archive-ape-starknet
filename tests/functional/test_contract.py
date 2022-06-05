@@ -34,16 +34,18 @@ def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     contract.increase_balance(account.address, increase_amount, sender=account)
 
+    # Verify the storage variable was updated.
     actual = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual == expected
 
 
-def test_logs(contract, account, ecosystem):
+def test_decode_logs(contract, account, ecosystem):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    assert len(receipt.logs) == 1
-    assert receipt.logs[0]["data"] == [increase_amount]
+    logs = [log for log in receipt.decode_logs(contract.balance_increased)]
+    assert len(logs) == 1
+    assert logs[0].amount == increase_amount
 
     from_address = receipt.logs[0]["from_address"]
     log_sender_address = ecosystem.decode_address(from_address)
