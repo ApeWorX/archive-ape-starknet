@@ -77,6 +77,45 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
+### Contracts
+
+First, deploy your contract:
+
+```python
+from ape import project
+
+contract = project.MyContract.deploy()
+```
+
+The ``deploy`` method returns a contract instance from which you can call methods on:
+
+```python
+receipt = contract.my_mutable_method(123)
+value = contract.my_view_method()
+```
+
+You can access the return data from a mutable method's receipt:
+
+```python
+receipt = contract.my_mutable_method(123)
+result = receipt.return_data
+```
+
+Include a sender to delegate the transaction to an account contract:
+
+```python
+from ape import accounts
+
+account = accounts.load("my_account")
+receipt = contract.my_mutable_method(123, sender=account)
+```
+
+**NOTE**: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:
+
+```python
+receipt = contract.store_my_list(3, [1, 2, 3])
+```
+
 ### Mainnet Alpha Whitelist Deployment Token
 
 Currently, to deploy to Alpha-Mainnet, your contract needs to be whitelisted.
@@ -98,38 +137,6 @@ Or, via the `--token` flag when deploying an account:
 
 ```bash
 ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
-```
-
-### Contracts
-
-First, deploy your contract:
-
-```python
-from ape import project
-
-contract = project.MyContract.deploy()
-```
-
-The ``deploy`` method returns a contract instance from which you can call methods on:
-
-```python
-receipt = contract.my_mutable_method(123)
-value = contract.my_view_method()
-```
-
-Include a sender to delegate the transaction to an account contract:
-
-```python
-from ape import accounts
-
-account = accounts.load("my_account")
-receipt = contract.my_mutable_method(123, sender=account)
-```
-
-**NOTE**: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:
-
-```python
-receipt = contract.store_my_list(3, [1, 2, 3])
 ```
 
 ## Development

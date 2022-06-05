@@ -87,14 +87,6 @@ class Starknet(EcosystemAPI):
         method_abi: Union[ConstructorABI, MethodABI],
         call_args: Union[List, Tuple],
     ) -> List:
-        def encode_primitive_value(val):
-            if isinstance(val, str) and is_0x_prefixed(val):
-                return int(val, 16)
-            elif isinstance(val, HexBytes):
-                return int(val.hex(), 16)
-
-            return val
-
         id_manager = identifier_manager_from_abi(full_abi)
         transformer = DataTransformer(method_abi.dict(), id_manager)
         encoded_args = []
@@ -111,17 +103,27 @@ class Starknet(EcosystemAPI):
                 and str(method_abi.inputs[index + 1].type).endswith("*")
             ):
                 # Handle arrays.
-                array_arg = [encode_primitive_value(v) for v in call_args[index + 1]]
+                array_arg = [self.encode_primitive_value(v) for v in call_args[index + 1]]
                 encoded_args.append(array_arg)
 
             else:
-                encoded_arg = encode_primitive_value(call_arg)
+                encoded_arg = self.encode_primitive_value(call_arg)
                 encoded_args.append(encoded_arg)
 
             index += 1
 
         calldata, _ = transformer.from_python(*encoded_args)
         return calldata
+
+    def encode_primitive_value(self, value: Any) -> Any:
+        if isinstance(value, (list, tuple)):
+            return [self.encode_primitive_value(v) for v in value]
+        if isinstance(value, str) and is_0x_prefixed(value):
+            return int(value, 16)
+        elif isinstance(value, HexBytes):
+            return int(value.hex(), 16)
+
+        return value
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = data["type"]

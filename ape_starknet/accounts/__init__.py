@@ -318,7 +318,17 @@ class BaseStarknetAccount(AccountAPI):
         starknet_txn = txn.as_starknet_object()
         txn_info = account_client.add_transaction_sync(starknet_txn, token=token)
         txn_hash = txn_info["transaction_hash"]
-        return self.provider.get_transaction(txn_hash)
+
+        return_data = [
+            self.provider.network.ecosystem.encode_primitive_value(v)
+            for v in txn_info.get("result", [])
+        ]
+        if len(return_data) == 1:
+            return_data = return_data[0]
+
+        receipt = self.provider.get_transaction(txn_hash)
+        receipt.return_data = return_data
+        return receipt
 
     def create_account_client(self) -> AccountClient:
         network = self.provider.network
