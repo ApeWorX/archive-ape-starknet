@@ -33,7 +33,6 @@ def test_contract_transaction_handles_non_felt_arguments(contract, account, init
 def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-
     actual_from_receipt = receipt.return_data
     actual_from_call = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
@@ -50,11 +49,12 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
     assert actual_from_receipt == actual_from_call == expected
 
 
-def test_logs(contract, account, ecosystem):
+def test_decode_logs(contract, account, ecosystem):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    assert len(receipt.logs) == 1
-    assert receipt.logs[0]["data"] == [increase_amount]
+    logs = [log for log in receipt.decode_logs(contract.balance_increased)]
+    assert len(logs) == 1
+    assert logs[0].amount == increase_amount
 
     from_address = receipt.logs[0]["from_address"]
     log_sender_address = ecosystem.decode_address(from_address)

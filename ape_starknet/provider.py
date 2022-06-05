@@ -145,7 +145,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if not self.client:
             raise ProviderNotConnectedError()
 
-        return self.client.estimate_fee_sync(starknet_object)
+        result = self.client.estimate_fee_sync(starknet_object)
+        return result
 
     @property
     def gas_price(self) -> int:
