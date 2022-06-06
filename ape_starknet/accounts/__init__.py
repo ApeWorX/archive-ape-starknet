@@ -31,6 +31,7 @@ from ape_starknet._utils import (
     get_chain_id,
     handle_client_errors,
 )
+from ape_starknet.ecosystems import Starknet
 from ape_starknet.provider import StarknetProvider
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
@@ -328,7 +329,15 @@ class BaseStarknetAccount(AccountAPI):
         starknet_txn = txn.as_starknet_object()
         txn_info = account_client.add_transaction_sync(starknet_txn, token=token)
         txn_hash = txn_info["transaction_hash"]
-        return self.provider.get_transaction(txn_hash)
+
+        starknet: Starknet = self.provider.network.ecosystem  # type: ignore
+        return_data = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+        if len(return_data) == 1:
+            return_data = return_data[0]
+
+        receipt = self.provider.get_transaction(txn_hash)
+        receipt.return_data = return_data
+        return receipt
 
     def create_account_client(self) -> AccountClient:
         network = self.provider.network

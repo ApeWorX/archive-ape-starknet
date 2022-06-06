@@ -53,14 +53,15 @@ end
 @external
 func increase_balance{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
-        range_check_ptr}(user : felt, amount : felt):
+        range_check_ptr}(user : felt, amount : felt) -> (balance):
     let (initialized) = is_initialized.read()
     assert initialized = TRUE
 
-    let (res) = balance.read(user=user)
-    balance.write(user, res + amount)
+    let (current_balance) = balance.read(user=user)
+    balance.write(user, current_balance + amount)
     balance_increased.emit(amount)
-    return ()
+    let (new_balance) = balance.read(user=user)
+    return (new_balance)
 end
 
 @external

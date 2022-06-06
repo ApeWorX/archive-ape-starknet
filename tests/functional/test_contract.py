@@ -32,12 +32,21 @@ def test_contract_transaction_handles_non_felt_arguments(contract, account, init
 
 def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
-    contract.increase_balance(account.address, increase_amount, sender=account)
-
-    # Verify the storage variable was updated.
-    actual = contract.get_balance(account.address)
+    receipt = contract.increase_balance(account.address, increase_amount, sender=account)
+    actual_from_receipt = receipt.return_data
+    actual_from_call = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
-    assert actual == expected
+    assert actual_from_receipt == actual_from_call == expected
+
+
+def test_unsigned_contract_transaction(contract, account, initial_balance):
+    increase_amount = 123456
+    receipt = contract.increase_balance(account.address, increase_amount)
+
+    actual_from_receipt = receipt.return_data
+    actual_from_call = contract.get_balance(account.address)
+    expected = initial_balance + increase_amount
+    assert actual_from_receipt == actual_from_call == expected
 
 
 def test_decode_logs(contract, account, ecosystem):

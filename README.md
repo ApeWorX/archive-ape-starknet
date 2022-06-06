@@ -79,16 +79,6 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 ### Contract Interaction
 
-You can deploy contracts by doing:
-
-```python
-from ape import project
-
-my_contract = project.MyContract.deploy()
-```
-
-### Contract Interaction
-
 First, deploy your contract:
 
 ```python
@@ -104,6 +94,13 @@ receipt = contract.my_mutable_method(123)
 value = contract.my_view_method()
 ```
 
+You can access the return data from a mutable method's receipt:
+
+```python
+receipt = contract.my_mutable_method(123)
+result = receipt.return_data
+```
+
 Include a sender to delegate the transaction to an account contract:
 
 ```python
@@ -117,6 +114,16 @@ receipt = contract.my_mutable_method(123, sender=account)
 
 ```python
 receipt = contract.store_my_list(3, [1, 2, 3])
+```
+
+### Mainnet Alpha Whitelist Deployment Token
+
+You can deploy contracts by doing:
+
+```python
+from ape import project
+
+my_contract = project.MyContract.deploy()
 ```
 
 ### Paying Fees
