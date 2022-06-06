@@ -73,7 +73,7 @@ setup(
         "importlib-metadata ; python_version<'3.8'",
     ],  # NOTE: Add 3rd party libraries here
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
-    python_requires=">=3.7.2,<3.9",
+    python_requires=">=3.7.2,<3.10",
     extras_require=extras_require,
     py_modules=["ape_starknet"],
     license="Apache-2.0",
@@ -91,5 +91,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
 )
