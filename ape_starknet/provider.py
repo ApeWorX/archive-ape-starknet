@@ -30,6 +30,7 @@ from ape_starknet._utils import (
     handle_client_errors,
 )
 from ape_starknet.config import StarknetConfig
+from ape_starknet.ecosystems import Starknet
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 
@@ -217,12 +218,21 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if txn.sender:
             # If using a sender, send the transaction from your sender's account contract.
             container = self.account_manager.containers["starknet"]
-            return container[txn.sender].send_transaction(txn, token=token)  # type: ignore
+            result = container[txn.sender].send_transaction(txn, token=token)  # type: ignore
+            return result
         else:
             starknet_txn = txn.as_starknet_object()
-            result = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
-            txn_hash = result["transaction_hash"]
-            return self.get_transaction(txn_hash)
+            txn_info = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
+
+            starknet: Starknet = self.provider.network.ecosystem  # type: ignore
+            return_data = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+            if len(return_data) == 1:
+                return_data = return_data[0]
+
+            txn_hash = txn_info["transaction_hash"]
+            receipt = self.get_transaction(txn_hash)
+            receipt.return_data = return_data
+            return receipt
 
     @handle_client_errors
     def get_contract_logs(
