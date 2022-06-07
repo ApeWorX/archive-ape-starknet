@@ -59,7 +59,6 @@ setup(
         "fastecdsa",  # Not directly used, but part of install instructions for cairo-lang
         "sympy",  # Not directly used, but part of install instructions for cairo-lang
         "cairo-lang",
-        "hexbytes>=0.2.2,<1.0.0",
         "pytest>=6.0,<7.0",  # For 'ape test' integration
         "pytest-asyncio",  # For 'ape test' integration
         "click>=8.1.0,<8.2",
@@ -67,7 +66,6 @@ setup(
         "pydantic>=1.9.0,<2.0",
         "eth-ape>=0.2.4,<0.3.0",
         "ethpm-types",  # Use same as `eth-ape`.
-        "pydantic>=1.9.0,<2.0",
         "starknet.py>=0.2.3a0,<0.3",
         "starknet-devnet==0.2.1",
         "importlib-metadata ; python_version<'3.8'",
