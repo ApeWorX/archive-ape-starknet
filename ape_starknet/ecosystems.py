@@ -8,7 +8,7 @@ from ape.api import (
     ReceiptAPI,
     TransactionAPI,
 )
-from ape.types import AddressType, ContractLog, RawAddress
+from ape.types import AddressType, ContractLog, RawAddress, TransactionSignature
 from eth_utils import is_0x_prefixed
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
@@ -180,14 +180,26 @@ class Starknet(EcosystemAPI):
         )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
-        txn_type = kwargs.pop("type")
+        txn_type = kwargs.pop("type", kwargs.pop("tx_type"))
         txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeployTransaction]]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             txn_cls = InvokeFunctionTransaction
         elif txn_type == TransactionType.DEPLOY:
             txn_cls = DeployTransaction
 
-        return txn_cls(**kwargs)
+        txn_data = {**kwargs}
+        if "max_fee" in txn_data and not isinstance(txn_data["max_fee"], int):
+            txn_data["max_fee"] = self.encode_primitive_value(txn_data["max_fee"])
+
+        if "signature" in txn_data and not isinstance(txn_data["signature"], TransactionSignature):
+            txn_data["signature"] = TransactionSignature(
+                v=0, r=HexBytes(txn_data["signature"][0]), s=HexBytes(txn_data["signature"][1])
+            )
+
+        # if "method_abi" not in txn_data:
+        #     contract = self.chain_manager.contracts.get(txn_data["contract_address"])
+
+        return txn_cls(**txn_data)
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
         index = 0

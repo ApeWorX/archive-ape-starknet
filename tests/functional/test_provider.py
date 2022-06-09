@@ -11,3 +11,11 @@ def test_get_nonce(provider, account, contract):
 def test_contract_at(contract, provider):
     actual = provider.contract_at(contract.address)  # type: ignore
     assert actual.address == contract.address
+
+
+def test_get_transactions_by_block(provider, account, contract):
+    # Transact to create data.
+    contract.increase_balance(account.address, 123, sender=account)
+
+    transactions = [t for t in provider.get_transactions_by_block("latest")]
+    assert len(transactions) == 1
