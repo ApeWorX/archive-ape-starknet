@@ -20,6 +20,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     DeclareSpecificInfo,
     DeploySpecificInfo,
     InvokeSpecificInfo,
+    StarknetBlock,
 )
 
 from ape_starknet._utils import (
@@ -167,15 +168,16 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
-        if isinstance(block_id, (int, str)) and len(str(block_id)) == 76:
-            kwarg = "block_hash"
-        elif isinstance(block_id, int) or block_id == "pending":
-            kwarg = "block_number"
-        else:
-            raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
-
-        block = self.starknet_client.get_block_sync(**{kwarg: block_id})
+        block = self._get_block(block_id)
         return self.network.ecosystem.decode_block(block.dump())
+
+    def _get_block(self, block_id: BlockID) -> StarknetBlock:
+        kwarg = (
+            "block_hash"
+            if isinstance(block_id, (int, str)) and len(str(block_id)) == 76
+            else "block_number"
+        )
+        return self.starknet_client.get_block_sync(**{kwarg: block_id})
 
     @handle_client_errors
     def send_call(self, txn: TransactionAPI) -> bytes:
@@ -216,6 +218,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         receipt_dict["type"] = txn_type
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
         return self.network.ecosystem.decode_receipt(receipt_dict)
+
+    def get_transactions_by_block(self, block_id: HexBytes) -> Iterator[TransactionAPI]:
+        block = self._get_block(block_id)
+        for txn in block.transactions:
+            yield self.network.ecosystem.create_transaction(**txn)
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
