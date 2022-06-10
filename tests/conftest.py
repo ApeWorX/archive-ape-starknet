@@ -55,6 +55,16 @@ def chain():
 
 
 @pytest.fixture(scope="session")
+def password():
+    return PASSWORD
+
+
+@pytest.fixture(scope="session")
+def public_key():
+    return PUBLIC_KEY
+
+
+@pytest.fixture(scope="session")
 def project(request, config):
     project_path = _HERE / "projects" / "project"
     os.chdir(project_path)
