@@ -16,6 +16,7 @@ from ape.utils import abstractmethod
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
 from hexbytes import HexBytes
+from services.external_api.base_client import BadRequest
 from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.account_client import AccountClient  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
@@ -186,7 +187,7 @@ class StarknetAccountContracts(AccountContainerAPI):
             try:
                 contract_type = self.provider.network.explorer.get_contract_type(address)
                 self.chain_manager.contracts[address] = contract_type
-            except ProviderError:
+            except (ProviderError, BadRequest):
                 # Unable to store contract type.
                 pass
 
