@@ -181,12 +181,14 @@ class StarknetAccountContracts(AccountContainerAPI):
             new_account = StarknetKeyfileAccount(key_file_path=path)
             new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
 
+        # Add account contract to cache
         ecosystem = self.network_manager.starknet
         address = ecosystem.decode_address(contract_address)
         if self.network_manager.active_provider and self.provider.network.explorer:
             try:
                 contract_type = self.provider.network.explorer.get_contract_type(address)
-                self.chain_manager.contracts[address] = contract_type
+                if contract_type:
+                    self.chain_manager.contracts[address] = contract_type
             except (ProviderError, BadRequest):
                 # Unable to store contract type.
                 pass
