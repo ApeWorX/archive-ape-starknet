@@ -182,13 +182,13 @@ class StarknetAccountContracts(AccountContainerAPI):
 
         ecosystem = self.network_manager.starknet
         address = ecosystem.decode_address(contract_address)
-
-        try:
-            contract_type = self.provider.network.explorer.get_contract_type(address)
-            self.chain_manager.contracts[address] = contract_type
-        except ProviderError:
-            # Unable to store contract type.
-            pass
+        if self.network_manager.active_provider and self.provider.network.explorer:
+            try:
+                contract_type = self.provider.network.explorer.get_contract_type(address)
+                self.chain_manager.contracts[address] = contract_type
+            except ProviderError:
+                # Unable to store contract type.
+                pass
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
