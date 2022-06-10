@@ -10,7 +10,6 @@ from ape.contracts import ContractInstance
 from ape.exceptions import ProviderError, ProviderNotConnectedError, VirtualMachineError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
-from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI
 from hexbytes import HexBytes
 from starknet_py.net import Client as StarknetClient  # type: ignore
@@ -45,6 +44,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     # Gets set when 'connect()' is called.
     client: Optional[StarknetClient] = None
     token_manager: TokenManager = TokenManager()
+    default_gas_cost: int = 0
 
     @property
     def process_name(self) -> str:
@@ -117,11 +117,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        return self._get_code(address)["bytecode"]  # type: ignore
+        return self.get_code_and_abi(address)["bytecode"]  # type: ignore
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
-        return self._get_code(address)["abi"]  # type: ignore
+        return self.get_code_and_abi(address)["abi"]  # type: ignore
 
     @handle_client_errors
     def get_nonce(self, address: str) -> int:
@@ -130,11 +130,19 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if address in container.public_key_addresses:  # type: ignore
             address = container[address].contract_address  # type: ignore
 
-        contract = self.contract_at(address)
+        checksum_address = self.network.ecosystem.decode_address(address)
+        contract = self.chain_manager.contracts.instance_at(checksum_address)
+
+        if not isinstance(contract, ContractInstance):
+            raise ProviderError(f"Account contract '{checksum_address}' not found.")
+
         return contract.get_nonce()
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
+        if self.network.name == LOCAL_NETWORK_NAME:
+            return self.default_gas_cost
+
         if not isinstance(txn, StarknetTransaction):
             raise ProviderError(
                 "Unable to estimate the gas cost for a non-Starknet transaction "
@@ -248,7 +256,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        if txn.type == TransactionType.INVOKE_FUNCTION and txn.max_fee is None:
+        if txn.type == TransactionType.INVOKE_FUNCTION and not txn.max_fee:
             txn.max_fee = self.estimate_gas_cost(txn)
 
         return txn
@@ -256,17 +264,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
-    def _get_code(self, address: Union[str, AddressType]):
+    def get_code_and_abi(self, address: Union[str, AddressType]):
         address_int = parse_address(address)
         return self.starknet_client.get_code_sync(address_int)
-
-    def contract_at(self, address: Union[AddressType, int, str]) -> ContractInstance:
-        if isinstance(address, int):
-            address = self.network.ecosystem.decode_address(address)
-
-        code = self._get_code(address)
-        contract_type = ContractType.parse_obj(code)
-        return ContractInstance(address, contract_type)  # type: ignore
 
     def _deploy(self, contract_data: Union[str, Dict], *args, token: Optional[str] = None) -> str:
         """

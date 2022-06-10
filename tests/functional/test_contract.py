@@ -1,5 +1,5 @@
 import pytest
-from ape.exceptions import ContractLogicError
+from ape.exceptions import AccountsError, ContractLogicError
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -84,3 +84,16 @@ def test_array_inputs(contract, account):
     actual = contract.get_last_sum()
     expected = 6
     assert actual == expected
+
+
+def test_unable_to_afford_transaction(contract, account, provider):
+    # This also indirectly tests `estimate_gas_cost()`.
+
+    try:
+        provider.default_gas_cost = 123321123321
+        with pytest.raises(AccountsError) as err:
+            contract.increase_balance(account.address, 1, sender=account)
+
+        assert "Transfer value meets or exceeds account balance." in str(err.value)
+    finally:
+        provider.default_gas_cost = 0
