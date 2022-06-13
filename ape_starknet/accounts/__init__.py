@@ -334,12 +334,15 @@ class BaseStarknetAccount(AccountAPI):
         txn_hash = txn_info["transaction_hash"]
 
         starknet: Starknet = self.provider.network.ecosystem  # type: ignore
-        return_data = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
-        if len(return_data) == 1:
-            return_data = return_data[0]
+        return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+
+        # In starknet accounts, as of 0.9.0, the first value in the return tuple is the length.
+        return_value = return_value[1:]
+        if len(return_value) == 1:
+            return_value = return_value[0]
 
         receipt = self.provider.get_transaction(txn_hash)
-        receipt.return_data = return_data
+        receipt.return_value = return_value
         return receipt
 
     def create_account_client(self) -> AccountClient:
