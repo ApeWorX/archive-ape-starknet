@@ -33,7 +33,7 @@ def test_contract_transaction_handles_non_felt_arguments(contract, account, init
 def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    actual_from_receipt = receipt.return_data
+    actual_from_receipt = receipt.return_value
     actual_from_call = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual_from_receipt == actual_from_call == expected
@@ -43,7 +43,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     receipt = contract.increase_balance(account.address, increase_amount)
 
-    actual_from_receipt = receipt.return_data
+    actual_from_receipt = receipt.return_value
     actual_from_call = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual_from_receipt == actual_from_call == expected
@@ -80,10 +80,16 @@ def test_revert_no_message(contract, account):
 def test_array_inputs(contract, account):
     # This test makes sure we can pass python lists as arguments
     # to Cairo methods that accept arrays.
+    # NOTE: Due to a limitation in ape, we have to include the array length argument.
     contract.store_sum(3, [1, 2, 3])
     actual = contract.get_last_sum()
     expected = 6
     assert actual == expected
+
+
+def test_array_outputs(contract, account):
+    receipt = contract.get_array()
+    assert receipt.return_value == [1, 2, 3]
 
 
 def test_unable_to_afford_transaction(contract, account, provider):

@@ -142,7 +142,7 @@ class StarknetReceipt(ReceiptAPI):
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None  # type: ignore
     block_number: Optional[int] = None  # type: ignore
-    return_data: List[int] = []
+    return_value: List[int] = []
 
     """Ignored"""
     sender: str = Field("", exclude=True)

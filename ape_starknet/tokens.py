@@ -115,9 +115,9 @@ class TokenManager(ManagerAccessMixin):
         method_abi = MethodABI.parse_obj(implementation_abi)
         ecosystem = self.provider.network.ecosystem
         transaction = ecosystem.encode_transaction(contract_address, method_abi)
-        return_data = self.provider.send_call(transaction)
+        return_value = self.provider.send_call(transaction)
         actual_contract_address_int = self.provider.network.ecosystem.decode_returndata(
-            method_abi, return_data
+            method_abi, return_value
         )
         actual_contract_address = self.provider.network.ecosystem.decode_address(
             actual_contract_address_int
