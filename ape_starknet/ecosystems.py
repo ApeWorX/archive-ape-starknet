@@ -18,7 +18,7 @@ from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
 from ape_starknet._utils import to_checksum_address
 from ape_starknet.exceptions import StarknetEcosystemError
@@ -159,7 +159,7 @@ class Starknet(EcosystemAPI):
         if not salt:
             salt = ContractAddressSalt.get_random_value()
 
-        contract = ContractDefinition.deserialize(deployment_bytecode)
+        contract = ContractClass.deserialize(deployment_bytecode)
         calldata = self.encode_calldata(contract.abi, abi, args)
         return DeployTransaction(
             salt=salt,

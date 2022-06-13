@@ -16,7 +16,7 @@ from starknet_py.net.models.transaction import (  # type: ignore
     TransactionType,
 )
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
 
 class StarknetTransaction(TransactionAPI):
@@ -61,11 +61,12 @@ class DeployTransaction(StarknetTransaction):
     receiver: Optional[str] = Field(None, exclude=True)
 
     def as_starknet_object(self) -> Deploy:
-        definition = ContractDefinition.deserialize(self.data)
+        contract = ContractClass.deserialize(self.data)
         return Deploy(
             contract_address_salt=self.salt,
-            contract_definition=definition,
+            contract_definition=contract,
             constructor_calldata=self.constructor_calldata,
+            version=0,
         )
 
 
