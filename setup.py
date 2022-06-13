@@ -5,10 +5,11 @@ from setuptools import find_packages, setup  # type: ignore
 extras_require = {
     "test": [  # `test` GitHub Action jobs uses this
         "pytest>=6.0,<7.0",  # Core testing package
+        "pytest-asyncio",  # For 'ape test' integration
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-cairo",  # For compiling contracts in tests
+        "ape-cairo>=0.2.0a5,<0.3",  # For compiling contracts in tests
     ],
     "lint": [
         "black>=22.3.0,<23.0",  # auto-formatter and linter
@@ -55,19 +56,14 @@ setup(
     url="https://github.com/ApeWorX/ape-starknet",
     include_package_data=True,
     install_requires=[
-        "ecdsa",  # Not directly used, but part of install instructions for cairo-lang
-        "fastecdsa",  # Not directly used, but part of install instructions for cairo-lang
-        "sympy",  # Not directly used, but part of install instructions for cairo-lang
-        "cairo-lang",
-        "pytest>=6.0,<7.0",  # For 'ape test' integration
-        "pytest-asyncio",  # For 'ape test' integration
+        "cairo-lang>=0.9,<0.10",
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
         "eth-ape>=0.2.8,<0.3.0",
         "ethpm-types",  # Use same as `eth-ape`.
-        "starknet.py>=0.2.3a0,<0.3",
-        "starknet-devnet==0.2.1",
+        "starknet.py>=0.3.1a0,<0.4",
+        "starknet-devnet>=0.2.3,<0.3",
         "importlib-metadata ; python_version<'3.8'",
     ],  # NOTE: Add 3rd party libraries here
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},

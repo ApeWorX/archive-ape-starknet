@@ -15,7 +15,7 @@ from hexbytes import HexBytes
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
     DeploySpecificInfo,
     InvokeSpecificInfo,
@@ -274,17 +274,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         compiled account contracts from OZ.
         """
         if isinstance(contract_data, dict):
-            definition = ContractDefinition.load(contract_data)
+            contract = ContractClass.load(contract_data)
         else:
-            definition = ContractDefinition.loads(contract_data)
+            contract = ContractClass.loads(contract_data)
 
         data: Dict = next(
-            (member for member in definition.abi if member["type"] == "constructor"),
+            (member for member in contract.abi if member["type"] == "constructor"),
             {},
         )
         ctor_abi = ConstructorABI(**data)
         transaction = self.network.ecosystem.encode_deployment(
-            HexBytes(definition.serialize()), ctor_abi, *args
+            HexBytes(contract.serialize()), ctor_abi, *args
         )
         wl_token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
         receipt = self.send_transaction(transaction, token=wl_token)
