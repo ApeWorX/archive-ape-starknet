@@ -87,9 +87,17 @@ def test_array_inputs(contract, account):
     assert actual == expected
 
 
-def test_array_outputs(contract, account):
+def test_external_call_array_outputs(contract, account):
     receipt = contract.get_array()
     assert receipt.return_value == [1, 2, 3]
+
+    receipt = contract.get_array(sender=account)
+    assert receipt.return_value == [1, 2, 3]
+
+
+def test_view_call_array_outputs(contract, account):
+    array = contract.view_array()
+    assert array == [1, 2, 3]
 
 
 def test_unable_to_afford_transaction(contract, account, provider):
