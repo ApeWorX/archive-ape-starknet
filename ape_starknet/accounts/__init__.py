@@ -403,9 +403,6 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
         return self.raw_account_data["private_key"]
 
     def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
-        if not msg:
-            return None
-
         if not isinstance(msg, (list, tuple)):
             msg = [msg]
 
