@@ -232,6 +232,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             starknet_txn = txn.as_starknet_object()
             txn_info = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
 
+            error = txn_info.get("error", {})
+            if error:
+                message = error.get("message", error)
+                raise ProviderError(message)
+
             starknet: Starknet = self.provider.network.ecosystem  # type: ignore
             return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
 

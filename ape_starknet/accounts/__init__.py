@@ -331,6 +331,12 @@ class BaseStarknetAccount(AccountAPI):
         account_client = self.create_account_client()
         starknet_txn = txn.as_starknet_object()
         txn_info = account_client.add_transaction_sync(starknet_txn, token=token)
+
+        error = txn_info.get("error", {})
+        if error:
+            message = error.get("message", error)
+            raise AccountsError(message)
+
         txn_hash = txn_info["transaction_hash"]
 
         starknet: Starknet = self.provider.network.ecosystem  # type: ignore
