@@ -75,7 +75,7 @@ class Starknet(EcosystemAPI):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> List[Any]:
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> List[Any]:  # type: ignore
         def clear_lengths(arr):
             arr_len = arr[0]
             rest = arr[1:]
