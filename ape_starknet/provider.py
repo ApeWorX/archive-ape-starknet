@@ -188,7 +188,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             raise ProviderNotConnectedError()
 
         starknet_obj = txn.as_starknet_object()
-        return self.client.call_contract_sync(starknet_obj)
+        return_value = self.client.call_contract_sync(starknet_obj)
+        decoded_return_value = self.provider.network.ecosystem.decode_returndata(
+            txn.method_abi, return_value
+        )
+        return decoded_return_value
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
@@ -240,10 +244,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             starknet: Starknet = self.provider.network.ecosystem  # type: ignore
             return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
 
-            # In starknet accounts, as of 0.9.0, the first value in the return tuple is the length.
-            return_value = return_value[1:]
-            if len(return_value) == 1:
-                return_value = return_value[0]
+            if return_value and isinstance(txn, InvokeFunctionTransaction):
+                return_value = starknet.decode_returndata(txn.method_abi, return_value)
+                if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                    return_value = return_value[0]
 
             txn_hash = txn_info["transaction_hash"]
             receipt = self.get_transaction(txn_hash)

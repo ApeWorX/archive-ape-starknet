@@ -342,10 +342,10 @@ class BaseStarknetAccount(AccountAPI):
         starknet: Starknet = self.provider.network.ecosystem  # type: ignore
         return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
 
-        # In starknet accounts, as of 0.9.0, the first value in the return tuple is the length.
-        return_value = return_value[1:]
-        if len(return_value) == 1:
-            return_value = return_value[0]
+        if return_value and isinstance(txn, InvokeFunctionTransaction):
+            return_value = starknet.decode_returndata(txn.method_abi, return_value)
+            if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                return_value = return_value[0]
 
         receipt = self.provider.get_transaction(txn_hash)
         receipt.return_value = return_value
@@ -360,8 +360,8 @@ class BaseStarknetAccount(AccountAPI):
         chain_id = get_chain_id(network.name)
         return AccountClient(
             self.contract_address,
-            key_pair,
             self.provider.uri,
+            key_pair=key_pair,
             chain=chain_id,
         )
 

@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from ape.contracts import ContractInstance
+from ape.contracts.base import ContractCall
 from ape.exceptions import ContractError, ProviderError
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
@@ -64,11 +65,9 @@ class TokenManager(ManagerAccessMixin):
         if not method_abi:
             raise ContractError(f"Contract has no method '{abi_name}'.")
 
-        ecosystem = self.provider.network.ecosystem
         method_abi_obj = MethodABI.parse_obj(method_abi)
-        transaction = ecosystem.encode_transaction(contract_address, method_abi_obj, account)
-        call_data = self.provider.send_call(transaction)
-        return call_data[0]
+        balance = ContractCall(method_abi_obj, contract_address)()
+        return balance
 
     def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)
@@ -113,15 +112,8 @@ class TokenManager(ManagerAccessMixin):
             raise ValueError(f"No method found with name '{method_name}'.")
 
         method_abi = MethodABI.parse_obj(implementation_abi)
-        ecosystem = self.provider.network.ecosystem
-        transaction = ecosystem.encode_transaction(contract_address, method_abi)
-        return_value = self.provider.send_call(transaction)
-        actual_contract_address_int = self.provider.network.ecosystem.decode_returndata(
-            method_abi, return_value
-        )
-        actual_contract_address = self.provider.network.ecosystem.decode_address(
-            actual_contract_address_int
-        )
+        address_int = ContractCall(method_abi, contract_address)()
+        actual_contract_address = self.provider.network.ecosystem.decode_address(address_int)
         actual_abi = self.provider.get_abi(actual_contract_address)
         selected_abi = _select_method_abi(method_name, actual_abi)
         return selected_abi

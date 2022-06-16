@@ -75,11 +75,25 @@ class Starknet(EcosystemAPI):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: bytes) -> List[Any]:
-        if isinstance(raw_data, (list, tuple)) and len(raw_data) == 1:
-            return raw_data[0]
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> List[Any]:
+        def clear_lengths(arr):
+            arr_len = arr[0]
+            rest = arr[1:]
+            num_rest = len(rest)
+            return clear_lengths(rest) if arr_len == num_rest else arr
 
-        return raw_data  # type: ignore
+        is_arr = abi.outputs[0].name == "arr_len" and abi.outputs[1].type == "felt*"
+        has_leftover_length = len(raw_data) > 1 and not is_arr
+        if (
+            len(abi.outputs) == 2
+            and is_arr
+            and len(raw_data) >= 2
+            and all([isinstance(i, int) for i in raw_data])
+        ) or has_leftover_length:
+            # Is array - check if need to strip off arr_len
+            return clear_lengths(raw_data)
+
+        return raw_data
 
     def encode_calldata(
         self,

@@ -91,9 +91,6 @@ def test_external_call_array_outputs(contract, account):
     receipt = contract.get_array()
     assert receipt.return_value == [1, 2, 3]
 
-    receipt = contract.get_array(sender=account)
-    assert receipt.return_value == [1, 2, 3]
-
 
 def test_view_call_array_outputs(contract, account):
     array = contract.view_array()
