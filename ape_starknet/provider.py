@@ -15,7 +15,7 @@ from hexbytes import HexBytes
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
     DeploySpecificInfo,
     InvokeSpecificInfo,
@@ -188,7 +188,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             raise ProviderNotConnectedError()
 
         starknet_obj = txn.as_starknet_object()
-        return self.client.call_contract_sync(starknet_obj)
+        return_value = self.client.call_contract_sync(starknet_obj)
+        decoded_return_value = self.provider.network.ecosystem.decode_returndata(
+            txn.method_abi, return_value
+        )
+        return decoded_return_value
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
@@ -232,14 +236,22 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             starknet_txn = txn.as_starknet_object()
             txn_info = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
 
+            error = txn_info.get("error", {})
+            if error:
+                message = error.get("message", error)
+                raise ProviderError(message)
+
             starknet: Starknet = self.provider.network.ecosystem  # type: ignore
-            return_data = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
-            if len(return_data) == 1:
-                return_data = return_data[0]
+            return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+
+            if return_value and isinstance(txn, InvokeFunctionTransaction):
+                return_value = starknet.decode_returndata(txn.method_abi, return_value)
+                if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                    return_value = return_value[0]
 
             txn_hash = txn_info["transaction_hash"]
             receipt = self.get_transaction(txn_hash)
-            receipt.return_data = return_data
+            receipt.return_value = return_value
             return receipt
 
     @handle_client_errors
@@ -274,17 +286,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         compiled account contracts from OZ.
         """
         if isinstance(contract_data, dict):
-            definition = ContractDefinition.load(contract_data)
+            contract = ContractClass.load(contract_data)
         else:
-            definition = ContractDefinition.loads(contract_data)
+            contract = ContractClass.loads(contract_data)
 
         data: Dict = next(
-            (member for member in definition.abi if member["type"] == "constructor"),
+            (member for member in contract.abi if member["type"] == "constructor"),
             {},
         )
         ctor_abi = ConstructorABI(**data)
         transaction = self.network.ecosystem.encode_deployment(
-            HexBytes(definition.serialize()), ctor_abi, *args
+            HexBytes(contract.serialize()), ctor_abi, *args
         )
         wl_token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
         receipt = self.send_transaction(transaction, token=wl_token)

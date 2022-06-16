@@ -1,6 +1,7 @@
 # Declare this file as a StarkNet contract.
 %lang starknet
 
+from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import (
     HashBuiltin, SignatureBuiltin)
 from starkware.cairo.common.hash import hash2
@@ -18,6 +19,10 @@ end
 
 @storage_var
 func is_initialized() -> (initialized: felt):
+end
+
+@storage_var
+func array_get_counter() -> (res: felt):
 end
 
 @event
@@ -71,6 +76,32 @@ func store_sum{
     let (calc) = array_sum(arr_len, arr)
     last_sum.write(calc)
     return (calc)
+end
+
+@external
+func get_array{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (arr_len: felt, arr: felt*):
+    const ARRAY_SIZE = 3
+    let (ptr) = alloc()
+    assert [ptr] = 1
+    assert [ptr + 1] = 2
+    assert [ptr + 2] = 3
+    let (current_count) = array_get_counter.read()
+    array_get_counter.write(current_count + 1)
+    return (ARRAY_SIZE, ptr)
+end
+
+@view
+func view_array{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (arr_len: felt, arr: felt*):
+    const ARRAY_SIZE = 3
+    let (ptr) = alloc()
+    assert [ptr] = 1
+    assert [ptr + 1] = 2
+    assert [ptr + 2] = 3
+    return (ARRAY_SIZE, ptr)
 end
 
 func array_sum(arr_len: felt, arr : felt*) -> (sum):

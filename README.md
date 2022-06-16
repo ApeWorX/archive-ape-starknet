@@ -98,7 +98,7 @@ You can access the return data from a mutable method's receipt:
 
 ```python
 receipt = contract.my_mutable_method(123)
-result = receipt.return_data
+result = receipt.return_value
 ```
 
 Include a sender to delegate the transaction to an account contract:

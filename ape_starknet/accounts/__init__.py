@@ -16,7 +16,7 @@ from ape.utils import abstractmethod
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
 from hexbytes import HexBytes
-from services.external_api.base_client import BadRequest  # type: ignore
+from services.external_api.client import BadRequest  # type: ignore
 from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.account_client import AccountClient  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
@@ -331,15 +331,24 @@ class BaseStarknetAccount(AccountAPI):
         account_client = self.create_account_client()
         starknet_txn = txn.as_starknet_object()
         txn_info = account_client.add_transaction_sync(starknet_txn, token=token)
+
+        error = txn_info.get("error", {})
+        if error:
+            message = error.get("message", error)
+            raise AccountsError(message)
+
         txn_hash = txn_info["transaction_hash"]
 
         starknet: Starknet = self.provider.network.ecosystem  # type: ignore
-        return_data = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
-        if len(return_data) == 1:
-            return_data = return_data[0]
+        return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+
+        if return_value and isinstance(txn, InvokeFunctionTransaction):
+            return_value = starknet.decode_returndata(txn.method_abi, return_value)
+            if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                return_value = return_value[0]
 
         receipt = self.provider.get_transaction(txn_hash)
-        receipt.return_data = return_data
+        receipt.return_value = return_value
         return receipt
 
     def create_account_client(self) -> AccountClient:
@@ -351,8 +360,8 @@ class BaseStarknetAccount(AccountAPI):
         chain_id = get_chain_id(network.name)
         return AccountClient(
             self.contract_address,
-            key_pair,
             self.provider.uri,
+            key_pair=key_pair,
             chain=chain_id,
         )
 
