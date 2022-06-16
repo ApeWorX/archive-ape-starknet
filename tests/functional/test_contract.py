@@ -148,6 +148,9 @@ def test_array_inputs(contract):
 # Test external, and view, methods
 #
 
+    receipt = contract.get_array(sender=account)
+    assert receipt.return_value == [1, 2, 3]
+
 
 @pytest.mark.parametrize(
     "method, returndata_expected, return_value_expected",
