@@ -62,7 +62,7 @@ setup(
         "pydantic>=1.9.0,<2.0",
         "eth-ape>=0.2.8,<0.3.0",
         "ethpm-types",  # Use same as `eth-ape`.
-        "starknet.py>=0.3.1a0,<0.4",
+        "starknet.py>=0.3.2a0,<0.4",
         "starknet-devnet>=0.2.3,<0.3",
         "importlib-metadata ; python_version<'3.8'",
     ],  # NOTE: Add 3rd party libraries here
