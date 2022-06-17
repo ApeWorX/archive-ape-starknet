@@ -5,6 +5,7 @@ from ape.contracts import ContractEvent
 from ape.exceptions import ProviderError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod
+from eth_utils import to_int
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field
@@ -95,11 +96,14 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
         contract_abi = [a.dict() for a in contract_type.abi]
         selector = get_selector_from_name(self.method_abi.name)
         encoded_call_data = self.starknet.encode_calldata(contract_abi, self.method_abi, self.data)
+
         return InvokeFunction(
             contract_address=contract_address_int,
             entry_point_selector=selector,
             calldata=encoded_call_data,
-            signature=[self.signature[1], self.signature[2]] if self.signature else [],
+            signature=[to_int(self.signature.r), to_int(self.signature.s)]
+            if self.signature
+            else [],
             max_fee=self.max_fee,
             version=self.version,
         )
