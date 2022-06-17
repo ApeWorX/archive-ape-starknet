@@ -4,7 +4,7 @@ from ape.api import ConverterAPI
 from ape.types import AddressType
 from eth_utils import is_checksum_address
 
-from ape_starknet._utils import is_hex_address, to_checksum_address
+from ape_starknet.utils import is_hex_address, to_checksum_address
 
 
 # NOTE: This utility converter ensures that all bytes args can accept hex too

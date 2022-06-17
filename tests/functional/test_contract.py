@@ -148,6 +148,8 @@ def test_array_inputs(contract):
 # Test external, and view, methods
 #
 
+
+def test_external_call_array_outputs_from_account(contract, account):
     receipt = contract.get_array(sender=account)
     assert receipt.return_value == [1, 2, 3]
 

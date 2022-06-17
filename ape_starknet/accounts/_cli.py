@@ -11,12 +11,12 @@ from ape.cli import (
 from ape.cli.options import ApeCliContextObject
 from ape.utils import add_padding_to_strings
 
-from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
     BaseStarknetAccount,
     StarknetAccountContracts,
     StarknetKeyfileAccount,
 )
+from ape_starknet.utils import PLUGIN_NAME
 
 
 def _get_container(cli_ctx: ApeCliContextObject) -> StarknetAccountContracts:
