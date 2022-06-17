@@ -54,8 +54,7 @@ class TokenManager(StarknetMixin):
             raise ContractError(f"Contract has no method '{abi_name}'.")
 
         method_abi_obj = MethodABI.parse_obj(method_abi)
-        balance = ContractCall(method_abi_obj, contract_address)()
-        return balance
+        return ContractCall(method_abi_obj, contract_address)()
 
     def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
         contract_address = self._get_contract_address(token=token)
@@ -88,5 +87,4 @@ class TokenManager(StarknetMixin):
         address_int = ContractCall(method_abi, contract_address)()
         actual_contract_address = self.starknet.decode_address(address_int)
         actual_abi = self.provider.get_abi(actual_contract_address)
-        selected_abi = _select_method_abi(method_name, actual_abi)
-        return selected_abi
+        return _select_method_abi(method_name, actual_abi)

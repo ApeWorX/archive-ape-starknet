@@ -1,3 +1,4 @@
+import contextlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -53,9 +54,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
 
     @property
     def aliases(self) -> Iterator[str]:
-        for key in self.ephemeral_accounts.keys():
-            yield key
-
+        yield from self.ephemeral_accounts.keys()
         for key_file in self._key_file_paths:
             yield key_file.stem
 
@@ -108,10 +107,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
 
     def load(self, alias: str) -> "BaseStarknetAccount":
         if alias in self.ephemeral_accounts:
-            account = StarknetEphemeralAccount(
+            return StarknetEphemeralAccount(
                 raw_account_data=self.ephemeral_accounts[alias], account_key=alias
             )
-            return account
 
         return self.load_key_file_account(alias)
 
@@ -182,13 +180,11 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
         # Add account contract to cache
         address = self.starknet.decode_address(contract_address)
         if self.network_manager.active_provider and self.provider.network.explorer:
-            try:
+            # Skip errors when unable to store contract type.
+            with contextlib.suppress(ProviderError, BadRequest):
                 contract_type = self.provider.network.explorer.get_contract_type(address)
                 if contract_type:
                     self.chain_manager.contracts[address] = contract_type
-            except (ProviderError, BadRequest):
-                # Unable to store contract type.
-                pass
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
@@ -393,11 +389,14 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         return contract.deploy(sender=self)
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
-        for deployment in self.get_deployments():
-            if deployment.network_name in network_name:
-                return deployment
-
-        return None
+        return next(
+            (
+                deployment
+                for deployment in self.get_deployments()
+                if deployment.network_name in network_name
+            ),
+            None,
+        )
 
     def check_signature(  # type: ignore
         self,
@@ -496,14 +495,12 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         remaining_deployments = [
             vars(d) for d in self.get_deployments() if d.network_name != network
         ]
-        if not remaining_deployments:
+        if remaining_deployments:
+            self.write(passphrase=passphrase, deployments=remaining_deployments)
+        elif click.confirm(f"Completely delete local key for account '{self.address}'?"):
             # Delete entire account JSON if no more deployments.
             # The user has to agree to an additional prompt since this may be very destructive.
-
-            if click.confirm(f"Completely delete local key for account '{self.address}'?"):
-                self.key_file_path.unlink()
-        else:
-            self.write(passphrase=passphrase, deployments=remaining_deployments)
+            self.key_file_path.unlink()
 
     def sign_message(
         self, msg: SignableMessage, passphrase: Optional[str] = None
