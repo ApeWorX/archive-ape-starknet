@@ -10,7 +10,7 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
-from ape.types import AddressType, SignableMessage
+from ape.types import AddressType, SignableMessage, TransactionSignature
 from ape.utils import abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
@@ -339,20 +339,21 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         txn.receiver = contract_address
         txn.sender = None
         txn.method_abi = execute_abi
-        sign_result = self.sign_transaction(txn)
-        if not sign_result:
-            raise SignatureError("Failed to sign transaction.")
-
-        r, s = sign_result
-        txn.signature = (0, r, s)
+        txn.signature = self.sign_transaction(txn)
         return txn
 
-    def sign_transaction(self, txn: TransactionAPI) -> Optional[ECSignature]:
+    def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
         if not isinstance(txn, InvokeFunctionTransaction):
             raise AccountsError("This account can only sign Starknet transactions.")
 
         # NOTE: 'v' is not used
-        return self.signer.sign_transaction(txn.as_starknet_object())
+        sign_result = self.signer.sign_transaction(txn.as_starknet_object())
+        if not sign_result:
+            raise SignatureError("Failed to sign transaction.")
+
+        r = to_bytes(sign_result[0])
+        s = to_bytes(sign_result[1])
+        return TransactionSignature(v=0, r=r, s=s)  # type: ignore
 
     def transfer(
         self,
