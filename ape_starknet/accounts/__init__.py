@@ -281,7 +281,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
 
         contract_type = self.chain_manager.contracts.get(self.contract_address)
         if not contract_type:
-            raise AccountsError(f"Account '{self.contract_address}' is was expected but not found.")
+            raise AccountsError(f"Account '{self.contract_address}' was expected but not found.")
 
         return contract_type
 
