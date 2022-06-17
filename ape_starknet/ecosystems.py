@@ -23,6 +23,7 @@ from starkware.starknet.services.api.contract_class import ContractClass  # type
 from ape_starknet._utils import to_checksum_address
 from ape_starknet.exceptions import StarknetEcosystemError
 from ape_starknet.transactions import (
+    DeclareTransaction,
     DeployTransaction,
     InvokeFunctionTransaction,
     StarknetReceipt,
@@ -195,11 +196,15 @@ class Starknet(EcosystemAPI):
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = kwargs.pop("type")
-        txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeployTransaction]]
+        txn_cls: Union[
+            Type[InvokeFunctionTransaction], Type[DeployTransaction], Type[DeclareTransaction]
+        ]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             txn_cls = InvokeFunctionTransaction
         elif txn_type == TransactionType.DEPLOY:
             txn_cls = DeployTransaction
+        elif txn_type == TransactionType.DECLARE:
+            txn_cls = DeclareTransaction
 
         return txn_cls(**kwargs)
 

@@ -17,6 +17,7 @@ from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+    DeclareSpecificInfo,
     DeploySpecificInfo,
     InvokeSpecificInfo,
 )
@@ -205,6 +206,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             txn_type = TransactionType.DEPLOY
         elif isinstance(txn_info, InvokeSpecificInfo):
             txn_type = TransactionType.INVOKE_FUNCTION
+        elif isinstance(txn_info, DeclareSpecificInfo):
+            txn_type = TransactionType.DECLARE
         else:
             raise ValueError(f"No value found for '{txn_info}'.")
 
