@@ -116,4 +116,7 @@ def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
 
     # Fix escaping newline issue with error message.
     err_msg = err_msg.replace("\\n", "").strip()
+    err_msg = err_msg.replace(
+        "Transaction was rejected with following starknet error: ", ""
+    ).strip()
     return ContractLogicError(revert_message=err_msg)

@@ -2,7 +2,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
-from ape.exceptions import ProviderError
+from ape.exceptions import ProviderError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod
 from ethpm_types.abi import EventABI, MethodABI
@@ -17,6 +17,8 @@ from starknet_py.net.models.transaction import (  # type: ignore
 )
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
+
+from ape_starknet.utils.basemodel import StarknetMixin
 
 
 class StarknetTransaction(TransactionAPI):
@@ -70,7 +72,7 @@ class DeployTransaction(StarknetTransaction):
         )
 
 
-class InvokeFunctionTransaction(StarknetTransaction):
+class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
     type: TransactionType = TransactionType.INVOKE_FUNCTION
     method_abi: MethodABI
     max_fee: int = 0
@@ -81,29 +83,23 @@ class InvokeFunctionTransaction(StarknetTransaction):
     receiver: AddressType = Field(alias="contract_address")
 
     def as_starknet_object(self) -> InvokeFunction:
-        from ape_starknet.ecosystems import Starknet
-        from ape_starknet.provider import StarknetProvider
-
-        ecosystem = self.provider.network.ecosystem
-        if (
-            not isinstance(self.provider, StarknetProvider)
-            or not isinstance(ecosystem, Starknet)
-            or not self.provider.client
-        ):
+        if not self.provider.client:
             # **NOTE**: This check is mostly done for mypy.
             raise ProviderError("Must be connected to a Starknet provider.")
 
-        method_abi = self.method_abi
-        contract_address = ecosystem.encode_address(self.receiver)
-        contract_abi = self.provider.get_abi(contract_address)
+        contract_address_int = self.starknet.encode_address(self.receiver)
+        contract_type = self.chain_manager.contracts.get(self.receiver)
+        if not contract_type:
+            raise TransactionError(message=f"Unknown contract '{self.receiver}'.")
 
-        call_data = ecosystem.encode_calldata(contract_abi, method_abi, self.data)
-        selector = get_selector_from_name(method_abi.name)
+        contract_abi = [a.dict() for a in contract_type.abi]
+        selector = get_selector_from_name(self.method_abi.name)
+        encoded_call_data = self.starknet.encode_calldata(contract_abi, self.method_abi, self.data)
         return InvokeFunction(
-            contract_address=contract_address,
+            contract_address=contract_address_int,
             entry_point_selector=selector,
-            calldata=call_data,
-            signature=[],  # NOTE: Signatures are not supported on signing transactions
+            calldata=encoded_call_data,
+            signature=[self.signature[1], self.signature[2]] if self.signature else [],
             max_fee=self.max_fee,
             version=self.version,
         )
@@ -131,7 +127,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
         return call_data
 
 
-class StarknetReceipt(ReceiptAPI):
+class StarknetReceipt(ReceiptAPI, StarknetMixin):
     """
     An object represented a confirmed transaction in Starknet.
     """
@@ -180,7 +176,7 @@ class StarknetReceipt(ReceiptAPI):
             log_data["block_number"] = self.block_number
             log_data_items.append(log_data)
 
-        yield from self.provider.network.ecosystem.decode_logs(abi, log_data_items)
+        yield from self.starknet.decode_logs(abi, log_data_items)
 
 
 __all__ = [
