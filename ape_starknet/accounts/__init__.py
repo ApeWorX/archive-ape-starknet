@@ -298,7 +298,11 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         if not execute_abi_ls:
             raise AccountsError(f"Account '{contract_address}' does not have __execute__ method.")
 
-        return execute_abi_ls[0]
+        abi = execute_abi_ls[0]
+        if not isinstance(abi, MethodABI):
+            raise AccountsError("ABI for '__execute__' is not a method.")
+
+        return abi
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.contract_address}>"
