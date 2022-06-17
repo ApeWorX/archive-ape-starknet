@@ -7,6 +7,21 @@ def connection(provider):
     yield
 
 
+def test_declare_and_deploy(project):
+    # This also tests `get_class_hash()`.
+
+    # Declare
+
+    # Get class hash
+
+    # Check calls are not possible on the declared contract
+
+    # Deploy the declared contract
+
+    # Check calls are possible on the deployed contract
+    pass
+
+
 def test_deploy(project):
     assert project.MyContract, "Unable to access contract when needing to compile"
 

@@ -10,6 +10,7 @@ from hexbytes import HexBytes
 from pydantic import Field
 from starknet_py.constants import TxStatus  # type: ignore
 from starknet_py.net.models.transaction import (  # type: ignore
+    Declare,
     Deploy,
     InvokeFunction,
     Transaction,
@@ -45,6 +46,22 @@ class StarknetTransaction(TransactionAPI):
         transaction equivalent so it can be accepted by the core Starknet OS
         framework.
         """
+
+
+class DeclareTransaction(StarknetTransaction):
+    type: TransactionType = TransactionType.DECLARE
+    sender: Optional[AddressType] = None
+    max_fee: int = 0
+
+    def as_starknet_object(self) -> Declare:
+        contract = ContractClass.deserialize(self.data)
+        return Declare(
+            contract,
+            sender_address=self.sender,
+            signature=[],  # NOTE: Signatures are not supported on signing transactions
+            max_fee=self.max_fee,
+            version=self.version,
+        )
 
 
 class DeployTransaction(StarknetTransaction):
