@@ -44,10 +44,9 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 def to_checksum_address(address: RawAddress) -> AddressType:
     try:
         hex_address = hexstr_if_str(to_hex, address)
-    except AttributeError:
-        raise ValueError(
-            f"Value must be any string, int, or bytes, instead got type {type(address)}"
-        )
+    except AttributeError as exc:
+        msg = f"Value must be any string, int, or bytes, instead got type {type(address)}"
+        raise ValueError(msg) from exc
 
     cleaned_address = remove_0x_prefix(HexStr(hex_address))
     address_hash = encode_hex(keccak(text=cleaned_address))
@@ -66,10 +65,7 @@ def to_checksum_address(address: RawAddress) -> AddressType:
 
 
 def is_hex_address(value: Any) -> bool:
-    if not is_text(value):
-        return False
-
-    return _HEX_ADDRESS_REG_EXP.fullmatch(value) is not None
+    return _HEX_ADDRESS_REG_EXP.fullmatch(value) is not None if is_text(value) else False
 
 
 def handle_client_errors(f):

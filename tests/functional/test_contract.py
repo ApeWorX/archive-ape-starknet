@@ -52,7 +52,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
 def test_decode_logs(contract, account, ecosystem):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    logs = [log for log in receipt.decode_logs(contract.balance_increased)]
+    logs = list(receipt.decode_logs(contract.balance_increased))
     assert len(logs) == 1
     assert logs[0].amount == increase_amount
 
