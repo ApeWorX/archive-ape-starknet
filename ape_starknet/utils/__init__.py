@@ -2,13 +2,7 @@ import re
 from typing import Any, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import (
-    AddressError,
-    ApeException,
-    ContractLogicError,
-    ProviderError,
-    VirtualMachineError,
-)
+from ape.exceptions import ApeException, ContractLogicError, ProviderError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -49,9 +43,11 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 
 def to_checksum_address(address: RawAddress) -> AddressType:
     try:
-        hex_address = hexstr_if_str(to_hex, address).lower()
+        hex_address = hexstr_if_str(to_hex, address)
     except AttributeError:
-        raise AddressError(f"Value must be any string, instead got type {type(address)}")
+        raise ValueError(
+            f"Value must be any string, int, or bytes, instead got type {type(address)}"
+        )
 
     cleaned_address = remove_0x_prefix(HexStr(hex_address))
     address_hash = encode_hex(keccak(text=cleaned_address))
@@ -116,4 +112,7 @@ def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
 
     # Fix escaping newline issue with error message.
     err_msg = err_msg.replace("\\n", "").strip()
+    err_msg = err_msg.replace(
+        "Transaction was rejected with following starknet error: ", ""
+    ).strip()
     return ContractLogicError(revert_message=err_msg)

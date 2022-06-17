@@ -20,7 +20,6 @@ from starkware.starknet.definitions.transaction_type import TransactionType  # t
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
-from ape_starknet._utils import to_checksum_address
 from ape_starknet.exceptions import StarknetEcosystemError
 from ape_starknet.transactions import (
     DeployTransaction,
@@ -28,6 +27,7 @@ from ape_starknet.transactions import (
     StarknetReceipt,
     StarknetTransaction,
 )
+from ape_starknet.utils import to_checksum_address
 
 NETWORKS = {
     # chain_id, network_id
@@ -101,24 +101,37 @@ class Starknet(EcosystemAPI):
         method_abi: Union[ConstructorABI, MethodABI],
         call_args: Union[List, Tuple],
     ) -> List:
+        full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
         id_manager = identifier_manager_from_abi(full_abi)
         transformer = DataTransformer(method_abi.dict(), id_manager)
-        encoded_args = []
+        encoded_args: List[Any] = []
         index = 0
         last_index = len(method_abi.inputs) - 1
+        did_process_array_during_arr_len = False
+
         for call_arg, input_type in zip(call_args, method_abi.inputs):
             if str(input_type.type).endswith("*"):
-                # (arrays) Was processed the iteration before.
-                continue
+                if did_process_array_during_arr_len:
+                    did_process_array_during_arr_len = False
+                    continue
 
+                array_arg = [self.encode_primitive_value(v) for v in call_arg]
+                encoded_args.append(array_arg)
             elif (
                 input_type.name == "arr_len"
                 and index < last_index
                 and str(method_abi.inputs[index + 1].type).endswith("*")
             ):
-                # Handle arrays.
                 array_arg = [self.encode_primitive_value(v) for v in call_args[index + 1]]
                 encoded_args.append(array_arg)
+                did_process_array_during_arr_len = True
+
+            elif isinstance(call_arg, dict):
+                encoded_struct = {}
+                for key, value in call_arg.items():
+                    encoded_struct[key] = self.encode_primitive_value(value)
+
+                encoded_args.append(encoded_struct)
 
             else:
                 encoded_arg = self.encode_primitive_value(call_arg)
@@ -130,10 +143,15 @@ class Starknet(EcosystemAPI):
         return calldata
 
     def encode_primitive_value(self, value: Any) -> Any:
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, int):
+            return value
+
+        elif isinstance(value, (list, tuple)):
             return [self.encode_primitive_value(v) for v in value]
+
         if isinstance(value, str) and is_0x_prefixed(value):
             return int(value, 16)
+
         elif isinstance(value, HexBytes):
             return int(value.hex(), 16)
 
