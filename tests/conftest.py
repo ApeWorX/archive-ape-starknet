@@ -9,12 +9,12 @@ import pytest
 from ape.api import EcosystemAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 
-from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
     StarknetAccountContracts,
     StarknetEphemeralAccount,
     StarknetKeyfileAccount,
 )
+from ape_starknet.utils import PLUGIN_NAME
 
 # NOTE: Ensure that we don't use local paths for these
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()

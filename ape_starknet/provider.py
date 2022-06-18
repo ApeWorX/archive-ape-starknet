@@ -22,22 +22,22 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     StarknetBlock,
 )
 
-from ape_starknet._utils import (
+from ape_starknet.config import StarknetConfig
+from ape_starknet.tokens import TokenManager
+from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
+from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     PLUGIN_NAME,
     get_chain_id,
     get_virtual_machine_error,
     handle_client_errors,
 )
-from ape_starknet.config import StarknetConfig
-from ape_starknet.ecosystems import Starknet
-from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
+from ape_starknet.utils.basemodel import StarknetMixin
 
 DEFAULT_PORT = 8545
 
 
-class StarknetProvider(SubprocessProvider, ProviderAPI):
+class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
     """
     A Starknet provider.
     """
@@ -106,13 +106,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         return get_chain_id(self.network.name).value
 
     @handle_client_errors
-    def get_balance(self, address: str) -> int:
+    def get_balance(self, address: AddressType) -> int:
         network = self.network.name
         if network == LOCAL_NETWORK_NAME:
             # Fees / balances are currently not supported in local
             return 0
 
-        account = self.account_manager.containers["starknet"][address]  # type: ignore
+        account = self.account_contracts[address]
         account_contract_address = account.contract_address  # type: ignore
         return self.token_manager.get_balance(account_contract_address)
 
@@ -125,13 +125,14 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         return self.get_code_and_abi(address)["abi"]  # type: ignore
 
     @handle_client_errors
-    def get_nonce(self, address: str) -> int:
+    def get_nonce(self, address: AddressType) -> int:
         # Check if passing a public-key address of a local account
-        container = self.account_manager.containers["starknet"]
-        if address in container.public_key_addresses:  # type: ignore
-            address = container[address].contract_address  # type: ignore
+        if address in self.account_contracts.public_key_addresses:
+            contract_address = self.account_contracts.get_account(address).contract_address
+            if contract_address:
+                address = contract_address
 
-        checksum_address = self.network.ecosystem.decode_address(address)
+        checksum_address = self.starknet.decode_address(address)
         contract = self.chain_manager.contracts.instance_at(checksum_address)
 
         if not isinstance(contract, ContractInstance):
@@ -167,8 +168,15 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
-        block = self._get_block(block_id)
-        return self.network.ecosystem.decode_block(block.dump())
+        if isinstance(block_id, (int, str)) and len(str(block_id)) == 76:
+            kwarg = "block_hash"
+        elif isinstance(block_id, int) or block_id == "pending":
+            kwarg = "block_number"
+        else:
+            raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
+
+        block = self.starknet_client.get_block_sync(**{kwarg: block_id})
+        return self.starknet.decode_block(block.dump())
 
     def _get_block(self, block_id: BlockID) -> StarknetBlock:
         kwarg = (
@@ -191,10 +199,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
         starknet_obj = txn.as_starknet_object()
         return_value = self.client.call_contract_sync(starknet_obj)
-        decoded_return_value = self.provider.network.ecosystem.decode_returndata(
-            txn.method_abi, return_value
-        )
-        return decoded_return_value
+        decoded_return_value = self.starknet.decode_returndata(txn.method_abi, return_value)
+        return decoded_return_value  # type: ignore
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
@@ -210,11 +216,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         else:
             raise ValueError(f"No value found for '{txn_info}'.")
 
-        ecosystem = self.provider.network.ecosystem
-        receipt_dict["contract_address"] = ecosystem.decode_address(txn_info.contract_address)
+        receipt_dict["contract_address"] = self.starknet.decode_address(txn_info.contract_address)
         receipt_dict["type"] = txn_type
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
-        return self.network.ecosystem.decode_receipt(receipt_dict)
+        return self.starknet.decode_receipt(receipt_dict)
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
@@ -234,32 +239,28 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
                 "Unable to send non-Starknet transaction using a Starknet provider."
             )
 
-        if txn.sender:
-            # If using a sender, send the transaction from your sender's account contract.
-            container = self.account_manager.containers["starknet"]
-            result = container[txn.sender].send_transaction(txn, token=token)  # type: ignore
-            return result
-        else:
-            starknet_txn = txn.as_starknet_object()
-            txn_info = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
+        starknet_txn = txn.as_starknet_object()
+        txn_info = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
 
-            error = txn_info.get("error", {})
-            if error:
-                message = error.get("message", error)
-                raise ProviderError(message)
+        error = txn_info.get("error", {})
+        if error:
+            message = error.get("message", error)
+            raise ProviderError(message)
 
-            starknet: Starknet = self.provider.network.ecosystem  # type: ignore
-            return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+        # Return felts as ints and let calling context decide if hexstr is more appropriate.
+        return_value = [
+            self.starknet.encode_primitive_value(v) if isinstance(v, str) else v
+            for v in txn_info.get("result", [])
+        ]
+        if return_value and isinstance(txn, InvokeFunctionTransaction):
+            return_value = self.starknet.decode_returndata(txn.method_abi, return_value)
+            if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                return_value = return_value[0]
 
-            if return_value and isinstance(txn, InvokeFunctionTransaction):
-                return_value = starknet.decode_returndata(txn.method_abi, return_value)
-                if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
-                    return_value = return_value[0]
-
-            txn_hash = txn_info["transaction_hash"]
-            receipt = self.get_transaction(txn_hash)
-            receipt.return_value = return_value
-            return receipt
+        txn_hash = txn_info["transaction_hash"]
+        receipt = self.get_transaction(txn_hash)
+        receipt.return_value = return_value
+        return receipt
 
     @handle_client_errors
     def get_contract_logs(
@@ -302,7 +303,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             {},
         )
         ctor_abi = ConstructorABI(**data)
-        transaction = self.network.ecosystem.encode_deployment(
+        transaction = self.starknet.encode_deployment(
             HexBytes(contract.serialize()), ctor_abi, *args
         )
         wl_token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
