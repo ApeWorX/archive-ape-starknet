@@ -174,10 +174,12 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
 
         log_data_items: List[Dict] = []
         for log in self.logs:
-            log_data = {**log}
-            log_data["block_hash"] = self.block_hash
-            log_data["transaction_hash"] = self.txn_hash
-            log_data["block_number"] = self.block_number
+            log_data = {
+                **log,
+                "block_hash": self.block_hash,
+                "transaction_hash": self.txn_hash,
+                "block_number": self.block_number,
+            }
             log_data_items.append(log_data)
 
         yield from self.starknet.decode_logs(abi, log_data_items)
