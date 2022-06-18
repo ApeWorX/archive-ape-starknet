@@ -2,10 +2,11 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
-from ape.exceptions import ProviderError, TransactionError
+from ape.exceptions import TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
 from eth_utils import to_bytes, to_int
+from ethpm_types import ContractType
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field
@@ -17,8 +18,10 @@ from starknet_py.net.models.transaction import (  # type: ignore
     TransactionType,
 )
 from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
-from starkware.starknet.core.os.transaction_hash.transaction_hash import (
+from starkware.starknet.core.os.transaction_hash.transaction_hash import (  # type: ignore
+    TransactionHashPrefix,
     calculate_deploy_transaction_hash,
+    calculate_transaction_hash_common,
 )
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
@@ -60,7 +63,6 @@ class DeployTransaction(StarknetTransaction):
     constructor_calldata: List[int] = []
     caller_address: int = 0
     token: Optional[str] = None
-    version: int = 0
 
     """Aliases"""
     data: bytes = Field(alias="contract_code")  # type: ignore
@@ -75,16 +77,16 @@ class DeployTransaction(StarknetTransaction):
     @property
     def txn_hash(self) -> HexBytes:
         contract_address = calculate_contract_address(
-            salt=self.salt,
             contract_class=self.starknet_contract,
             constructor_calldata=self.constructor_calldata,
             deployer_address=self.caller_address,
+            salt=self.salt,
         )
         chain_id = self.provider.chain_id
         hash_int = calculate_deploy_transaction_hash(
+            chain_id=chain_id,
             contract_address=contract_address,
             constructor_calldata=self.constructor_calldata,
-            chain_id=chain_id,
             version=self.version,
         )
         return HexBytes(to_bytes(hash_int))
@@ -92,9 +94,9 @@ class DeployTransaction(StarknetTransaction):
     def as_starknet_object(self) -> Deploy:
         contract = ContractClass.deserialize(self.data)
         return Deploy(
+            constructor_calldata=self.constructor_calldata,
             contract_address_salt=self.salt,
             contract_definition=contract,
-            constructor_calldata=self.constructor_calldata,
             version=self.version,
         )
 
@@ -109,24 +111,46 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
     data: List[Any] = Field(alias="calldata")  # type: ignore
     receiver: AddressType = Field(alias="contract_address")
 
-    def as_starknet_object(self) -> InvokeFunction:
-        if not self.provider.client:
-            # **NOTE**: This check is mostly done for mypy.
-            raise ProviderError("Must be connected to a Starknet provider.")
+    @property
+    def receiver_int(self) -> int:
+        return self.starknet.encode_address(self.receiver)
 
-        contract_address_int = self.starknet.encode_address(self.receiver)
+    @cached_property
+    def contract_type(self) -> ContractType:
         contract_type = self.chain_manager.contracts.get(self.receiver)
         if not contract_type:
             raise TransactionError(message=f"Unknown contract '{self.receiver}'.")
 
-        contract_abi = [a.dict() for a in contract_type.abi]
-        selector = get_selector_from_name(self.method_abi.name)
-        encoded_call_data = self.starknet.encode_calldata(contract_abi, self.method_abi, self.data)
+        return contract_type
 
+    @cached_property
+    def entry_point_selector(self) -> int:
+        return get_selector_from_name(self.method_abi.name)
+
+    @cached_property
+    def calldata(self) -> List[int]:
+        contract_abi = [a.dict() for a in self.contract_type.abi]
+        return self.starknet.encode_calldata(contract_abi, self.method_abi, self.data)
+
+    @property
+    def txn_hash(self) -> HexBytes:
+        hash_int = calculate_transaction_hash_common(
+            additional_data=[],
+            calldata=self.calldata,
+            chain_id=self.provider.chain_id,
+            contract_address=self.receiver_int,
+            entry_point_selector=self.entry_point_selector,
+            max_fee=self.max_fee,
+            tx_hash_prefix=TransactionHashPrefix.INVOKE,
+            version=self.version,
+        )
+        return HexBytes(to_bytes(hash_int))
+
+    def as_starknet_object(self) -> InvokeFunction:
         return InvokeFunction(
-            contract_address=contract_address_int,
-            entry_point_selector=selector,
-            calldata=encoded_call_data,
+            calldata=self.calldata,
+            contract_address=self.receiver_int,
+            entry_point_selector=self.entry_point_selector,
             signature=[to_int(self.signature.r), to_int(self.signature.s)]
             if self.signature
             else [],

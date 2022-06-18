@@ -1,5 +1,4 @@
 import pytest
-from ape.contracts.base import ContractConstructor
 from ape.exceptions import AccountsError, ContractLogicError
 
 
@@ -16,19 +15,6 @@ def test_deploy(project):
 
     deployment = contract.deploy()
     assert deployment
-
-
-def test_deploy_txn_hash(project, convert, provider):
-    contract_type = project.MyContract.contract_type
-    constructor = ContractConstructor(  # type: ignore
-        abi=contract_type.constructor,
-        deployment_bytecode=contract_type.get_deployment_bytecode() or b"",  # type: ignore
-    )
-    deploy_txn = constructor.serialize_transaction()
-    receipt = provider.send_transaction(deploy_txn)
-
-    # Ensure the pre-calculated hash is the same as the one returns in the Receipt.
-    assert deploy_txn.txn_hash.hex() == receipt.txn_hash
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):

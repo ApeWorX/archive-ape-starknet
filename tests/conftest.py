@@ -6,8 +6,7 @@ from typing import cast
 
 import ape
 import pytest
-from ape.api import EcosystemAPI
-from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
 
 from ape_starknet.accounts import (
     StarknetAccountContracts,
