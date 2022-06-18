@@ -211,14 +211,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
 
         if isinstance(txn_info, DeploySpecificInfo):
             txn_type = TransactionType.DEPLOY
+            max_fee = 0
         elif isinstance(txn_info, InvokeSpecificInfo):
             txn_type = TransactionType.INVOKE_FUNCTION
+            max_fee = txn_info.max_fee
         else:
             raise ValueError(f"No value found for '{txn_info}'.")
 
         receipt_dict["contract_address"] = self.starknet.decode_address(txn_info.contract_address)
         receipt_dict["type"] = txn_type
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
+        receipt_dict["max_fee"] = max_fee
         return self.starknet.decode_receipt(receipt_dict)
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:

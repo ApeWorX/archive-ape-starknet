@@ -18,14 +18,17 @@ def test_deploy(project):
     assert deployment
 
 
-def test_deploy_txn_hash(project, convert):
+def test_deploy_txn_hash(project, convert, provider):
+    contract_type = project.MyContract.contract_type
     constructor = ContractConstructor(  # type: ignore
-        abi=project.contract_type.constructor,
-        deployment_bytecode=project.contract_type.get_deployment_bytecode() or b"",  # type: ignore
+        abi=contract_type.constructor,
+        deployment_bytecode=contract_type.get_deployment_bytecode() or b"",  # type: ignore
     )
     deploy_txn = constructor.serialize_transaction()
-    txn_hash = deploy_txn.txn_hash
-    assert txn_hash
+    receipt = provider.send_transaction(deploy_txn)
+
+    # Ensure the pre-calculated hash is the same as the one returns in the Receipt.
+    assert deploy_txn.txn_hash.hex() == receipt.txn_hash
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):

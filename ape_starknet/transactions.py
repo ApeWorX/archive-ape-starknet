@@ -5,7 +5,7 @@ from ape.contracts import ContractEvent
 from ape.exceptions import ProviderError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
-from eth_utils import to_int
+from eth_utils import to_bytes, to_int
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field
@@ -60,6 +60,7 @@ class DeployTransaction(StarknetTransaction):
     constructor_calldata: List[int] = []
     caller_address: int = 0
     token: Optional[str] = None
+    version: int = 0
 
     """Aliases"""
     data: bytes = Field(alias="contract_code")  # type: ignore
@@ -80,11 +81,13 @@ class DeployTransaction(StarknetTransaction):
             deployer_address=self.caller_address,
         )
         chain_id = self.provider.chain_id
-        return calculate_deploy_transaction_hash(
+        hash_int = calculate_deploy_transaction_hash(
             contract_address=contract_address,
             constructor_calldata=self.constructor_calldata,
             chain_id=chain_id,
+            version=self.version,
         )
+        return HexBytes(to_bytes(hash_int))
 
     def as_starknet_object(self) -> Deploy:
         contract = ContractClass.deserialize(self.data)
@@ -92,7 +95,7 @@ class DeployTransaction(StarknetTransaction):
             contract_address_salt=self.salt,
             contract_definition=contract,
             constructor_calldata=self.constructor_calldata,
-            version=0,
+            version=self.version,
         )
 
 
@@ -161,6 +164,8 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
 
     type: TransactionType
     status: TxStatus
+    actual_fee: int
+    max_fee: int
 
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None  # type: ignore
@@ -179,8 +184,11 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
 
     @property
     def ran_out_of_gas(self) -> bool:
-        # Errors elsewhere if we run out of gas.
-        return False
+        return self.max_fee == self.actual_fee
+
+    @property
+    def total_fees_paid(self) -> int:
+        return self.actual_fee
 
     def decode_logs(self, abi: Union[EventABI, ContractEvent]) -> Iterator[ContractLog]:
         """
