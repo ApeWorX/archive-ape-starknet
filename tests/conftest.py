@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Iterator, cast
+from typing import cast
 
 import ape
 import pytest
@@ -15,7 +15,6 @@ from ape_starknet.accounts import (
     StarknetEphemeralAccount,
     StarknetKeyfileAccount,
 )
-from ape_starknet.provider import StarknetProvider
 
 # NOTE: Ensure that we don't use local paths for these
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
@@ -50,6 +49,26 @@ def networks():
 
 
 @pytest.fixture(scope="session")
+def convert():
+    return ape.convert
+
+
+@pytest.fixture(scope="session")
+def chain():
+    return ape.chain
+
+
+@pytest.fixture(scope="session")
+def password():
+    return PASSWORD
+
+
+@pytest.fixture(scope="session")
+def public_key():
+    return PUBLIC_KEY
+
+
+@pytest.fixture(scope="session")
 def project(request, config):
     project_path = _HERE / "projects" / "project"
     os.chdir(project_path)
@@ -78,7 +97,7 @@ def initial_balance(contract, account):
 
 
 @pytest.fixture(scope="session")
-def provider() -> Iterator[StarknetProvider]:
+def provider():
     network = f"{PLUGIN_NAME}:{LOCAL_NETWORK_NAME}:{PLUGIN_NAME}"
     with ape.networks.parse_network_choice(network) as provider:
         yield provider
@@ -105,7 +124,7 @@ def second_account(account_container, provider):
     account_container.delete_account(SECOND_ALIAS)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ecosystem(provider) -> EcosystemAPI:
     return provider.network.ecosystem
 
@@ -126,7 +145,7 @@ def clean_cache(project):
         cache_file.unlink()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def key_file_account_data():
     return {
         "address": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
@@ -162,7 +181,7 @@ def key_file_account_data():
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def argent_x_key_file_account_data():
     return {
         "address": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
@@ -194,7 +213,7 @@ def argent_x_key_file_account_data():
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ephemeral_account_data():
     return {
         "private_key": 509219664670742235607272813021130138373595301613956902800973975925797957544,
@@ -202,7 +221,7 @@ def ephemeral_account_data():
     }
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="session")
 def existing_key_file_account(config, key_file_account_data):
     temp_accounts_dir = Path(config.DATA_FOLDER) / "starknet"
     temp_accounts_dir.mkdir(exist_ok=True, parents=True)
@@ -219,19 +238,31 @@ def existing_key_file_account(config, key_file_account_data):
         test_key_file_path.unlink()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="session")
 def existing_ephemeral_account(config, ephemeral_account_data):
     return StarknetEphemeralAccount(
         account_key=EXISTING_EPHEMERAL_ALIAS, raw_account_data=ephemeral_account_data
     )
 
 
-@pytest.fixture
-def token_contract(config, account):
+@pytest.fixture(scope="session")
+def token_initial_supply():
+    return TOKEN_INITIAL_SUPPLY
+
+
+@pytest.fixture(scope="session")
+def token_contract(config, account, token_initial_supply):
     project_path = _HERE / "projects" / "token"
-    os.chdir(project_path)
 
     with config.using_project(project_path):
         yield ape.project.TestToken.deploy(
-            123123, 321321, TOKEN_INITIAL_SUPPLY, account.contract_address
+            123123, 321321, token_initial_supply, account.contract_address
         )
+
+
+@pytest.fixture(scope="session")
+def proxy_token_contract(config, account, token_initial_supply, token_contract):
+    project_path = _HERE / "projects" / "proxy"
+
+    with config.using_project(project_path):
+        return ape.project.Proxy.deploy(token_contract.address)

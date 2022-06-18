@@ -1,14 +1,7 @@
 from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 
-from ape.api import (
-    BlockAPI,
-    BlockConsensusAPI,
-    BlockGasAPI,
-    EcosystemAPI,
-    ReceiptAPI,
-    TransactionAPI,
-)
-from ape.types import AddressType, ContractLog, RawAddress, TransactionSignature
+from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
+from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
@@ -17,8 +10,9 @@ from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
+from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
 from ape_starknet._utils import to_checksum_address
 from ape_starknet.exceptions import StarknetEcosystemError
@@ -37,8 +31,9 @@ NETWORKS = {
 
 
 class StarknetBlock(BlockAPI):
-    gas_data: BlockGasAPI = None  # type: ignore
-    consensus_data: BlockConsensusAPI = None  # type: ignore
+    """
+    A block in Starknet.
+    """
 
 
 class Starknet(EcosystemAPI):
@@ -75,11 +70,25 @@ class Starknet(EcosystemAPI):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: bytes) -> List[Any]:
-        if isinstance(raw_data, (list, tuple)) and len(raw_data) == 1:
-            return raw_data[0]
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> List[Any]:  # type: ignore
+        def clear_lengths(arr):
+            arr_len = arr[0]
+            rest = arr[1:]
+            num_rest = len(rest)
+            return clear_lengths(rest) if arr_len == num_rest else arr
 
-        return raw_data  # type: ignore
+        is_arr = abi.outputs[0].name == "arr_len" and abi.outputs[1].type == "felt*"
+        has_leftover_length = len(raw_data) > 1 and not is_arr
+        if (
+            len(abi.outputs) == 2
+            and is_arr
+            and len(raw_data) >= 2
+            and all([isinstance(i, int) for i in raw_data])
+        ) or has_leftover_length:
+            # Is array - check if need to strip off arr_len
+            return clear_lengths(raw_data)
+
+        return raw_data
 
     def encode_calldata(
         self,
@@ -159,7 +168,7 @@ class Starknet(EcosystemAPI):
         if not salt:
             salt = ContractAddressSalt.get_random_value()
 
-        contract = ContractDefinition.deserialize(deployment_bytecode)
+        contract = ContractClass.deserialize(deployment_bytecode)
         calldata = self.encode_calldata(contract.abi, abi, args)
         return DeployTransaction(
             salt=salt,
@@ -191,13 +200,12 @@ class Starknet(EcosystemAPI):
         if "max_fee" in txn_data and not isinstance(txn_data["max_fee"], int):
             txn_data["max_fee"] = self.encode_primitive_value(txn_data["max_fee"])
 
-        if "signature" in txn_data and not isinstance(txn_data["signature"], TransactionSignature):
-            txn_data["signature"] = TransactionSignature(
-                v=0, r=HexBytes(txn_data["signature"][0]), s=HexBytes(txn_data["signature"][1])
-            )
-
-        # if "method_abi" not in txn_data:
-        #     contract = self.chain_manager.contracts.get(txn_data["contract_address"])
+        if "method_abi" not in txn_data:
+            contract = self.chain_manager.contracts.get(txn_data["contract_address"])
+            for abi in contract.mutable_methods:
+                selector = get_selector_from_name(abi.name)
+                if selector == txn_data["asdfadf"]:
+                    txn_data["method_abi"] = abi
 
         return txn_cls(**txn_data)
 

@@ -8,11 +8,6 @@ def test_get_nonce(provider, account, contract):
     assert actual == initial_nonce + 1
 
 
-def test_contract_at(contract, provider):
-    actual = provider.contract_at(contract.address)  # type: ignore
-    assert actual.address == contract.address
-
-
 def test_get_transactions_by_block(provider, account, contract):
     # Transact to create data.
     contract.increase_balance(account.address, 123, sender=account)

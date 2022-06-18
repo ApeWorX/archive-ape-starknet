@@ -10,13 +10,12 @@ from ape.contracts import ContractInstance
 from ape.exceptions import ProviderError, ProviderNotConnectedError, VirtualMachineError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import cached_property
-from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI
 from hexbytes import HexBytes
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
     DeploySpecificInfo,
     InvokeSpecificInfo,
@@ -46,6 +45,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     # Gets set when 'connect()' is called.
     client: Optional[StarknetClient] = None
     token_manager: TokenManager = TokenManager()
+    default_gas_cost: int = 0
 
     @property
     def process_name(self) -> str:
@@ -118,11 +118,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        return self._get_code(address)["bytecode"]  # type: ignore
+        return self.get_code_and_abi(address)["bytecode"]  # type: ignore
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
-        return self._get_code(address)["abi"]  # type: ignore
+        return self.get_code_and_abi(address)["abi"]  # type: ignore
 
     @handle_client_errors
     def get_nonce(self, address: str) -> int:
@@ -131,11 +131,19 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         if address in container.public_key_addresses:  # type: ignore
             address = container[address].contract_address  # type: ignore
 
-        contract = self.contract_at(address)
+        checksum_address = self.network.ecosystem.decode_address(address)
+        contract = self.chain_manager.contracts.instance_at(checksum_address)
+
+        if not isinstance(contract, ContractInstance):
+            raise ProviderError(f"Account contract '{checksum_address}' not found.")
+
         return contract.get_nonce()
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
+        if self.network.name == LOCAL_NETWORK_NAME:
+            return self.default_gas_cost
+
         if not isinstance(txn, StarknetTransaction):
             raise ProviderError(
                 "Unable to estimate the gas cost for a non-Starknet transaction "
@@ -182,7 +190,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             raise ProviderNotConnectedError()
 
         starknet_obj = txn.as_starknet_object()
-        return self.client.call_contract_sync(starknet_obj)
+        return_value = self.client.call_contract_sync(starknet_obj)
+        decoded_return_value = self.provider.network.ecosystem.decode_returndata(
+            txn.method_abi, return_value
+        )
+        return decoded_return_value
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
@@ -204,7 +216,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
         return self.network.ecosystem.decode_receipt(receipt_dict)
 
-    def get_transactions_by_block(self, block_id: HexBytes) -> Iterator[TransactionAPI]:
+    def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
         for txn in block.transactions:
             yield self.network.ecosystem.create_transaction(**txn)
@@ -231,14 +243,22 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
             starknet_txn = txn.as_starknet_object()
             txn_info = self.starknet_client.add_transaction_sync(starknet_txn, token=token)
 
+            error = txn_info.get("error", {})
+            if error:
+                message = error.get("message", error)
+                raise ProviderError(message)
+
             starknet: Starknet = self.provider.network.ecosystem  # type: ignore
-            return_data = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
-            if len(return_data) == 1:
-                return_data = return_data[0]
+            return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
+
+            if return_value and isinstance(txn, InvokeFunctionTransaction):
+                return_value = starknet.decode_returndata(txn.method_abi, return_value)
+                if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                    return_value = return_value[0]
 
             txn_hash = txn_info["transaction_hash"]
             receipt = self.get_transaction(txn_hash)
-            receipt.return_data = return_data
+            receipt.return_value = return_value
             return receipt
 
     @handle_client_errors
@@ -255,7 +275,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
 
     @handle_client_errors
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        if txn.type == TransactionType.INVOKE_FUNCTION and txn.max_fee is None:
+        if txn.type == TransactionType.INVOKE_FUNCTION and not txn.max_fee:
             txn.max_fee = self.estimate_gas_cost(txn)
 
         return txn
@@ -263,17 +283,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
-    def _get_code(self, address: Union[str, AddressType]):
+    def get_code_and_abi(self, address: Union[str, AddressType]):
         address_int = parse_address(address)
         return self.starknet_client.get_code_sync(address_int)
-
-    def contract_at(self, address: Union[AddressType, int, str]) -> ContractInstance:
-        if isinstance(address, int):
-            address = self.network.ecosystem.decode_address(address)
-
-        code = self._get_code(address)
-        contract_type = ContractType.parse_obj(code)
-        return ContractInstance(address, contract_type)  # type: ignore
 
     def _deploy(self, contract_data: Union[str, Dict], *args, token: Optional[str] = None) -> str:
         """
@@ -281,17 +293,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI):
         compiled account contracts from OZ.
         """
         if isinstance(contract_data, dict):
-            definition = ContractDefinition.load(contract_data)
+            contract = ContractClass.load(contract_data)
         else:
-            definition = ContractDefinition.loads(contract_data)
+            contract = ContractClass.loads(contract_data)
 
         data: Dict = next(
-            (member for member in definition.abi if member["type"] == "constructor"),
+            (member for member in contract.abi if member["type"] == "constructor"),
             {},
         )
         ctor_abi = ConstructorABI(**data)
         transaction = self.network.ecosystem.encode_deployment(
-            HexBytes(definition.serialize()), ctor_abi, *args
+            HexBytes(contract.serialize()), ctor_abi, *args
         )
         wl_token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
         receipt = self.send_transaction(transaction, token=wl_token)

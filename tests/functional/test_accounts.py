@@ -4,19 +4,16 @@ from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
 
 from ape_starknet._utils import is_hex_address
 
-from ..conftest import PASSWORD, PUBLIC_KEY
 
-
-def test_address(existing_key_file_account):
-    expected = PUBLIC_KEY
+def test_address(existing_key_file_account, public_key):
     actual = existing_key_file_account.address
-    assert actual != expected, "Result is not checksummed"
-    assert remove_0x_prefix(actual.lower()) == expected
+    assert actual != public_key, "Result is not checksummed"
+    assert remove_0x_prefix(actual.lower()) == public_key
     assert is_hex_address(actual)
 
 
-def test_sign_message_using_key_file_account(existing_key_file_account):
-    assert existing_key_file_account.sign_message(5, passphrase=PASSWORD)
+def test_sign_message_using_key_file_account(existing_key_file_account, password):
+    assert existing_key_file_account.sign_message(5, passphrase=password)
 
 
 def test_contact_address(account):

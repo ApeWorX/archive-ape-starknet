@@ -1,5 +1,6 @@
 import pytest
-from ape.exceptions import ContractLogicError
+from ape.contracts.base import ContractConstructor
+from ape.exceptions import AccountsError, ContractLogicError
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -15,6 +16,16 @@ def test_deploy(project):
 
     deployment = contract.deploy()
     assert deployment
+
+
+def test_deploy_txn_hash(project, convert):
+    constructor = ContractConstructor(  # type: ignore
+        abi=project.contract_type.constructor,
+        deployment_bytecode=project.contract_type.get_deployment_bytecode() or b"",  # type: ignore
+    )
+    deploy_txn = constructor.serialize_transaction()
+    txn_hash = deploy_txn.txn_hash
+    assert txn_hash
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):
@@ -33,7 +44,7 @@ def test_contract_transaction_handles_non_felt_arguments(contract, account, init
 def test_signed_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    actual_from_receipt = receipt.return_data
+    actual_from_receipt = receipt.return_value
     actual_from_call = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual_from_receipt == actual_from_call == expected
@@ -43,7 +54,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
     receipt = contract.increase_balance(account.address, increase_amount)
 
-    actual_from_receipt = receipt.return_data
+    actual_from_receipt = receipt.return_value
     actual_from_call = contract.get_balance(account.address)
     expected = initial_balance + increase_amount
     assert actual_from_receipt == actual_from_call == expected
@@ -80,7 +91,31 @@ def test_revert_no_message(contract, account):
 def test_array_inputs(contract, account):
     # This test makes sure we can pass python lists as arguments
     # to Cairo methods that accept arrays.
+    # NOTE: Due to a limitation in ape, we have to include the array length argument.
     contract.store_sum(3, [1, 2, 3])
     actual = contract.get_last_sum()
     expected = 6
     assert actual == expected
+
+
+def test_external_call_array_outputs(contract, account):
+    receipt = contract.get_array()
+    assert receipt.return_value == [1, 2, 3]
+
+
+def test_view_call_array_outputs(contract, account):
+    array = contract.view_array()
+    assert array == [1, 2, 3]
+
+
+def test_unable_to_afford_transaction(contract, account, provider):
+    # This also indirectly tests `estimate_gas_cost()`.
+
+    try:
+        provider.default_gas_cost = 123321123321
+        with pytest.raises(AccountsError) as err:
+            contract.increase_balance(account.address, 1, sender=account)
+
+        assert "Transfer value meets or exceeds account balance." in str(err.value)
+    finally:
+        provider.default_gas_cost = 0

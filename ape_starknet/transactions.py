@@ -4,7 +4,7 @@ from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
 from ape.exceptions import ProviderError
 from ape.types import AddressType, ContractLog
-from ape.utils import abstractmethod
+from ape.utils import abstractmethod, cached_property
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field
@@ -15,8 +15,12 @@ from starknet_py.net.models.transaction import (  # type: ignore
     Transaction,
     TransactionType,
 )
+from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
+from starkware.starknet.core.os.transaction_hash.transaction_hash import (
+    calculate_deploy_transaction_hash,
+)
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
-from starkware.starknet.services.api.contract_definition import ContractDefinition  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
 
 class StarknetTransaction(TransactionAPI):
@@ -60,12 +64,32 @@ class DeployTransaction(StarknetTransaction):
     """Ignored"""
     receiver: Optional[str] = Field(None, exclude=True)
 
+    @cached_property
+    def starknet_contract(self) -> ContractClass:
+        return ContractClass.deserialize(self.data)
+
+    @property
+    def txn_hash(self) -> HexBytes:
+        contract_address = calculate_contract_address(
+            salt=self.salt,
+            contract_class=self.starknet_contract,
+            constructor_calldata=self.constructor_calldata,
+            deployer_address=self.caller_address,
+        )
+        chain_id = self.provider.chain_id
+        return calculate_deploy_transaction_hash(
+            contract_address=contract_address,
+            constructor_calldata=self.constructor_calldata,
+            chain_id=chain_id,
+        )
+
     def as_starknet_object(self) -> Deploy:
-        definition = ContractDefinition.deserialize(self.data)
+        contract = ContractClass.deserialize(self.data)
         return Deploy(
             contract_address_salt=self.salt,
-            contract_definition=definition,
+            contract_definition=contract,
             constructor_calldata=self.constructor_calldata,
+            version=0,
         )
 
 
@@ -141,7 +165,7 @@ class StarknetReceipt(ReceiptAPI):
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None  # type: ignore
     block_number: Optional[int] = None  # type: ignore
-    return_data: List[int] = []
+    return_value: List[int] = []
 
     """Ignored"""
     sender: str = Field("", exclude=True)
