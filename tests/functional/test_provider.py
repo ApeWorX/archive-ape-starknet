@@ -1,3 +1,5 @@
+from starkware.starknet.public.abi import get_selector_from_name
+
 from ape_starknet.utils import is_checksum_address
 
 
@@ -21,14 +23,28 @@ def test_get_block(provider, contract):
 
 def test_get_transactions_by_block(provider, account, contract):
     # Transact to create data.
-    contract.increase_balance(account.address, 123, sender=account)
+    expected_value = 123
+    contract.increase_balance(account.address, expected_value, sender=account)
 
     transactions = [t for t in provider.get_transactions_by_block("latest")]
+
     expected_chain_id = provider.chain_id
     expected_abi = [a for a in account.contract_type.mutable_methods if a.name == "__execute__"][0]
+    expected_nonce = account.nonce - 1
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id
     assert transactions[0].method_abi == expected_abi
     assert transactions[0].receiver == account.contract_address
     assert is_checksum_address(transactions[0].receiver)
-    assert transactions[0].calldata
+    expected_data = [
+        1,
+        provider.starknet.encode_address(contract.address),
+        get_selector_from_name("increase_balance"),
+        0,
+        2,
+        2,
+        provider.starknet.encode_address(account.address),
+        expected_value,
+        expected_nonce,
+    ]
+    assert transactions[0].data == expected_data

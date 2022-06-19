@@ -2,7 +2,6 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
-from ape.exceptions import TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod
 from eth_utils import to_bytes, to_int
@@ -61,7 +60,7 @@ class StarknetTransaction(TransactionAPI):
 class DeployTransaction(StarknetTransaction):
     type: TransactionType = TransactionType.DEPLOY
     salt: int
-    constructor_calldata: List[int] = []
+    constructor_calldata: Union[List, Tuple] = []
     caller_address: int = 0
     token: Optional[str] = None
 
@@ -118,26 +117,17 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
 
     @property
     def contract_type(self) -> ContractType:
-        contract_type = self.chain_manager.contracts.get(self.receiver)
-        if not contract_type:
-            raise TransactionError(message=f"Unknown contract '{self.receiver}'.")
-
-        return contract_type
+        return self.chain_manager.contracts[self.receiver]
 
     @property
     def entry_point_selector(self) -> int:
         return get_selector_from_name(self.method_abi.name)
 
     @property
-    def calldata(self) -> List[int]:
-        contract_abi = [a.dict() for a in self.contract_type.abi]
-        return self.starknet.encode_calldata(contract_abi, self.method_abi, self.data)
-
-    @property
     def txn_hash(self) -> HexBytes:
         hash_int = calculate_transaction_hash_common(
             additional_data=[],
-            calldata=self.calldata,
+            calldata=self.data,
             chain_id=self.provider.chain_id,
             contract_address=self.receiver_int,
             entry_point_selector=self.entry_point_selector,
@@ -149,7 +139,7 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
 
     def as_starknet_object(self) -> InvokeFunction:
         return InvokeFunction(
-            calldata=self.calldata,
+            calldata=self.data,
             contract_address=self.receiver_int,
             entry_point_selector=self.entry_point_selector,
             signature=[to_int(self.signature.r), to_int(self.signature.s)]
@@ -158,28 +148,6 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
             max_fee=self.max_fee,
             version=self.version,
         )
-
-    def decode_calldata(self) -> List[Union[int, Tuple[int, ...]]]:
-        call_data: List[Union[int, Tuple[int, ...]]] = []
-
-        def convert(item: Any) -> int:
-            if isinstance(item, HexBytes):
-                return int(item.hex(), 16)
-            elif isinstance(item, str):
-                return int(item, 16)
-            elif item is not None:
-                return item
-
-            raise ValueError(f"Unable to handle argument type '{type(item)}'.")
-
-        for item in self.data:
-            if isinstance(item, (tuple, list)):
-                tuple_args = tuple([convert(v) for v in item])
-                call_data.append(tuple_args)
-            else:
-                call_data.append(convert(item))
-
-        return call_data
 
 
 class StarknetReceipt(ReceiptAPI, StarknetMixin):

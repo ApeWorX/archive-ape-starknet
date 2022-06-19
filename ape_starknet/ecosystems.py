@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed, to_bytes
-from ethpm_types.abi import ConstructorABI, EventABI, MethodABI, StructABI
+from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
 from starknet_py.net.models.address import parse_address  # type: ignore
 from starknet_py.net.models.chains import StarknetChainId  # type: ignore
@@ -99,7 +99,7 @@ class Starknet(EcosystemAPI):
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
         id_manager = identifier_manager_from_abi(full_abi)
         transformer = DataTransformer(method_abi.dict(), id_manager)
-        encoded_args: List[Any] = []
+        pre_encoded_args: List[Any] = []
         index = 0
         last_index = len(method_abi.inputs) - 1
         did_process_array_during_arr_len = False
@@ -110,81 +110,64 @@ class Starknet(EcosystemAPI):
                     did_process_array_during_arr_len = False
                     continue
 
-                # Handle user excluding 'arr_len' / 'call_array_len' and assume 'len(arr)'.
-                arr_len = len(call_arg) if isinstance(call_arg, (list, tuple)) else 1
-                rest_start_index = index + 1
-                array_arg = self._encode_array(arr_len, call_arg, index, call_args[rest_start_index:])
-                encoded_args.append(array_arg)
+                encoded_arg = self._pre_encode_value(call_arg)
+                pre_encoded_args.append(encoded_arg)
             elif (
                 input_type.name in ("arr_len", "call_array_len")
                 and index < last_index
                 and str(method_abi.inputs[index + 1].type).endswith("*")
             ):
-                # 'arr_len' was provided. The cairo standard is to provider 'arr_len' ahead of
-                # the array value, so we need we have not yet processed the array.
-                arr_len = call_args[index]
-                array_index = index + 1
-                rest_start_index = array_index + 1
-                array_arg = self._encode_array(
-                    arr_len, call_args[array_index], array_index, call_args[rest_start_index:]
-                )
-                encoded_args.append(array_arg)
-                did_process_array_during_arr_len = True
+                pre_encoded_arg = self._pre_encode_value(call_arg)
 
-            elif str(input_type)[0].isupper():
-                # NOTE: Intentionally handled after arrays so struct-arrays get handled first.
-                [struct_abi] = [abi for abi in full_abi if abi.type == "struct" and abi.name == input_type]
-                rest_start_index = index + 1
-                struct_arg = self._encode_struct(struct_abi, call_arg, call_args[rest_start_index:])
-                encoded_args.append(struct_arg)
-
-            elif isinstance(call_arg, dict):
-                encoded_struct = {}
-                for key, value in call_arg.items():
-                    encoded_struct[key] = self.encode_primitive_value(value)
-
-                encoded_args.append(encoded_struct)
+                if isinstance(pre_encoded_arg, int):
+                    # 'arr_len' was provided.
+                    array_index = index + 1
+                    pre_encoded_array = self._pre_encode_array(call_args[array_index])
+                    pre_encoded_args.append(pre_encoded_array)
+                    did_process_array_during_arr_len = True
+                else:
+                    pre_encoded_args.append(pre_encoded_arg)
 
             else:
-                encoded_arg = self.encode_primitive_value(call_arg)
-                encoded_args.append(encoded_arg)
+                pre_encoded_args.append(self._pre_encode_value(call_arg))
 
             index += 1
 
-        calldata, _ = transformer.from_python(*encoded_args)
-        return calldata
+        encoded_calldata, _ = transformer.from_python(*pre_encoded_args)
+        return encoded_calldata
 
-    def _encode_array(self, arr_len: int, arr: Union[List, int, str], rest_args: Optional[List] = None):
-        if isinstance(arr, (list, tuple)):
-            # 'arr_len' already handled
-            return [self.encode_primitive_value(v) for v in arr]
-        elif rest_args and len(rest_args) >= arr_len - 1:
-            # Grab values from 'rest_args' to build array
-            return [self.encode_primitive_value(v) for v in [arr, *rest_args[: arr_len - 1]]]
+    def _pre_encode_value(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return self._pre_encode_struct(value)
+        elif isinstance(value, (list, tuple)):
+            return self._pre_encode_array(value)
         else:
-            # Handle list with single item without `[]`.
-            return [self.encode_primitive_value(arr)]
+            return self.encode_primitive_value(value)
 
-    def _encode_struct(self, struct_abi: StructABI, struct: Union[Dict, int], rest_args: Optional[List] = None):
-        if isinstance(struct, dict):
-            for key in struct_abi.inputs:
-                if key not in struct:
-                    raise ValueError(f"'{key}' not found in dict argument for struct '{struct_abi.name}'.")
+    def _pre_encode_array(self, array: Any) -> List:
+        if not isinstance(array, (list, tuple)):
+            # Will handle single item structs and felts.
+            return self._pre_encode_array([array])
 
-            return struct
+        encoded_array = []
+        for item in array:
+            encoded_value = self._pre_encode_value(item)
+            encoded_array.append(encoded_value)
 
-        else:
-            # Handle flattened data
+        return encoded_array
 
+    def _pre_encode_struct(self, struct: Dict) -> Dict:
+        encoded_struct = {}
+        for key, value in struct.items():
+            encoded_struct[key] = self._pre_encode_value(value)
 
-    def encode_primitive_value(self, value: Any) -> Any:
+        return encoded_struct
+
+    def encode_primitive_value(self, value: Any) -> int:
         if isinstance(value, int):
             return value
 
-        elif isinstance(value, (list, tuple)):
-            return [self.encode_primitive_value(v) for v in value]
-
-        if isinstance(value, str) and is_0x_prefixed(value):
+        elif isinstance(value, str) and is_0x_prefixed(value):
             return int(value, 16)
 
         elif isinstance(value, HexBytes):
@@ -246,8 +229,9 @@ class Starknet(EcosystemAPI):
         if not salt:
             salt = ContractAddressSalt.get_random_value()
 
+        constructor_args = list(args)
         contract = ContractClass.deserialize(deployment_bytecode)
-        calldata = self.encode_calldata(contract.abi, abi, args)
+        calldata = self.encode_calldata(contract.abi, abi, constructor_args)
         return DeployTransaction(
             salt=salt,
             constructor_calldata=calldata,
@@ -258,10 +242,12 @@ class Starknet(EcosystemAPI):
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
+        contract_type = self.chain_manager.contracts[address]
+        encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
         return InvokeFunctionTransaction(
             contract_address=address,
             method_abi=abi,
-            calldata=args,
+            calldata=encoded_calldata,
             sender=kwargs.get("sender"),
             max_fee=kwargs.get("max_fee", 0),
         )
@@ -294,7 +280,11 @@ class Starknet(EcosystemAPI):
             # above before getting to the 'Invoke transactions' section.
             txn_data["contract_address"] = self.decode_address(txn_data["receiver"])
 
-        if "max_fee" in txn_data and not isinstance(txn_data["max_fee"], int):
+        if (
+            "max_fee" in txn_data
+            and not isinstance(txn_data["max_fee"], int)
+            and txn_data["max_fee"] is not None
+        ):
             txn_data["max_fee"] = self.encode_primitive_value(txn_data["max_fee"])
 
         if "method_abi" not in txn_data:
@@ -313,6 +303,13 @@ class Starknet(EcosystemAPI):
 
                 if selector == selector_to_check:
                     txn_data["method_abi"] = abi
+
+        if "calldata" in txn_data and txn_data["calldata"] is not None:
+            # Transactions in blocks show calldata as flattened hex-strs
+            # but elsewhere we expect flattened ints. Convert to ints for
+            # consistency and testing purposes.
+            encoded_calldata = [self.encode_primitive_value(v) for v in txn_data["calldata"]]
+            txn_data["calldata"] = encoded_calldata
 
         return txn_cls(**txn_data)
 
