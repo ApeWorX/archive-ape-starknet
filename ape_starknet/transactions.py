@@ -4,11 +4,10 @@ from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
 from ape.exceptions import TransactionError
 from ape.types import AddressType, ContractLog
-from ape.utils import abstractmethod, cached_property
+from ape.utils import abstractmethod
 from eth_utils import to_bytes, to_int
-from ethpm_types import ContractType
+from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
-from hexbytes import HexBytes
 from pydantic import Field
 from starknet_py.constants import TxStatus  # type: ignore
 from starknet_py.net.models.transaction import (  # type: ignore
@@ -17,7 +16,9 @@ from starknet_py.net.models.transaction import (  # type: ignore
     Transaction,
     TransactionType,
 )
-from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
+from starkware.starknet.core.os.contract_address.contract_address import (
+    calculate_contract_address,  # type: ignore
+)
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (  # type: ignore
     TransactionHashPrefix,
     calculate_deploy_transaction_hash,
@@ -70,7 +71,7 @@ class DeployTransaction(StarknetTransaction):
     """Ignored"""
     receiver: Optional[str] = Field(None, exclude=True)
 
-    @cached_property
+    @property
     def starknet_contract(self) -> ContractClass:
         return ContractClass.deserialize(self.data)
 
@@ -115,7 +116,7 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
     def receiver_int(self) -> int:
         return self.starknet.encode_address(self.receiver)
 
-    @cached_property
+    @property
     def contract_type(self) -> ContractType:
         contract_type = self.chain_manager.contracts.get(self.receiver)
         if not contract_type:
@@ -123,11 +124,11 @@ class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
 
         return contract_type
 
-    @cached_property
+    @property
     def entry_point_selector(self) -> int:
         return get_selector_from_name(self.method_abi.name)
 
-    @cached_property
+    @property
     def calldata(self) -> List[int]:
         contract_abi = [a.dict() for a in self.contract_type.abi]
         return self.starknet.encode_calldata(contract_abi, self.method_abi, self.data)
@@ -190,6 +191,7 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
     status: TxStatus
     actual_fee: int
     max_fee: int
+    receiver: Optional[str] = None
 
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None  # type: ignore

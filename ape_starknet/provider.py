@@ -17,8 +17,6 @@ from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
-    DeploySpecificInfo,
-    InvokeSpecificInfo,
     StarknetBlock,
 )
 
@@ -29,6 +27,7 @@ from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     PLUGIN_NAME,
     get_chain_id,
+    get_dict_from_tx_info,
     get_virtual_machine_error,
     handle_client_errors,
 )
@@ -170,8 +169,14 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
     def get_block(self, block_id: BlockID) -> BlockAPI:
         if isinstance(block_id, (int, str)) and len(str(block_id)) == 76:
             kwarg = "block_hash"
-        elif isinstance(block_id, int) or block_id == "pending":
+        elif block_id in ("pending", "latest"):
             kwarg = "block_number"
+        elif isinstance(block_id, int):
+            kwarg = "block_number"
+            if block_id < 0:
+                lateset_block_number = self.get_block("latest").number
+                block_id = lateset_block_number + block_id + 1
+
         else:
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
 
@@ -208,26 +213,18 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
         receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash).transaction
-
-        if isinstance(txn_info, DeploySpecificInfo):
-            txn_type = TransactionType.DEPLOY
-            max_fee = 0
-        elif isinstance(txn_info, InvokeSpecificInfo):
-            txn_type = TransactionType.INVOKE_FUNCTION
-            max_fee = txn_info.max_fee
-        else:
-            raise ValueError(f"No value found for '{txn_info}'.")
-
+        txn_dict = get_dict_from_tx_info(txn_info)
         receipt_dict["contract_address"] = self.starknet.decode_address(txn_info.contract_address)
-        receipt_dict["type"] = txn_type
+        receipt_dict["type"] = txn_dict["type"]
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
-        receipt_dict["max_fee"] = max_fee
+        receipt_dict["max_fee"] = txn_dict["max_fee"]
         return self.starknet.decode_receipt(receipt_dict)
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
-        for txn in block.transactions:
-            yield self.network.ecosystem.create_transaction(**txn)
+        for txn_info in block.transactions:
+            txn_dict = get_dict_from_tx_info(txn_info)
+            yield self.network.ecosystem.create_transaction(**txn_dict)
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
