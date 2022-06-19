@@ -159,11 +159,12 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
     status: TxStatus
     actual_fee: int
     max_fee: int
+    return_value: List[int] = []
 
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None  # type: ignore
     block_number: Optional[int] = None  # type: ignore
-    return_value: List[int] = []
+    receiver: Optional[str] = None  # type: ignore
 
     """Ignored"""
     sender: str = Field("", exclude=True)
