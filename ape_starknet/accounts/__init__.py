@@ -337,7 +337,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         }
         contract_type = self.chain_manager.contracts[contract_address]
         txn.data = self.starknet.encode_calldata(
-            contract_type.abi, self.execute_abi, [[account_call], stark_tx.calldata, self.nonce]
+            contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
         )
         txn.receiver = contract_address
         txn.sender = None
