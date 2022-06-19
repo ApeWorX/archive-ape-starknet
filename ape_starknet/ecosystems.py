@@ -261,7 +261,7 @@ class Starknet(EcosystemAPI):
         elif txn_type == TransactionType.DEPLOY:
             txn_cls = DeployTransaction
 
-        txn_data = {**kwargs, "signature": None}
+        txn_data: Dict[str, Any] = {**kwargs, "signature": None}
         if "chain_id" not in txn_data and self.network_manager.active_provider:
             txn_data["chain_id"] = self.provider.chain_id
 

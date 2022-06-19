@@ -15,8 +15,8 @@ from starknet_py.net.models.transaction import (  # type: ignore
     Transaction,
     TransactionType,
 )
-from starkware.starknet.core.os.contract_address.contract_address import (
-    calculate_contract_address,  # type: ignore
+from starkware.starknet.core.os.contract_address.contract_address import (  # type: ignore
+    calculate_contract_address,
 )
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (  # type: ignore
     TransactionHashPrefix,
@@ -159,7 +159,6 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
     status: TxStatus
     actual_fee: int
     max_fee: int
-    receiver: Optional[str] = None
 
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None  # type: ignore
