@@ -339,7 +339,10 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
             "data_offset": 0,
             "data_len": len(stark_tx.calldata),
         }
-        txn.data = [[account_call], stark_tx.calldata, self.nonce]
+        contract_type = self.chain_manager.contracts[contract_address]
+        txn.data = self.starknet.encode_calldata(
+            contract_type.abi, self.execute_abi, [[account_call], stark_tx.calldata, self.nonce]
+        )
         txn.receiver = contract_address
         txn.sender = None
         txn.method_abi = execute_abi
