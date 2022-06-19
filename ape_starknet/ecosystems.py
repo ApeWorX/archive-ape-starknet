@@ -314,8 +314,7 @@ class Starknet(EcosystemAPI):
         return txn_cls(**txn_data)
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
-        index = 0
-        for log in raw_logs:
+        for index, log in enumerate(raw_logs):
             event_args = dict(zip([a.name for a in abi.inputs], log["data"]))
             yield ContractLog(  # type: ignore
                 name=abi.name,
@@ -325,4 +324,3 @@ class Starknet(EcosystemAPI):
                 block_hash=log["block_hash"],
                 block_number=log["block_number"],
             )  # type: ignore
-            index += 1

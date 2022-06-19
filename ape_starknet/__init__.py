@@ -12,7 +12,7 @@ from ape_starknet.tokens import TokenManager
 from ape_starknet.utils import NETWORKS, PLUGIN_NAME
 
 tokens = TokenManager()
-network_names = [LOCAL_NETWORK_NAME] + [k for k in NETWORKS.keys()]
+network_names = [LOCAL_NETWORK_NAME] + list(NETWORKS.keys())
 
 
 @plugins.register(plugins.ConversionPlugin)

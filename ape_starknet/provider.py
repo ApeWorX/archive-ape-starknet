@@ -155,8 +155,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
         if not self.client:
             raise ProviderNotConnectedError()
 
-        result = self.client.estimate_fee_sync(starknet_object)
-        return result
+        return self.client.estimate_fee_sync(starknet_object)
 
     @property
     def gas_price(self) -> int:
@@ -204,8 +203,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
 
         starknet_obj = txn.as_starknet_object()
         return_value = self.client.call_contract_sync(starknet_obj)
-        decoded_return_value = self.starknet.decode_returndata(txn.method_abi, return_value)
-        return decoded_return_value  # type: ignore
+        return self.starknet.decode_returndata(txn.method_abi, return_value)  # type: ignore
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
