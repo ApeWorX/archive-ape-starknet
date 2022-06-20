@@ -265,17 +265,31 @@ class Starknet(EcosystemAPI):
         else:
             contract_type = contract
 
+        if "sender" in kwargs:
+            if hasattr(kwargs["sender"], "contract_address"):
+                account = kwargs["sender"]
+                kwargs["sender"] = account.contract_address
+                if not kwargs.get("nonce"):
+                    kwargs["nonce"] = account.nonce
+
+            if isinstance(kwargs["sender"], str):
+                kwargs["sender"] = self.encode_address(kwargs["sender"])
+
+        if not kwargs.get("nonce") and self.network_manager.active_provider:
+            kwargs["nonce"] = self.provider.get_nonce(kwargs["sender"])
+
         code = contract_type.get_deployment_bytecode() or b""
-        contract = ContractClass.deserialize(code)
+        starknet_contract = ContractClass.deserialize(code)
         return DeclareTransaction(
-            data=contract.dumps(),
+            data=starknet_contract.dumps(),
             max_fee=kwargs.get("max_fee", 0),
             sender=kwargs.get("sender"),
+            nonce=kwargs["nonce"]
         )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = kwargs.pop("type", kwargs.pop("tx_type", ""))
-        txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeployTransaction]]
+        txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeployTransaction], Type[DeclareTransaction]]
         invoking = txn_type == TransactionType.INVOKE_FUNCTION
         if invoking:
             txn_cls = InvokeFunctionTransaction

@@ -7,21 +7,6 @@ def connection(provider):
     yield
 
 
-def test_declare_and_deploy(project):
-    # This also tests `get_class_hash()`.
-
-    # Declare
-
-    # Get class hash
-
-    # Check calls are not possible on the declared contract
-
-    # Deploy the declared contract
-
-    # Check calls are possible on the deployed contract
-    pass
-
-
 def test_deploy(project):
     assert project.MyContract, "Unable to access contract when needing to compile"
 
@@ -33,8 +18,9 @@ def test_deploy(project):
 
 
 def test_declare(account, project):
-    declare_receipt = account.declare_class(project.MyContract)
-    assert declare_receipt
+    declared_contract = account.declare(project.MyContract)
+    contract_instance = account.deploy(declared_contract)
+    assert declared_contract
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):

@@ -31,7 +31,7 @@ from starkware.starknet.services.api.contract_class import ContractClass  # type
 from ape_starknet.utils.basemodel import StarknetMixin
 
 
-class StarknetTransaction(TransactionAPI):
+class StarknetTransaction(TransactionAPI, StarknetMixin):
     """
     A base transaction class for all Starknet transactions.
     """
@@ -77,11 +77,13 @@ class DeclareTransaction(StarknetTransaction):
         )
 
     def as_starknet_object(self) -> Declare:
+        sender_int = self.starknet.encode_address(self.sender)
         return Declare(
-            self.starknet_contract,
-            sender_address=self.sender,
-            signature=[],  # NOTE: Signatures are not supported on signing transactions
+            contract_class=self.starknet_contract,
             max_fee=self.max_fee,
+            nonce=self.nonce,
+            sender_address=sender_int,
+            signature=[],  # NOTE: Signatures are not supported on signing transactions
             version=self.version,
         )
 
@@ -128,7 +130,7 @@ class DeployTransaction(StarknetTransaction):
         )
 
 
-class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
+class InvokeFunctionTransaction(StarknetTransaction):
     type: TransactionType = TransactionType.INVOKE_FUNCTION
     method_abi: MethodABI
     max_fee: int = 0

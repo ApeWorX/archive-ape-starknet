@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from ape.contracts import ContractInstance
 from ape.contracts.base import ContractCall
@@ -56,7 +56,13 @@ class TokenManager(StarknetMixin):
         method_abi_obj = MethodABI.parse_obj(method_abi)
         return ContractCall(method_abi_obj, contract_address)()
 
-    def transfer(self, sender: int, receiver: int, amount: int, token: str = "eth"):
+    def transfer(self, sender: Union[int, AddressType], receiver: Union[int, AddressType], amount: int, token: str = "eth"):
+        if not isinstance(sender, int):
+            sender = self.starknet.encode_address(sender)
+
+        if not isinstance(receiver, int):
+            receiver = self.starknet.encode_address(receiver)
+
         contract_address = self._get_contract_address(token=token)
         if not contract_address:
             return
