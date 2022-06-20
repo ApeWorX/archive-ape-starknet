@@ -181,7 +181,6 @@ class Starknet(EcosystemAPI):
         if txn_type == TransactionType.INVOKE_FUNCTION.value:
             data["receiver"] = data.pop("contract_address")
 
-        txn_hash_int = data["transaction_hash"]
         max_fee = data.get("max_fee", 0) or 0
         if isinstance(max_fee, str):
             max_fee = int(max_fee, 16)
@@ -197,12 +196,12 @@ class Starknet(EcosystemAPI):
 
         block_hash = data.get("block_hash")
         if block_hash:
-            block_hash = HexBytes(data["block_hash"]).hex()
+            block_hash = HexBytes(block_hash).hex()
 
         return StarknetReceipt(
             provider=data.get("provider"),
             type=data["type"],
-            transaction_hash=HexBytes(txn_hash_int).hex(),
+            transaction_hash=HexBytes(data["transaction_hash"]).hex(),
             status=data["status"].value,
             block_number=data["block_number"],
             block_hash=block_hash,
