@@ -8,7 +8,7 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractContainer, ContractInstance
+from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
@@ -385,8 +385,9 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         sender = self.starknet.encode_address(self.contract_address)
         return self.token_manager.transfer(sender, account, value, **kwargs)  # type: ignore
 
-    def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
-        return contract.deploy(sender=self)
+    def declare_class(self, contract: ContractContainer):
+        transaction = self.starknet.encode_contract_declaration(contract)
+        return self.provider.send_transaction(transaction)
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
         return next(
