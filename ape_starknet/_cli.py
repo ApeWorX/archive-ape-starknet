@@ -8,4 +8,4 @@ def cli():
     """Starknet ecosystem commands"""
 
 
-cli.add_command(accounts)  # type: ignore
+cli.add_command(accounts)

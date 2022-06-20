@@ -19,4 +19,4 @@ class StarknetMixin(ManagerAccessMixin):
 
     @property
     def account_contracts(self) -> "StarknetAccountContracts":
-        return self.account_manager.containers["starknet"]  # type: ignore
+        return self.account_manager.containers["starknet"]
