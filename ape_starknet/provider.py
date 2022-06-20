@@ -117,11 +117,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        return self.get_code_and_abi(address)["bytecode"]  # type: ignore
+        return self.get_code_and_abi(address)["bytecode"]
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
-        return self.get_code_and_abi(address)["abi"]  # type: ignore
+        return self.get_code_and_abi(address)["abi"]
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:

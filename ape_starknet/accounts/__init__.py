@@ -210,7 +210,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
         private_key = private_key or get_random_private_key()
         key_pair = KeyPair.from_private_key(private_key)
 
-        contract_address = self.provider._deploy(  # type: ignore
+        contract_address = self.provider._deploy(
             COMPILED_ACCOUNT_CONTRACT, key_pair.public_key, token=token
         )
         self.import_account(alias, network_name, contract_address, key_pair.private_key)
@@ -389,9 +389,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         if self.contract_address is None:
             raise ValueError("Contract address cannot be None")
 
-        return self.token_manager.transfer(
-            self.contract_address, receiver, value, **kwargs
-        )  # type: ignore
+        return self.token_manager.transfer(self.contract_address, receiver, value, **kwargs)
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)

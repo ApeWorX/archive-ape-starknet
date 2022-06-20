@@ -65,7 +65,7 @@ class DeployTransaction(StarknetTransaction):
     token: Optional[str] = None
 
     """Aliases"""
-    data: bytes = Field(alias="contract_code")  # type: ignore
+    data: bytes = Field(alias="contract_code")
 
     """Ignored"""
     receiver: Optional[str] = Field(None, exclude=True)
@@ -160,7 +160,7 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
     return_value: List[int] = []
 
     # NOTE: Might be a backend bug causing this to be None
-    block_hash: Optional[str] = None  # type: ignore
+    block_hash: Optional[str] = None
     block_number: Optional[int] = None  # type: ignore
     receiver: Optional[str] = None  # type: ignore
 

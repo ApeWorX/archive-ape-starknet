@@ -4,12 +4,12 @@ from ape_starknet.utils import is_checksum_address
 
 
 def test_get_nonce(provider, account, contract):
-    initial_nonce = provider.get_nonce(account.contract_address)  # type: ignore
+    initial_nonce = provider.get_nonce(account.contract_address)
 
     # Transact to increase nonce
     contract.increase_balance(account.address, 123, sender=account)
 
-    actual = provider.get_nonce(account.contract_address)  # type: ignore
+    actual = provider.get_nonce(account.contract_address)
     assert actual == initial_nonce + 1
 
 

@@ -15,8 +15,8 @@ class ProviderConfig(PluginConfig):
 
 
 class StarknetConfig(PluginConfig):
-    mainnet: NetworkConfig = NetworkConfig(required_confirmations=7, block_time=13)  # type: ignore
-    testnet: NetworkConfig = NetworkConfig(required_confirmations=2, block_time=15)  # type: ignore
-    local: NetworkConfig = NetworkConfig()  # type: ignore
+    mainnet: NetworkConfig = NetworkConfig(required_confirmations=7, block_time=13)
+    testnet: NetworkConfig = NetworkConfig(required_confirmations=2, block_time=15)
+    local: NetworkConfig = NetworkConfig()
     default_network: str = LOCAL_NETWORK_NAME
     providers: ProviderConfig = ProviderConfig()

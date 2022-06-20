@@ -324,4 +324,4 @@ class Starknet(EcosystemAPI):
                 transaction_hash=log["transaction_hash"],
                 block_hash=log["block_hash"],
                 block_number=log["block_number"],
-            )  # type: ignore
+            )
