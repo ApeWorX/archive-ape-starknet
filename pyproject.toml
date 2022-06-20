@@ -29,6 +29,7 @@ addopts = """
 python_files = "test_*.py"
 testpaths = "tests"
 markers = "fuzzing: Run Hypothesis fuzz test suite"
+asyncio_mode = "auto"
 
 [tool.isort]
 line_length = 100
