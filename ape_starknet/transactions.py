@@ -92,11 +92,10 @@ class DeployTransaction(StarknetTransaction):
         return HexBytes(to_bytes(hash_int))
 
     def as_starknet_object(self) -> Deploy:
-        contract = ContractClass.deserialize(self.data)
         return Deploy(
             constructor_calldata=self.constructor_calldata,
             contract_address_salt=self.salt,
-            contract_definition=contract,
+            contract_definition=self.starknet_contract,
             version=self.version,
         )
 
