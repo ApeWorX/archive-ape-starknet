@@ -4,7 +4,7 @@ from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractEvent
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod
-from eth_utils import to_bytes, to_int
+from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field
@@ -89,7 +89,7 @@ class DeployTransaction(StarknetTransaction):
             constructor_calldata=self.constructor_calldata,
             version=self.version,
         )
-        return HexBytes(to_bytes(hash_int))
+        return HexBytes(hash_int)
 
     def as_starknet_object(self) -> Deploy:
         return Deploy(
@@ -134,7 +134,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
             tx_hash_prefix=TransactionHashPrefix.INVOKE,
             version=self.version,
         )
-        return HexBytes(to_bytes(hash_int))
+        return HexBytes(hash_int)
 
     def as_starknet_object(self) -> InvokeFunction:
         return InvokeFunction(

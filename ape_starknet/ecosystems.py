@@ -2,7 +2,7 @@ from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
 from ape.types import AddressType, ContractLog, RawAddress
-from eth_utils import is_0x_prefixed, to_bytes
+from eth_utils import is_0x_prefixed
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
 from starknet_py.net.models.address import parse_address  # type: ignore
@@ -197,12 +197,12 @@ class Starknet(EcosystemAPI):
 
         block_hash = data.get("block_hash")
         if block_hash:
-            block_hash = HexBytes(to_bytes(data["block_hash"])).hex()
+            block_hash = HexBytes(data["block_hash"]).hex()
 
         return StarknetReceipt(
             provider=data.get("provider"),
             type=data["type"],
-            transaction_hash=HexBytes(to_bytes(txn_hash_int)).hex(),
+            transaction_hash=HexBytes(txn_hash_int).hex(),
             status=data["status"].value,
             block_number=data["block_number"],
             block_hash=block_hash,
