@@ -35,6 +35,7 @@ def test_get_transactions_by_block(provider, account, contract):
     assert transactions[0].chain_id == expected_chain_id
     assert transactions[0].method_abi == expected_abi
     assert transactions[0].receiver == account.contract_address
+    assert transactions[0].value == 0
     assert is_checksum_address(transactions[0].receiver)
     expected_data = [
         1,
