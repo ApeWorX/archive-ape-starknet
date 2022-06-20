@@ -174,11 +174,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
             kwarg = "block_number"
             if block_id < 0:
                 latest_block_number = self.get_block("latest").number
-                block_id = latest_block_number + block_id + 1
-                if block_id < 0:
+                block_id_int = latest_block_number + block_id + 1
+                if block_id_int < 0:
                     raise ValueError(
                         f"Negative block number '{block_id}' results in non-existent block."
                     )
+
+                block_id = block_id_int
 
         else:
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
