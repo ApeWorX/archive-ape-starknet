@@ -24,10 +24,16 @@ def test_get_block(provider, contract):
 
 def test_get_block_negative_number_resulting_less_than_zero(provider, contract):
     _ = contract  # Contract fixture used to increase blocks (since deploys happen)
+    value = 23525
     with pytest.raises(ValueError) as err:
-        provider.get_block(-23525)
+        provider.get_block(-value)
 
-    assert str(err.value) == "Negative block number '-23523' results in non-existent block."
+    latest_block_number = provider.get_block("latest").number
+    expected_block_number = latest_block_number - value - 1
+    assert (
+        str(err.value)
+        == f"Negative block number '{expected_block_number}' results in non-existent block."
+    )
 
 
 def test_get_transactions_by_block(provider, account, contract):
