@@ -4,8 +4,7 @@ from ape.contracts.base import ContractConstructor
 def test_deploy_txn_hash(project, convert, provider):
     contract_type = project.MyContract.contract_type
     constructor = ContractConstructor(  # type: ignore
-        abi=contract_type.constructor,
-        deployment_bytecode=contract_type.get_deployment_bytecode() or b"",  # type: ignore
+        abi=contract_type.constructor, deployment_bytecode=contract_type.get_deployment_bytecode()
     )
     deploy_txn = constructor.serialize_transaction()
     receipt = provider.send_transaction(deploy_txn)

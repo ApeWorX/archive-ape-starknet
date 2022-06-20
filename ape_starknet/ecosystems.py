@@ -1,8 +1,10 @@
 from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
+from ape.contracts import ContractContainer
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed, to_bytes
+from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
 from starknet_py.net.models.address import parse_address  # type: ignore
@@ -243,16 +245,9 @@ class Starknet(EcosystemAPI):
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
+        # NOTE: This method only works for invoke-transactions
         contract_type = self.chain_manager.contracts[address]
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
-        type_kwarg = kwargs.get("type")
-
-        if type_kwarg in ("declare", "0", 0, "0x0", "0x00", b"\x00"):
-            # a 'delcare' transaction
-            return DeclareTransaction(
-                sender=kwargs.get("sender"),
-                max_fee=kwargs.get("max_fee", 0),
-            )
 
         return InvokeFunctionTransaction(
             contract_address=address,
@@ -260,6 +255,22 @@ class Starknet(EcosystemAPI):
             calldata=encoded_calldata,
             sender=kwargs.get("sender"),
             max_fee=kwargs.get("max_fee", 0),
+        )
+
+    def encode_contract_declaration(
+        self, contract: Union[ContractContainer, ContractType], *args, **kwargs
+    ) -> DeclareTransaction:
+        if isinstance(contract, ContractContainer):
+            contract_type = contract.contract_type
+        else:
+            contract_type = contract
+
+        code = contract_type.get_deployment_bytecode() or b""
+        contract = ContractClass.deserialize(code)
+        return DeclareTransaction(
+            data=contract.dumps(),
+            max_fee=kwargs.get("max_fee", 0),
+            sender=kwargs.get("sender"),
         )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:

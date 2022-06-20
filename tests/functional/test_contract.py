@@ -32,6 +32,11 @@ def test_deploy(project):
     assert deployment
 
 
+def test_declare(account, project):
+    declare_receipt = account.declare_class(project.MyContract)
+    assert declare_receipt
+
+
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):
     # NOTE: This test validates the account signature but the transaction
     # is not directly sent from the account.

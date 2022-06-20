@@ -21,6 +21,7 @@ from starkware.starknet.core.os.contract_address.contract_address import (  # ty
 )
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (  # type: ignore
     TransactionHashPrefix,
+    calculate_declare_transaction_hash,
     calculate_deploy_transaction_hash,
     calculate_transaction_hash_common,
 )
@@ -63,10 +64,21 @@ class DeclareTransaction(StarknetTransaction):
     sender: Optional[AddressType] = None
     max_fee: int = 0
 
+    @property
+    def starknet_contract(self) -> ContractClass:
+        return ContractClass.deserialize(self.data)
+
+    @property
+    def txn_hash(self) -> HexBytes:
+        return calculate_declare_transaction_hash(
+            self.starknet_contract,
+            self.provider.chain_id,
+            self.sender,
+        )
+
     def as_starknet_object(self) -> Declare:
-        contract = ContractClass.deserialize(self.data)
         return Declare(
-            contract,
+            self.starknet_contract,
             sender_address=self.sender,
             signature=[],  # NOTE: Signatures are not supported on signing transactions
             max_fee=self.max_fee,
@@ -99,9 +111,8 @@ class DeployTransaction(StarknetTransaction):
             deployer_address=self.caller_address,
             salt=self.salt,
         )
-        chain_id = self.provider.chain_id
         hash_int = calculate_deploy_transaction_hash(
-            chain_id=chain_id,
+            chain_id=self.provider.chain_id,
             contract_address=contract_address,
             constructor_calldata=self.constructor_calldata,
             version=self.version,
@@ -109,11 +120,10 @@ class DeployTransaction(StarknetTransaction):
         return HexBytes(to_bytes(hash_int))
 
     def as_starknet_object(self) -> Deploy:
-        contract = ContractClass.deserialize(self.data)
         return Deploy(
             constructor_calldata=self.constructor_calldata,
             contract_address_salt=self.salt,
-            contract_definition=contract,
+            contract_definition=self.starknet_contract,
             version=self.version,
         )
 
