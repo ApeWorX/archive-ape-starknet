@@ -29,7 +29,7 @@ from starkware.starknet.services.api.contract_class import ContractClass  # type
 from ape_starknet.utils.basemodel import StarknetMixin
 
 
-class StarknetTransaction(TransactionAPI):
+class StarknetTransaction(TransactionAPI, StarknetMixin):
     """
     A base transaction class for all Starknet transactions.
     """
@@ -100,7 +100,7 @@ class DeployTransaction(StarknetTransaction):
         )
 
 
-class InvokeFunctionTransaction(StarknetTransaction, StarknetMixin):
+class InvokeFunctionTransaction(StarknetTransaction):
     type: TransactionType = TransactionType.INVOKE_FUNCTION
     method_abi: MethodABI
     max_fee: int = 0
