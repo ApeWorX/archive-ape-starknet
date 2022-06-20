@@ -82,9 +82,8 @@ class DeployTransaction(StarknetTransaction):
             deployer_address=self.caller_address,
             salt=self.salt,
         )
-        chain_id = self.provider.chain_id
         hash_int = calculate_deploy_transaction_hash(
-            chain_id=chain_id,
+            chain_id=self.provider.chain_id,
             contract_address=contract_address,
             constructor_calldata=self.constructor_calldata,
             version=self.version,

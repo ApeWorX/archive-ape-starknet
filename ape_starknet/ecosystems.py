@@ -242,6 +242,7 @@ class Starknet(EcosystemAPI):
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
+        # NOTE: This method only works for invoke-transactions
         contract_type = self.chain_manager.contracts[address]
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
         return InvokeFunctionTransaction(

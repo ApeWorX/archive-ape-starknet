@@ -291,11 +291,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
         Helper for deploying a Starknet-compiled artifact, such as imported
         compiled account contracts from OZ.
         """
-        if isinstance(contract_data, dict):
-            contract = ContractClass.load(contract_data)
-        else:
-            contract = ContractClass.loads(contract_data)
-
+        contract = (
+            ContractClass.load(contract_data)
+            if isinstance(contract_data, dict)
+            else ContractClass.loads(contract_data)
+        )
         data: Dict = next(
             (member for member in contract.abi if member["type"] == "constructor"),
             {},

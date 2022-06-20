@@ -30,7 +30,6 @@ from starkware.crypto.signature.signature import get_random_private_key  # type:
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils import PLUGIN_NAME, get_chain_id
 from ape_starknet.utils.basemodel import StarknetMixin
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -263,10 +262,10 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
     @cached_property
     def signer(self) -> StarkCurveSigner:
         key_pair = KeyPair.from_private_key(self._get_key())
-        network = self.provider.network
-        chain_id = get_chain_id(network.name)
         return StarkCurveSigner(
-            account_address=self.contract_address, key_pair=key_pair, chain_id=chain_id
+            account_address=self.contract_address,
+            key_pair=key_pair,
+            chain_id=self.provider.chain_id,
         )
 
     @cached_property
@@ -374,16 +373,24 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
                 raise ValueError("value is not an integer.")
 
         if not isinstance(account, str) and hasattr(account, "contract_address"):
-            account = account.contract_address  # type: ignore
+            receiver = account.contract_address
 
-        if not isinstance(account, int):
-            account = self.starknet.encode_address(account)  # type: ignore
+        elif isinstance(account, str):
+            checksummed_address = self.starknet.decode_address(account)
+            receiver = self.starknet.encode_address(checksummed_address)
+
+        elif isinstance(account, int):
+            receiver = account
+
+        else:
+            raise TypeError(f"Unable to handle account type '{type(account)}'.")
 
         if self.contract_address is None:
             raise ValueError("Contract address cannot be None")
 
-        sender = self.starknet.encode_address(self.contract_address)
-        return self.token_manager.transfer(sender, account, value, **kwargs)  # type: ignore
+        return self.token_manager.transfer(
+            self.contract_address, receiver, value, **kwargs
+        )  # type: ignore
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)
@@ -403,7 +410,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         data: int,
         signature: Optional[ECSignature] = None,  # TransactionAPI doesn't need it
     ) -> bool:
-        int_address = self.network_manager.get_ecosystem(PLUGIN_NAME).encode_address(self.address)
+        int_address = self.starknet.encode_address(self.address)
         return verify_ecdsa_sig(int_address, data, signature)
 
     def get_deployments(self) -> List[StarknetAccountDeployment]:
