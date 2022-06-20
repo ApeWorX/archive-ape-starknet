@@ -17,8 +17,7 @@ from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
-    DeploySpecificInfo,
-    InvokeSpecificInfo,
+    StarknetBlock,
 )
 
 from ape_starknet.config import StarknetConfig
@@ -28,6 +27,7 @@ from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     PLUGIN_NAME,
     get_chain_id,
+    get_dict_from_tx_info,
     get_virtual_machine_error,
     handle_client_errors,
 )
@@ -117,11 +117,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        return self.get_code_and_abi(address)["bytecode"]  # type: ignore
+        return self.get_code_and_abi(address)["bytecode"]
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
-        return self.get_code_and_abi(address)["abi"]  # type: ignore
+        return self.get_code_and_abi(address)["abi"]
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:
@@ -168,13 +168,33 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
     def get_block(self, block_id: BlockID) -> BlockAPI:
         if isinstance(block_id, (int, str)) and len(str(block_id)) == 76:
             kwarg = "block_hash"
-        elif isinstance(block_id, int) or block_id == "pending":
+        elif block_id in ("pending", "latest"):
             kwarg = "block_number"
+        elif isinstance(block_id, int):
+            kwarg = "block_number"
+            if block_id < 0:
+                latest_block_number = self.get_block("latest").number
+                block_id_int = latest_block_number + block_id + 1
+                if block_id_int < 0:
+                    raise ValueError(
+                        f"Negative block number '{block_id_int}' results in non-existent block."
+                    )
+
+                block_id = block_id_int
+
         else:
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
 
         block = self.starknet_client.get_block_sync(**{kwarg: block_id})
         return self.starknet.decode_block(block.dump())
+
+    def _get_block(self, block_id: BlockID) -> StarknetBlock:
+        kwarg = (
+            "block_hash"
+            if isinstance(block_id, (int, str)) and len(str(block_id)) == 76
+            else "block_number"
+        )
+        return self.starknet_client.get_block_sync(**{kwarg: block_id})
 
     @handle_client_errors
     def send_call(self, txn: TransactionAPI) -> bytes:
@@ -197,18 +217,18 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
         receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash).transaction
-
-        if isinstance(txn_info, DeploySpecificInfo):
-            txn_type = TransactionType.DEPLOY
-        elif isinstance(txn_info, InvokeSpecificInfo):
-            txn_type = TransactionType.INVOKE_FUNCTION
-        else:
-            raise ValueError(f"No value found for '{txn_info}'.")
-
+        txn_dict = get_dict_from_tx_info(txn_info)
         receipt_dict["contract_address"] = self.starknet.decode_address(txn_info.contract_address)
-        receipt_dict["type"] = txn_type
+        receipt_dict["type"] = txn_dict["type"]
         receipt_dict["events"] = [vars(e) for e in receipt_dict["events"]]
+        receipt_dict["max_fee"] = txn_dict["max_fee"]
         return self.starknet.decode_receipt(receipt_dict)
+
+    def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
+        block = self._get_block(block_id)
+        for txn_info in block.transactions:
+            txn_dict = get_dict_from_tx_info(txn_info)
+            yield self.network.ecosystem.create_transaction(**txn_dict)
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
@@ -277,11 +297,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
         Helper for deploying a Starknet-compiled artifact, such as imported
         compiled account contracts from OZ.
         """
-        if isinstance(contract_data, dict):
-            contract = ContractClass.load(contract_data)
-        else:
-            contract = ContractClass.loads(contract_data)
-
+        contract = (
+            ContractClass.load(contract_data)
+            if isinstance(contract_data, dict)
+            else ContractClass.loads(contract_data)
+        )
         data: Dict = next(
             (member for member in contract.abi if member["type"] == "constructor"),
             {},

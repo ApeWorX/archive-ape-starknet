@@ -1,13 +1,6 @@
 from typing import Any, Dict, Iterator, List, Tuple, Type, Union
 
-from ape.api import (
-    BlockAPI,
-    BlockConsensusAPI,
-    BlockGasAPI,
-    EcosystemAPI,
-    ReceiptAPI,
-    TransactionAPI,
-)
+from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
@@ -17,6 +10,7 @@ from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
+from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
@@ -37,8 +31,9 @@ NETWORKS = {
 
 
 class StarknetBlock(BlockAPI):
-    gas_data: BlockGasAPI = None  # type: ignore
-    consensus_data: BlockConsensusAPI = None  # type: ignore
+    """
+    A block in Starknet.
+    """
 
 
 class Starknet(EcosystemAPI):
@@ -65,7 +60,7 @@ class Starknet(EcosystemAPI):
         return to_checksum_address(raw_address)
 
     @classmethod
-    def encode_address(cls, address: AddressType) -> RawAddress:
+    def encode_address(cls, address: AddressType) -> int:
         return parse_address(address)
 
     def serialize_transaction(self, transaction: TransactionAPI) -> bytes:
@@ -104,7 +99,7 @@ class Starknet(EcosystemAPI):
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
         id_manager = identifier_manager_from_abi(full_abi)
         transformer = DataTransformer(method_abi.dict(), id_manager)
-        encoded_args: List[Any] = []
+        pre_encoded_args: List[Any] = []
         index = 0
         last_index = len(method_abi.inputs) - 1
         did_process_array_during_arr_len = False
@@ -115,40 +110,64 @@ class Starknet(EcosystemAPI):
                     did_process_array_during_arr_len = False
                     continue
 
-                array_arg = [self.encode_primitive_value(v) for v in call_arg]
-                encoded_args.append(array_arg)
+                encoded_arg = self._pre_encode_value(call_arg)
+                pre_encoded_args.append(encoded_arg)
             elif (
-                input_type.name == "arr_len"
+                input_type.name in ("arr_len", "call_array_len")
                 and index < last_index
                 and str(method_abi.inputs[index + 1].type).endswith("*")
             ):
-                array_arg = [self.encode_primitive_value(v) for v in call_args[index + 1]]
-                encoded_args.append(array_arg)
-                did_process_array_during_arr_len = True
+                pre_encoded_arg = self._pre_encode_value(call_arg)
 
-            elif isinstance(call_arg, dict):
-                encoded_struct = {
-                    key: self.encode_primitive_value(value) for key, value in call_arg.items()
-                }
-                encoded_args.append(encoded_struct)
+                if isinstance(pre_encoded_arg, int):
+                    # 'arr_len' was provided.
+                    array_index = index + 1
+                    pre_encoded_array = self._pre_encode_array(call_args[array_index])
+                    pre_encoded_args.append(pre_encoded_array)
+                    did_process_array_during_arr_len = True
+                else:
+                    pre_encoded_args.append(pre_encoded_arg)
 
             else:
-                encoded_arg = self.encode_primitive_value(call_arg)
-                encoded_args.append(encoded_arg)
+                pre_encoded_args.append(self._pre_encode_value(call_arg))
 
             index += 1
 
-        calldata, _ = transformer.from_python(*encoded_args)
-        return calldata
+        encoded_calldata, _ = transformer.from_python(*pre_encoded_args)
+        return encoded_calldata
 
-    def encode_primitive_value(self, value: Any) -> Any:
+    def _pre_encode_value(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return self._pre_encode_struct(value)
+        elif isinstance(value, (list, tuple)):
+            return self._pre_encode_array(value)
+        else:
+            return self.encode_primitive_value(value)
+
+    def _pre_encode_array(self, array: Any) -> List:
+        if not isinstance(array, (list, tuple)):
+            # Will handle single item structs and felts.
+            return self._pre_encode_array([array])
+
+        encoded_array = []
+        for item in array:
+            encoded_value = self._pre_encode_value(item)
+            encoded_array.append(encoded_value)
+
+        return encoded_array
+
+    def _pre_encode_struct(self, struct: Dict) -> Dict:
+        encoded_struct = {}
+        for key, value in struct.items():
+            encoded_struct[key] = self._pre_encode_value(value)
+
+        return encoded_struct
+
+    def encode_primitive_value(self, value: Any) -> int:
         if isinstance(value, int):
             return value
 
-        elif isinstance(value, (list, tuple)):
-            return [self.encode_primitive_value(v) for v in value]
-
-        if isinstance(value, str) and is_0x_prefixed(value):
+        elif isinstance(value, str) and is_0x_prefixed(value):
             return int(value, 16)
 
         elif isinstance(value, HexBytes):
@@ -162,23 +181,42 @@ class Starknet(EcosystemAPI):
         if txn_type == TransactionType.INVOKE_FUNCTION.value:
             data["receiver"] = data.pop("contract_address")
 
+        max_fee = data.get("max_fee", 0) or 0
+        if isinstance(max_fee, str):
+            max_fee = int(max_fee, 16)
+
+        receiver = data.get("receiver")
+        if receiver:
+            receiver = self.decode_address(receiver)
+
+        # 'contract_address' is for deploy-txns and refers to the new contract.
+        contract_address = data.get("contract_address")
+        if contract_address:
+            contract_address = self.decode_address(contract_address)
+
+        block_hash = data.get("block_hash")
+        if block_hash:
+            block_hash = HexBytes(block_hash).hex()
+
         return StarknetReceipt(
             provider=data.get("provider"),
             type=data["type"],
-            transaction_hash=data["transaction_hash"],
+            transaction_hash=HexBytes(data["transaction_hash"]).hex(),
             status=data["status"].value,
             block_number=data["block_number"],
-            block_hash=data["block_hash"],
+            block_hash=block_hash,
             events=data.get("events", []),
-            contract_address=data.get("contract_address"),
-            receiver=data.get("receiver", ""),
+            receiver=receiver,
+            contract_address=contract_address,
+            actual_fee=data.get("actual_fee", 0),
+            max_fee=max_fee,
         )
 
     def decode_block(self, data: dict) -> BlockAPI:
         return StarknetBlock(
             number=data["block_number"],
             hash=HexBytes(data["block_hash"]),
-            parent_hash=HexBytes(data["parent_block_hash"]),
+            parentHash=HexBytes(data["parent_block_hash"]),
             size=len(data["transactions"]),  # TODO: Figure out size
             timestamp=data["timestamp"],
         )
@@ -190,8 +228,9 @@ class Starknet(EcosystemAPI):
         if not salt:
             salt = ContractAddressSalt.get_random_value()
 
+        constructor_args = list(args)
         contract = ContractClass.deserialize(deployment_bytecode)
-        calldata = self.encode_calldata(contract.abi, abi, args)
+        calldata = self.encode_calldata(contract.abi, abi, constructor_args)
         return DeployTransaction(
             salt=salt,
             constructor_calldata=calldata,
@@ -202,23 +241,77 @@ class Starknet(EcosystemAPI):
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
+        # NOTE: This method only works for invoke-transactions
+        contract_type = self.chain_manager.contracts[address]
+        encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
         return InvokeFunctionTransaction(
             contract_address=address,
             method_abi=abi,
-            calldata=args,
+            calldata=encoded_calldata,
             sender=kwargs.get("sender"),
             max_fee=kwargs.get("max_fee", 0),
         )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
-        txn_type = kwargs.pop("type")
+        txn_type = kwargs.pop("type", kwargs.pop("tx_type", ""))
         txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeployTransaction]]
-        if txn_type == TransactionType.INVOKE_FUNCTION:
+        invoking = txn_type == TransactionType.INVOKE_FUNCTION
+        if invoking:
             txn_cls = InvokeFunctionTransaction
         elif txn_type == TransactionType.DEPLOY:
             txn_cls = DeployTransaction
 
-        return txn_cls(**kwargs)
+        txn_data: Dict[str, Any] = {**kwargs, "signature": None}
+        if "chain_id" not in txn_data and self.network_manager.active_provider:
+            txn_data["chain_id"] = self.provider.chain_id
+
+        # For deploy-txns, 'contract_address' is the address of the newly deployed contract.
+        if "contract_address" in txn_data:
+            txn_data["contract_address"] = self.decode_address(txn_data["contract_address"])
+
+        if not invoking:
+            return txn_cls(**txn_data)
+
+        """ ~ Invoke transactions ~ """
+
+        if "receiver" in txn_data:
+            # Model expects 'contract_address' key during serialization.
+            # NOTE: Deploy transactions have a different 'contract_address' and that is handled
+            # above before getting to the 'Invoke transactions' section.
+            txn_data["contract_address"] = self.decode_address(txn_data["receiver"])
+
+        if (
+            "max_fee" in txn_data
+            and not isinstance(txn_data["max_fee"], int)
+            and txn_data["max_fee"] is not None
+        ):
+            txn_data["max_fee"] = self.encode_primitive_value(txn_data["max_fee"])
+
+        if "method_abi" not in txn_data:
+            contract_int = txn_data["contract_address"]
+            contract_str = self.decode_address(contract_int)
+            contract = self.chain_manager.contracts.get(contract_str)
+            if not contract:
+                raise ValueError("Unable to create transaction objects from other networks.")
+
+            selector = txn_data["entry_point_selector"]
+            if isinstance(selector, str):
+                selector = int(selector, 16)
+
+            for abi in contract.mutable_methods:
+                selector_to_check = get_selector_from_name(abi.name)
+
+                if selector == selector_to_check:
+                    txn_data["method_abi"] = abi
+
+        if "calldata" in txn_data and txn_data["calldata"] is not None:
+            # Transactions in blocks show calldata as flattened hex-strs
+            # but elsewhere we expect flattened ints. Convert to ints for
+            # consistency and testing purposes.
+            encoded_calldata = [self.encode_primitive_value(v) for v in txn_data["calldata"]]
+            txn_data["calldata"] = encoded_calldata
+
+        return txn_cls(**txn_data)
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
         for index, log in enumerate(raw_logs):
@@ -230,4 +323,4 @@ class Starknet(EcosystemAPI):
                 transaction_hash=log["transaction_hash"],
                 block_hash=log["block_hash"],
                 block_number=log["block_number"],
-            )  # type: ignore
+            )

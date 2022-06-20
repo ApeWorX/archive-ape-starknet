@@ -1,5 +1,5 @@
 import re
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ApeException, ContractLogicError, ProviderError, VirtualMachineError
@@ -15,7 +15,12 @@ from eth_utils import (
     to_hex,
 )
 from starknet_py.net.client import BadRequest  # type: ignore
+from starknet_py.net.models import TransactionType  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
+from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+    DeploySpecificInfo,
+    InvokeSpecificInfo,
+)
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -68,6 +73,16 @@ def is_hex_address(value: Any) -> bool:
     return _HEX_ADDRESS_REG_EXP.fullmatch(value) is not None if is_text(value) else False
 
 
+def is_checksum_address(value: Any) -> bool:
+    if not is_text(value):
+        return False
+
+    if not is_hex_address(value):
+        return False
+
+    return value == to_checksum_address(value)
+
+
 def handle_client_errors(f):
     def func(*args, **kwargs):
         try:
@@ -112,3 +127,14 @@ def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
         "Transaction was rejected with following starknet error: ", ""
     ).strip()
     return ContractLogicError(revert_message=err_msg)
+
+
+def get_dict_from_tx_info(txn_info: Union[DeploySpecificInfo, InvokeSpecificInfo]) -> Dict:
+    txn_dict = txn_info.dump()
+    if isinstance(txn_info, DeploySpecificInfo):
+        txn_dict["type"] = TransactionType.DEPLOY
+        txn_dict["max_fee"] = 0
+    elif isinstance(txn_info, InvokeSpecificInfo):
+        txn_dict["type"] = TransactionType.INVOKE_FUNCTION
+
+    return txn_dict
