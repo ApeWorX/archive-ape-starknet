@@ -173,8 +173,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
         elif isinstance(block_id, int):
             kwarg = "block_number"
             if block_id < 0:
-                lateset_block_number = self.get_block("latest").number
-                block_id = lateset_block_number + block_id + 1
+                latest_block_number = self.get_block("latest").number
+                block_id = latest_block_number + block_id + 1
 
         else:
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
