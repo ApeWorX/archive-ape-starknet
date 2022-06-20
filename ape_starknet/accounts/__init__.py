@@ -30,6 +30,7 @@ from starkware.crypto.signature.signature import get_random_private_key  # type:
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
+from ape_starknet.utils import get_chain_id
 from ape_starknet.utils.basemodel import StarknetMixin
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -265,7 +266,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         return StarkCurveSigner(
             account_address=self.contract_address,
             key_pair=key_pair,
-            chain_id=self.provider.chain_id,
+            chain_id=get_chain_id(self.provider.chain_id),
         )
 
     @cached_property
@@ -373,7 +374,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
                 raise ValueError("value is not an integer.")
 
         if not isinstance(account, str) and hasattr(account, "contract_address"):
-            receiver = account.contract_address
+            receiver = getattr(account, "contract_address")
 
         elif isinstance(account, str):
             checksummed_address = self.starknet.decode_address(account)
