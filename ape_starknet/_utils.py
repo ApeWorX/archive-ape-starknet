@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 import re
 from typing import Any, Optional, Union
 
@@ -23,12 +21,7 @@ from eth_utils import (
     to_hex,
 )
 from starknet_py.net.client import BadRequest  # type: ignore
-from starkware.cairo.lang.compiler.program import Program  # type: ignore
-from starkware.starknet.compiler.compile import get_entry_points_by_type  # type: ignore
-from starkware.starknet.core.os.class_hash import compute_class_hash  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
-from starkware.starknet.testing.contract_utils import get_contract_class  # type: ignore
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -124,19 +117,3 @@ def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
     # Fix escaping newline issue with error message.
     err_msg = err_msg.replace("\\n", "").strip()
     return ContractLogicError(revert_message=err_msg)
-
-
-def compute_contract_class_hash(path: Path) -> int:
-    """
-    Compute contract classes hash off-chain.
-    `path` is the full path to the JSON compiled contract.
-    """
-    contract = json.loads(path.read_text())
-    program = Program.load(data=contract["program"])
-    real_contract = ContractClass(
-        program=program,
-        entry_points_by_type=get_entry_points_by_type(program=program),
-        abi=contract["abi"],
-    )
-    contract_cls = get_contract_class(contract_class=real_contract)
-    return compute_class_hash(contract_cls)
