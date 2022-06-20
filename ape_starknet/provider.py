@@ -177,7 +177,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
                 block_id_int = latest_block_number + block_id + 1
                 if block_id_int < 0:
                     raise ValueError(
-                        f"Negative block number '{block_id}' results in non-existent block."
+                        f"Negative block number '{block_id_int}' results in non-existent block."
                     )
 
                 block_id = block_id_int
