@@ -2,7 +2,7 @@ import pytest
 from eth_utils import remove_0x_prefix
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
 
-from ape_starknet._utils import is_hex_address
+from ape_starknet.utils import is_hex_address
 
 
 def test_address(existing_key_file_account, public_key):

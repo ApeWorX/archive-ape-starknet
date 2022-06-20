@@ -67,7 +67,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
 def test_decode_logs(contract, account, ecosystem):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    logs = [log for log in receipt.decode_logs(contract.balance_increased)]
+    logs = list(receipt.decode_logs(contract.balance_increased))
     assert len(logs) == 1
     assert logs[0].amount == increase_amount
 
@@ -104,6 +104,11 @@ def test_array_inputs(contract, account):
 
 def test_external_call_array_outputs(contract, account):
     receipt = contract.get_array()
+    assert receipt.return_value == [1, 2, 3]
+
+
+def test_external_call_array_outputs_from_account(contract, account):
+    receipt = contract.get_array(sender=account)
     assert receipt.return_value == [1, 2, 3]
 
 

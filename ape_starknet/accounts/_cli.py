@@ -11,12 +11,12 @@ from ape.cli import (
 from ape.cli.options import ApeCliContextObject
 from ape.utils import add_padding_to_strings
 
-from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
     BaseStarknetAccount,
     StarknetAccountContracts,
     StarknetKeyfileAccount,
 )
+from ape_starknet.utils import PLUGIN_NAME
 
 
 def _get_container(cli_ctx: ApeCliContextObject) -> StarknetAccountContracts:
@@ -58,9 +58,7 @@ def create(cli_ctx, alias, network, token):
 def _list(cli_ctx):
     """List your Starknet accounts"""
 
-    starknet_accounts = cast(
-        List[StarknetKeyfileAccount], [a for a in _get_container(cli_ctx).accounts]
-    )
+    starknet_accounts = cast(List[StarknetKeyfileAccount], list(_get_container(cli_ctx).accounts))
 
     if len(starknet_accounts) == 0:
         cli_ctx.logger.warning("No accounts found.")
@@ -78,7 +76,7 @@ def _list(cli_ctx):
             key = f"Contract address ({deployment.network_name})"
             output_dict[key] = deployment.contract_address
 
-        output_keys = add_padding_to_strings([k for k in output_dict.keys()])
+        output_keys = add_padding_to_strings(list(output_dict.keys()))
         output_dict = {k: output_dict[k.rstrip()] for k in output_keys}
 
         for k, v in output_dict.items():

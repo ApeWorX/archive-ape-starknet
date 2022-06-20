@@ -1,14 +1,8 @@
 import re
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import (
-    AddressError,
-    ApeException,
-    ContractLogicError,
-    ProviderError,
-    VirtualMachineError,
-)
+from ape.exceptions import ApeException, ContractLogicError, ProviderError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -21,7 +15,12 @@ from eth_utils import (
     to_hex,
 )
 from starknet_py.net.client import BadRequest  # type: ignore
+from starknet_py.net.models import TransactionType  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
+from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+    DeploySpecificInfo,
+    InvokeSpecificInfo,
+)
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -49,9 +48,10 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 
 def to_checksum_address(address: RawAddress) -> AddressType:
     try:
-        hex_address = hexstr_if_str(to_hex, address).lower()
-    except AttributeError:
-        raise AddressError(f"Value must be any string, instead got type {type(address)}")
+        hex_address = hexstr_if_str(to_hex, address)
+    except AttributeError as exc:
+        msg = f"Value must be any string, int, or bytes, instead got type {type(address)}"
+        raise ValueError(msg) from exc
 
     cleaned_address = remove_0x_prefix(HexStr(hex_address))
     address_hash = encode_hex(keccak(text=cleaned_address))
@@ -70,10 +70,17 @@ def to_checksum_address(address: RawAddress) -> AddressType:
 
 
 def is_hex_address(value: Any) -> bool:
+    return _HEX_ADDRESS_REG_EXP.fullmatch(value) is not None if is_text(value) else False
+
+
+def is_checksum_address(value: Any) -> bool:
     if not is_text(value):
         return False
 
-    return _HEX_ADDRESS_REG_EXP.fullmatch(value) is not None
+    if not is_hex_address(value):
+        return False
+
+    return value == to_checksum_address(value)
 
 
 def handle_client_errors(f):
@@ -116,4 +123,18 @@ def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
 
     # Fix escaping newline issue with error message.
     err_msg = err_msg.replace("\\n", "").strip()
+    err_msg = err_msg.replace(
+        "Transaction was rejected with following starknet error: ", ""
+    ).strip()
     return ContractLogicError(revert_message=err_msg)
+
+
+def get_dict_from_tx_info(txn_info: Union[DeploySpecificInfo, InvokeSpecificInfo]) -> Dict:
+    txn_dict = txn_info.dump()
+    if isinstance(txn_info, DeploySpecificInfo):
+        txn_dict["type"] = TransactionType.DEPLOY
+        txn_dict["max_fee"] = 0
+    elif isinstance(txn_info, InvokeSpecificInfo):
+        txn_dict["type"] = TransactionType.INVOKE_FUNCTION
+
+    return txn_dict

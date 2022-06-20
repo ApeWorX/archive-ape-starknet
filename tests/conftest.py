@@ -2,20 +2,18 @@ import json
 import os
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Iterator, cast
+from typing import cast
 
 import ape
 import pytest
-from ape.api import EcosystemAPI
-from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
 
-from ape_starknet._utils import PLUGIN_NAME
 from ape_starknet.accounts import (
     StarknetAccountContracts,
     StarknetEphemeralAccount,
     StarknetKeyfileAccount,
 )
-from ape_starknet.provider import StarknetProvider
+from ape_starknet.utils import PLUGIN_NAME
 
 # NOTE: Ensure that we don't use local paths for these
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
@@ -47,6 +45,11 @@ def accounts():
 @pytest.fixture(scope="session")
 def networks():
     return ape.networks
+
+
+@pytest.fixture(scope="session")
+def convert():
+    return ape.convert
 
 
 @pytest.fixture(scope="session")
@@ -93,7 +96,7 @@ def initial_balance(contract, account):
 
 
 @pytest.fixture(scope="session")
-def provider() -> Iterator[StarknetProvider]:
+def provider():
     network = f"{PLUGIN_NAME}:{LOCAL_NETWORK_NAME}:{PLUGIN_NAME}"
     with ape.networks.parse_network_choice(network) as provider:
         yield provider
@@ -244,21 +247,3 @@ def existing_ephemeral_account(config, ephemeral_account_data):
 @pytest.fixture(scope="session")
 def token_initial_supply():
     return TOKEN_INITIAL_SUPPLY
-
-
-@pytest.fixture(scope="session")
-def token_contract(config, account, token_initial_supply):
-    project_path = _HERE / "projects" / "token"
-
-    with config.using_project(project_path):
-        yield ape.project.TestToken.deploy(
-            123123, 321321, token_initial_supply, account.contract_address
-        )
-
-
-@pytest.fixture(scope="session")
-def proxy_token_contract(config, account, token_initial_supply, token_contract):
-    project_path = _HERE / "projects" / "proxy"
-
-    with config.using_project(project_path):
-        return ape.project.Proxy.deploy(token_contract.address)

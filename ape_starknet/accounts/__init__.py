@@ -1,5 +1,5 @@
+import contextlib
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
@@ -9,33 +9,29 @@ from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
-from ape.exceptions import AccountsError, ProviderError
+from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
-from ape.types import AddressType, SignableMessage
-from ape.utils import abstractmethod
+from ape.types import AddressType, SignableMessage, TransactionSignature
+from ape.utils import abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
+from ethpm_types import ContractType
+from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
 from services.external_api.client import BadRequest  # type: ignore
 from starknet_py.net import KeyPair  # type: ignore
-from starknet_py.net.account.account_client import AccountClient  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
     COMPILED_ACCOUNT_CONTRACT,
 )
+from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner  # type: ignore
 from starknet_py.utils.crypto.facade import ECSignature, sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 
-from ape_starknet._utils import (
-    ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
-    PLUGIN_NAME,
-    get_chain_id,
-    handle_client_errors,
-)
-from ape_starknet.ecosystems import Starknet
-from ape_starknet.provider import StarknetProvider
 from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
+from ape_starknet.transactions import InvokeFunctionTransaction
+from ape_starknet.utils import PLUGIN_NAME, get_chain_id
+from ape_starknet.utils.basemodel import StarknetMixin
 
 APP_KEY_FILE_KEY = "ape-starknet"
 """
@@ -45,7 +41,7 @@ specific to the ape-starknet plugin.
 APP_KEY_FILE_VERSION = "0.1.0"
 
 
-class StarknetAccountContracts(AccountContainerAPI):
+class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
 
     ephemeral_accounts: Dict[str, Dict] = {}
     """Local-network accounts that do not persist."""
@@ -58,9 +54,7 @@ class StarknetAccountContracts(AccountContainerAPI):
 
     @property
     def aliases(self) -> Iterator[str]:
-        for key in self.ephemeral_accounts.keys():
-            yield key
-
+        yield from self.ephemeral_accounts.keys()
         for key_file in self._key_file_paths:
             yield key_file.stem
 
@@ -108,12 +102,14 @@ class StarknetAccountContracts(AccountContainerAPI):
         # First, use the account's public key (what Ape is used to).
         return super().__getitem__(address)
 
+    def get_account(self, address: Union[AddressType, int]) -> "BaseStarknetAccount":
+        return self[address]  # type: ignore
+
     def load(self, alias: str) -> "BaseStarknetAccount":
         if alias in self.ephemeral_accounts:
-            account = StarknetEphemeralAccount(
+            return StarknetEphemeralAccount(
                 raw_account_data=self.ephemeral_accounts[alias], account_key=alias
             )
-            return account
 
         return self.load_key_file_account(alias)
 
@@ -182,16 +178,13 @@ class StarknetAccountContracts(AccountContainerAPI):
             new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
 
         # Add account contract to cache
-        ecosystem = self.network_manager.starknet
-        address = ecosystem.decode_address(contract_address)
+        address = self.starknet.decode_address(contract_address)
         if self.network_manager.active_provider and self.provider.network.explorer:
-            try:
+            # Skip errors when unable to store contract type.
+            with contextlib.suppress(ProviderError, BadRequest):
                 contract_type = self.provider.network.explorer.get_contract_type(address)
                 if contract_type:
                     self.chain_manager.contracts[address] = contract_type
-            except (ProviderError, BadRequest):
-                # Unable to store contract type.
-                pass
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
@@ -240,7 +233,7 @@ class StarknetAccountDeployment:
     contract_address: AddressType
 
 
-class BaseStarknetAccount(AccountAPI):
+class BaseStarknetAccount(AccountAPI, StarknetMixin):
     token_manager: TokenManager = TokenManager()
 
     @abstractmethod
@@ -251,41 +244,119 @@ class BaseStarknetAccount(AccountAPI):
     def get_account_data(self) -> Dict:
         ...
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} {self.contract_address}>"
-
     @property
     def contract_address(self) -> Optional[AddressType]:
-        ecosystem = self.network_manager.ecosystems[PLUGIN_NAME]
         for deployment in self.get_deployments():
             network_name = deployment.network_name
-            network = ecosystem.networks[network_name]
+            network = self.starknet.networks[network_name]
             if network_name == network.name:
                 address = deployment.contract_address
-                return ecosystem.decode_address(address)
+                return self.starknet.decode_address(address)
 
         return None
 
     @property
     def address(self) -> AddressType:
         public_key = self.get_account_data()["address"]
-        return self.network_manager.starknet.decode_address(public_key)
+        return self.starknet.decode_address(public_key)
 
-    @property
-    def provider(self) -> StarknetProvider:
-        provider = super().provider
-        if not isinstance(provider, StarknetProvider):
-            # Mostly for mypy
-            raise AccountsError("Must use a Starknet provider.")
+    @cached_property
+    def signer(self) -> StarkCurveSigner:
+        key_pair = KeyPair.from_private_key(self._get_key())
+        network = self.provider.network
+        chain_id = get_chain_id(network.name)
+        return StarkCurveSigner(
+            account_address=self.contract_address, key_pair=key_pair, chain_id=chain_id
+        )
 
-        return provider
+    @cached_property
+    def contract_type(self) -> Optional[ContractType]:
+        if not self.contract_address:
+            # Contract not deployed to this network yet
+            return None
 
-    def sign_transaction(self, txn: TransactionAPI) -> Optional[ECSignature]:
+        contract_type = self.chain_manager.contracts.get(self.contract_address)
+        if not contract_type:
+            raise AccountsError(f"Account '{self.contract_address}' was expected but not found.")
+
+        return contract_type
+
+    @cached_property
+    def execute_abi(self) -> Optional[MethodABI]:
+        contract_address = self.contract_address
+        contract_type = self.contract_type
+        if not contract_address or not contract_type:
+            return None
+
+        execute_abi_ls = [
+            abi for abi in contract_type.abi if getattr(abi, "name", "") == "__execute__"
+        ]
+        if not execute_abi_ls:
+            raise AccountsError(f"Account '{contract_address}' does not have __execute__ method.")
+
+        abi = execute_abi_ls[0]
+        if not isinstance(abi, MethodABI):
+            raise AccountsError("ABI for '__execute__' is not a method.")
+
+        return abi
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.contract_address}>"
+
+    def call(self, txn: TransactionAPI, send_everything: bool = False) -> ReceiptAPI:
+        if send_everything:
+            raise NotImplementedError("send_everything currently isn't implemented in Starknet.")
+
+        if not isinstance(txn, InvokeFunctionTransaction):
+            raise AccountsError("Can only call Starknet transactions.")
+
+        txn = self.prepare_transaction(txn)
+        if not txn.signature:
+            raise SignatureError("The transaction was not signed.")
+
+        return self.provider.send_transaction(txn)
+
+    def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        contract_address = self.contract_address
+        execute_abi = self.execute_abi
+        if not contract_address or not execute_abi:
+            raise AccountsError(
+                f"Account is not deployed to network '{self.provider.network.name}'."
+            )
+
+        if not isinstance(txn, InvokeFunctionTransaction):
+            raise AccountsError("Can only prepare invoke transactions.")
+
+        txn: InvokeFunctionTransaction = super().prepare_transaction(txn)  # type: ignore
+        stark_tx = txn.as_starknet_object()
+        account_call = {
+            "to": stark_tx.contract_address,
+            "selector": stark_tx.entry_point_selector,
+            "data_offset": 0,
+            "data_len": len(stark_tx.calldata),
+        }
+        contract_type = self.chain_manager.contracts[contract_address]
+        txn.data = self.starknet.encode_calldata(
+            contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
+        )
+        txn.receiver = contract_address
+        txn.sender = None
+        txn.method_abi = execute_abi
+        txn.signature = self.sign_transaction(txn)
+        return txn
+
+    def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
         if not isinstance(txn, InvokeFunctionTransaction):
             raise AccountsError("This account can only sign Starknet transactions.")
 
-        starknet_object = txn.as_starknet_object()
-        return self.sign_message(starknet_object.calldata)
+        # NOTE: 'v' is not used
+        sign_result = self.signer.sign_transaction(txn.as_starknet_object())
+        if not sign_result:
+            raise SignatureError("Failed to sign transaction.")
+
+        r = to_bytes(sign_result[0])
+        s = to_bytes(sign_result[1])
+        return TransactionSignature(v=0, r=r, s=s)  # type: ignore
 
     def transfer(
         self,
@@ -306,71 +377,26 @@ class BaseStarknetAccount(AccountAPI):
             account = account.contract_address  # type: ignore
 
         if not isinstance(account, int):
-            account = self.provider.network.ecosystem.encode_address(account)  # type: ignore
+            account = self.starknet.encode_address(account)  # type: ignore
 
         if self.contract_address is None:
             raise ValueError("Contract address cannot be None")
 
-        sender = self.provider.network.ecosystem.encode_address(self.contract_address)
+        sender = self.starknet.encode_address(self.contract_address)
         return self.token_manager.transfer(sender, account, value, **kwargs)  # type: ignore
 
     def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
         return contract.deploy(sender=self)
 
-    @handle_client_errors
-    def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
-        if not token and hasattr(txn, "token") and txn.token:  # type: ignore
-            token = txn.token  # type: ignore
-        else:
-            token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
-
-        if not isinstance(txn, StarknetTransaction):
-            # Mostly for mypy
-            raise AccountsError("Can only send Starknet transactions.")
-
-        account_client = self.create_account_client()
-        starknet_txn = txn.as_starknet_object()
-        txn_info = account_client.add_transaction_sync(starknet_txn, token=token)
-
-        error = txn_info.get("error", {})
-        if error:
-            message = error.get("message", error)
-            raise AccountsError(message)
-
-        txn_hash = txn_info["transaction_hash"]
-
-        starknet: Starknet = self.provider.network.ecosystem  # type: ignore
-        return_value = [starknet.encode_primitive_value(v) for v in txn_info.get("result", [])]
-
-        if return_value and isinstance(txn, InvokeFunctionTransaction):
-            return_value = starknet.decode_returndata(txn.method_abi, return_value)
-            if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
-                return_value = return_value[0]
-
-        receipt = self.provider.get_transaction(txn_hash)
-        receipt.return_value = return_value
-        return receipt
-
-    def create_account_client(self) -> AccountClient:
-        network = self.provider.network
-        key_pair = KeyPair(
-            public_key=network.ecosystem.encode_address(self.address),
-            private_key=self._get_key(),
-        )
-        chain_id = get_chain_id(network.name)
-        return AccountClient(
-            self.contract_address,
-            self.provider.uri,
-            key_pair=key_pair,
-            chain=chain_id,
-        )
-
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
-        for deployment in self.get_deployments():
-            if deployment.network_name in network_name:
-                return deployment
-
-        return None
+        return next(
+            (
+                deployment
+                for deployment in self.get_deployments()
+                if deployment.network_name in network_name
+            ),
+            None,
+        )
 
     def check_signature(  # type: ignore
         self,
@@ -469,14 +495,12 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         remaining_deployments = [
             vars(d) for d in self.get_deployments() if d.network_name != network
         ]
-        if not remaining_deployments:
+        if remaining_deployments:
+            self.write(passphrase=passphrase, deployments=remaining_deployments)
+        elif click.confirm(f"Completely delete local key for account '{self.address}'?"):
             # Delete entire account JSON if no more deployments.
             # The user has to agree to an additional prompt since this may be very destructive.
-
-            if click.confirm(f"Completely delete local key for account '{self.address}'?"):
-                self.key_file_path.unlink()
-        else:
-            self.write(passphrase=passphrase, deployments=remaining_deployments)
+            self.key_file_path.unlink()
 
     def sign_message(
         self, msg: SignableMessage, passphrase: Optional[str] = None

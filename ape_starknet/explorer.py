@@ -1,27 +1,17 @@
 from typing import Iterator, Optional
 
 from ape.api import ExplorerAPI, ReceiptAPI
-from ape.exceptions import ProviderError
 from ape.types import AddressType
 from ethpm_types import ContractType
 
-from ape_starknet.provider import StarknetProvider
+from ape_starknet.utils.basemodel import StarknetMixin
 
 
-class StarknetExplorer(ExplorerAPI):
+class StarknetExplorer(ExplorerAPI, StarknetMixin):
     BASE_URIS = {
         "testnet": "https://goerli.voyager.online",
         "mainnet": "https://voyager.online",
     }
-
-    @property
-    def provider(self) -> StarknetProvider:
-        provider = super().provider
-        if not isinstance(provider, StarknetProvider):
-            # Mostly for mypy
-            raise ProviderError("Must use a Starknet provider.")
-
-        return provider
 
     @property
     def base_uri(self) -> str:
