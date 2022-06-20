@@ -175,6 +175,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetMixin):
             if block_id < 0:
                 latest_block_number = self.get_block("latest").number
                 block_id = latest_block_number + block_id + 1
+                if block_id < 0:
+                    raise ValueError(
+                        f"Negative block number '{block_id}' results in non-existent block."
+                    )
 
         else:
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
