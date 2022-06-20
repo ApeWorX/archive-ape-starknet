@@ -177,7 +177,7 @@ class StarknetReceipt(ReceiptAPI, StarknetMixin):
 
     @property
     def ran_out_of_gas(self) -> bool:
-        return self.max_fee == self.actual_fee
+        return self.actual_fee >= self.max_fee
 
     @property
     def total_fees_paid(self) -> int:
