@@ -362,11 +362,14 @@ class ContractDeclaration(StarknetReceipt):
             if not contract_type.source_id:
                 continue
 
-            code = (
-                (contract_type.deployment_bytecode.bytecode or 0)
-                if contract_type.deployment_bytecode
-                else 0
-            )
+            program = contract_type.deployment_bytecode
+            if not program:
+                continue
+
+            code = program.bytecode
+            if not code:
+                continue
+
             contract_class = ContractClass.deserialize(HexBytes(code))
             contract_cls = get_contract_class(contract_class=contract_class)
             computed_class_hash = compute_class_hash(contract_cls)
