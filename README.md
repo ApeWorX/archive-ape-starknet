@@ -95,7 +95,7 @@ declaration = provider.declare(project.MyContract)
 print(declaration.class_hash)
 ```
 
-Then, you can use the class hash in a deploy system call in a Factory contract:
+Then, you can use the class hash in a deploy system call in a factory contract:
 
 ```cairo
 @external
@@ -127,7 +127,7 @@ contract_address = project.starknet.decode_address(call_result)
 contract = Contract(contract_address, contract_address)
 ```
 
-You can also `deploy()` from the declaration receipt (which uses the legacy Deploy transaction):
+You can also `deploy()` from the declaration receipt (which uses the legacy deploy transaction):
 
 ```python
 from ape import accounts
@@ -135,7 +135,7 @@ from ape import accounts
 receipt = declaration.deploy(1, 2, sender=accounts.load("MyAccount"))
 ```
 
-Otherwise, you can use the legacy deploy system which works the same as Ethereum in ape:
+Otherwise, you can use the legacy deploy system which works the same as Ethereum in ape except no sender is needed:
 
 ```python
 from ape import project
