@@ -1,15 +1,16 @@
+import pytest
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 
 from ape_starknet.utils import is_checksum_address
 
 
 def test_get_nonce(provider, account, contract):
-    initial_nonce = provider.get_nonce(account.contract_address)  # type: ignore
+    initial_nonce = provider.get_nonce(account.contract_address)
 
     # Transact to increase nonce
     contract.increase_balance(account.address, 123, sender=account)
 
-    actual = provider.get_nonce(account.contract_address)  # type: ignore
+    actual = provider.get_nonce(account.contract_address)
     assert actual == initial_nonce + 1
 
 
@@ -19,6 +20,30 @@ def test_get_block(provider, contract):
     latest_block_1 = provider.get_block(-1)
     latest_block_2 = provider.get_block(latest_block_0.number)
     assert latest_block_0.hash == latest_block_1.hash == latest_block_2.hash
+
+
+def test_get_negative_block_number(account, provider, contract):
+    start_block = provider.get_block("latest").number
+    for _ in range(3):
+        # Mine 3 blocks
+        contract.increase_balance(account.address, 12, sender=account)
+
+    block = provider.get_block(-2)
+    assert block.number == start_block + 2
+
+
+def test_get_block_negative_number_resulting_less_than_zero(provider, contract):
+    _ = contract  # Contract fixture used to increase blocks (since deploys happen)
+    latest_block_number = provider.get_block("latest").number
+    value = -100
+    with pytest.raises(ValueError) as err:
+        provider.get_block(value)
+
+    expected_block_number = latest_block_number + value + 1
+    assert (
+        str(err.value)
+        == f"Negative block number '{expected_block_number}' results in non-existent block."
+    )
 
 
 def test_get_transactions_by_block(provider, account, contract):

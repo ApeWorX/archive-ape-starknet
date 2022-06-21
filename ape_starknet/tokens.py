@@ -6,7 +6,7 @@ from ape.exceptions import ContractError
 from ape.types import AddressType
 from ethpm_types.abi import MethodABI
 
-from ape_starknet.utils.basemodel import StarknetMixin
+from ape_starknet.utils.basemodel import StarknetBase
 
 
 def missing_contract_error(token: str, contract_address: AddressType) -> ContractError:
@@ -24,7 +24,7 @@ def _select_method_abi(name: str, abi: List[Dict]) -> Optional[Dict]:
     return None
 
 
-class TokenManager(StarknetMixin):
+class TokenManager(StarknetBase):
     TOKEN_ADDRESS_MAP = {
         "eth": {
             "testnet": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
@@ -56,7 +56,13 @@ class TokenManager(StarknetMixin):
         method_abi_obj = MethodABI.parse_obj(method_abi)
         return ContractCall(method_abi_obj, contract_address)()
 
-    def transfer(self, sender: Union[int, AddressType], receiver: Union[int, AddressType], amount: int, token: str = "eth"):
+    def transfer(
+        self,
+        sender: Union[int, AddressType],
+        receiver: Union[int, AddressType],
+        amount: int,
+        token: str = "eth",
+    ):
         if not isinstance(sender, int):
             sender = self.starknet.encode_address(sender)
 

@@ -1,4 +1,5 @@
 import pytest
+from ape.contracts import ContractInstance
 from ape.exceptions import AccountsError, ContractLogicError
 
 
@@ -17,10 +18,19 @@ def test_deploy(project):
     assert deployment
 
 
-def test_declare(account, project):
-    declared_contract = account.declare(project.MyContract)
-    contract_instance = account.deploy(declared_contract)
-    assert declared_contract
+def test_declare_then_deploy(account, project, provider):
+    # Declare contract type. The result should contain a 'class_hash'.
+    declaration = provider.declare(project.MyContract)
+    assert declaration.class_hash
+
+    # Deploy a ContractInstance from the declaration.
+    contract = declaration.deploy()
+    assert isinstance(contract, ContractInstance)
+
+    # Ensure can interact with deployed contract from 'class_hash'.
+    balance_pre_call = contract.get_balance(account)
+    contract.increase_balance(account.contract_address, 9, sender=account)
+    assert contract.get_balance(account) == balance_pre_call + 9
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):
@@ -31,7 +41,7 @@ def test_contract_transaction_handles_non_felt_arguments(contract, account, init
     signature = account.sign_message(increase_amount)
     contract.increase_balance_signed(account.address, increase_amount, signature)
 
-    actual = contract.get_balance(account.address)
+    actual = contract.get_balance(account)
     expected = initial_balance + increase_amount
     assert actual == expected
 

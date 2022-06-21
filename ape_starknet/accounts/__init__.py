@@ -8,7 +8,6 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
@@ -30,7 +29,8 @@ from starkware.crypto.signature.signature import get_random_private_key  # type:
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils.basemodel import StarknetMixin
+from ape_starknet.utils import get_chain_id
+from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
 """
@@ -40,7 +40,7 @@ specific to the ape-starknet plugin.
 APP_KEY_FILE_VERSION = "0.1.0"
 
 
-class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
+class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     ephemeral_accounts: Dict[str, Dict] = {}
     """Local-network accounts that do not persist."""
@@ -209,8 +209,8 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
         private_key = private_key or get_random_private_key()
         key_pair = KeyPair.from_private_key(private_key)
 
-        contract_address = self.provider._deploy(  # type: ignore
-            COMPILED_ACCOUNT_CONTRACT, key_pair.public_key, token=token
+        contract_address = self.provider._deploy(
+            key_pair.public_key, contract_data=COMPILED_ACCOUNT_CONTRACT, token=token
         )
         self.import_account(alias, network_name, contract_address, key_pair.private_key)
         return contract_address
@@ -232,7 +232,7 @@ class StarknetAccountDeployment:
     contract_address: AddressType
 
 
-class BaseStarknetAccount(AccountAPI, StarknetMixin):
+class BaseStarknetAccount(AccountAPI, StarknetBase):
     token_manager: TokenManager = TokenManager()
 
     @abstractmethod
@@ -265,7 +265,7 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
         return StarkCurveSigner(
             account_address=self.contract_address,
             key_pair=key_pair,
-            chain_id=self.provider.chain_id,
+            chain_id=get_chain_id(self.provider.chain_id),
         )
 
     @cached_property
@@ -373,27 +373,22 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
                 raise ValueError("value is not an integer.")
 
         if not isinstance(account, str) and hasattr(account, "contract_address"):
-            receiver = account.contract_address  # type: ignore
+            receiver = getattr(account, "contract_address")
+
         elif isinstance(account, str):
             checksummed_address = self.starknet.decode_address(account)
             receiver = self.starknet.encode_address(checksummed_address)
+
         elif isinstance(account, int):
             receiver = account
+
         else:
             raise TypeError(f"Unable to handle account type '{type(account)}'.")
 
         if self.contract_address is None:
             raise ValueError("Contract address cannot be None")
 
-        return self.token_manager.transfer(
-            self.contract_address, receiver, value, **kwargs
-        )  # type: ignore
-
-    def declare(self, contract: ContractContainer):
-        transaction = self.starknet.encode_contract_declaration(
-            contract, sender=self, nonce=self.nonce,
-        )
-        return self.provider.send_transaction(transaction)
+        return self.token_manager.transfer(self.contract_address, receiver, value, **kwargs)
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
         return next(

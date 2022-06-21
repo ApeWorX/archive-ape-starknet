@@ -4,10 +4,10 @@ from ape.api import ExplorerAPI, ReceiptAPI
 from ape.types import AddressType
 from ethpm_types import ContractType
 
-from ape_starknet.utils.basemodel import StarknetMixin
+from ape_starknet.utils.basemodel import StarknetBase
 
 
-class StarknetExplorer(ExplorerAPI, StarknetMixin):
+class StarknetExplorer(ExplorerAPI, StarknetBase):
     BASE_URIS = {
         "testnet": "https://goerli.voyager.online",
         "mainnet": "https://voyager.online",
