@@ -130,6 +130,9 @@ def test_revert_no_message(contract, account):
     # Re-initialize (re-store state)
     contract.initialize()
 
+    # Re-initialize (re-store state)
+    contract.initialize()
+
 
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
