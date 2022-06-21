@@ -258,7 +258,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         txn_hash = txn_info["transaction_hash"]
         receipt = self.get_transaction(txn_hash)
 
-        if invoking:
+        if invoking and isinstance(txn, InvokeFunctionTransaction):
             return_value = self.starknet.decode_returndata(
                 txn.method_abi, txn_info.get("result", [])
             )

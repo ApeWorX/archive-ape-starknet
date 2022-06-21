@@ -110,6 +110,9 @@ def test_revert_no_message(contract, account):
 
     assert "An ASSERT_EQ instruction failed" in str(err.value)
 
+    # Re-initialize (re-store state)
+    contract.initialize()
+
 
 def test_array_inputs(contract, account):
     # This test makes sure we can pass python lists as arguments
