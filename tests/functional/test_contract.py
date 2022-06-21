@@ -28,9 +28,10 @@ def test_declare_then_deploy(account, project, provider):
     assert isinstance(contract, ContractInstance)
 
     # Ensure can interact with deployed contract from 'class_hash'.
-    balance_pre_call = contract.get_balance(account)
+    contract.initialize()
+    balance_pre_call = contract.get_balance(account.contract_address)
     contract.increase_balance(account.contract_address, 9, sender=account)
-    assert contract.get_balance(account) == balance_pre_call + 9
+    assert contract.get_balance(account.contract_address) == balance_pre_call + 9
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):

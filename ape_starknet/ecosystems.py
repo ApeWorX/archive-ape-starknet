@@ -183,37 +183,16 @@ class Starknet(EcosystemAPI):
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = TransactionType(data["type"])
         cls: Union[Type[ContractDeclaration], Type[DeployReceipt], Type[InvocationReceipt]]
-        receipt_kwargs = {
-            "block_hash": data.get("block_hash"),
-            "block_number": data["block_number"],
-            "provider": data.get("provider"),
-            "receiver": data.get("receiver"),
-            "type": txn_type,
-            "transaction_hash": data["transaction_hash"],
-        }
-
         if txn_type == TransactionType.INVOKE_FUNCTION:
-            receipt_kwargs["receiver"] = data.pop("contract_address")
-            receipt_kwargs["max_fee"] = data.get("max_fee", 0)
-            receipt_kwargs["receiver"] = self.decode_address(data["receiver"])
-            receipt_kwargs["actual_fee"] = data["actual_fee"]
-            receipt_kwargs["events"] = data["events"]
-            receipt_kwargs["max_fee"] = data["max_fee"]
-            receipt_kwargs["status"] = data["status"].value
             cls = InvocationReceipt
-
         elif txn_type == TransactionType.DEPLOY:
-            receipt_kwargs["contract_address"] = self.decode_address(data["contract_address"])
             cls = DeployReceipt
-
         elif txn_type == TransactionType.DECLARE:
-            receipt_kwargs["class_hash"] = data["class_hash"]
             cls = ContractDeclaration
-
         else:
             raise ValueError(f"Unable to handle contract type '{txn_type.value}'.")
 
-        return cls(**receipt_kwargs)
+        return cls.parse_obj(data)
 
     def decode_block(self, data: dict) -> BlockAPI:
         return StarknetBlock(
@@ -262,12 +241,16 @@ class Starknet(EcosystemAPI):
         contract_type = (
             contract.contract_type if isinstance(contract, ContractContainer) else contract
         )
-        code = contract_type.get_deployment_bytecode() or b""
-        starknet_contract = ContractClass.deserialize(code)
+        code = (
+            (contract_type.deployment_bytecode.bytecode or 0)
+            if contract_type.deployment_bytecode
+            else 0
+        )
+        starknet_contract = ContractClass.deserialize(HexBytes(code))
         return DeclareTransaction(contract_type=contract_type, data=starknet_contract.dumps())
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
-        txn_type = kwargs.pop("type", kwargs.pop("tx_type", ""))
+        txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
         txn_cls: Union[
             Type[InvokeFunctionTransaction], Type[DeployTransaction], Type[DeclareTransaction]
         ]
@@ -291,19 +274,6 @@ class Starknet(EcosystemAPI):
             return txn_cls(**txn_data)
 
         """ ~ Invoke transactions ~ """
-
-        if "receiver" in txn_data:
-            # Model expects 'contract_address' key during serialization.
-            # NOTE: Deploy transactions have a different 'contract_address' and that is handled
-            # above before getting to the 'Invoke transactions' section.
-            txn_data["contract_address"] = self.decode_address(txn_data["receiver"])
-
-        if (
-            "max_fee" in txn_data
-            and not isinstance(txn_data["max_fee"], int)
-            and txn_data["max_fee"] is not None
-        ):
-            txn_data["max_fee"] = self.encode_primitive_value(txn_data["max_fee"])
 
         if "method_abi" not in txn_data:
             contract_int = txn_data["contract_address"]

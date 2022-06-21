@@ -229,9 +229,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
-        receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash).transaction
+        receipt = self.starknet_client.get_transaction_receipt_sync(
+            tx_hash=txn_info.transaction_hash
+        )
+        receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
 
@@ -239,7 +241,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         block = self._get_block(block_id)
         for txn_info in block.transactions:
             txn_dict = get_dict_from_tx_info(txn_info)
-            yield self.network.ecosystem.create_transaction(**txn_dict)
+            yield self.starknet.create_transaction(**txn_dict)
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:

@@ -57,6 +57,16 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     def serialize_transaction(self) -> dict:  # type: ignore
         return self.dict()
 
+    @validator("status", pre=True, allow_reuse=True)
+    def validate_status(cls, value):
+        if isinstance(value, TxStatus):
+            return value.value
+
+        elif isinstance(value, str):
+            return int(value, 16)
+
+        return value
+
     @abstractmethod
     def as_starknet_object(self) -> Transaction:
         """
@@ -141,15 +151,28 @@ class DeployTransaction(StarknetTransaction):
 
 
 class InvokeFunctionTransaction(StarknetTransaction):
-    method_abi: MethodABI
-
     max_fee: int = 0
+    method_abi: MethodABI
     sender: Optional[AddressType] = None
     type: TransactionType = TransactionType.INVOKE_FUNCTION
 
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore
     receiver: AddressType = Field(alias="contract_address")
+
+    @validator("receiver", pre=True, allow_reuse=True)
+    def validate_receiver(cls, value):
+        if isinstance(value, int):
+            return to_checksum_address(value)
+
+        return value
+
+    @validator("max_fee", pre=True, allow_reuse=True)
+    def validate_max_fee(cls, value):
+        if isinstance(value, str):
+            return int(value, 16)
+
+        return value
 
     @property
     def receiver_int(self) -> int:
@@ -238,10 +261,20 @@ class DeployReceipt(StarknetReceipt):
     # Only get a receipt if deploy was accepted
     status: TxStatus = TxStatus.ACCEPTED_ON_L2
 
+    @validator("contract_address", pre=True, allow_reuse=True)
+    def validate_contract_address(cls, value):
+        if isinstance(value, int):
+            return to_checksum_address(value)
+
+        return value
+
 
 class InvocationReceipt(StarknetReceipt):
     actual_fee: int
+    entry_point_selector: Optional[int] = None  # Either has this or method_abi
     max_fee: int
+    method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
+    receiver: str = Field(alias="contract_address")
     return_value: List[int] = []
 
     """Aliased"""
@@ -251,6 +284,13 @@ class InvocationReceipt(StarknetReceipt):
     def validate_max_fee(cls, value):
         if isinstance(value, str):
             return int(value, 16)
+
+    @validator("entry_point_selector", pre=True, allow_reuse=True)
+    def validate_entry_point_selector(cls, value):
+        if isinstance(value, str):
+            return int(value, 16)
+
+        return value
 
     @property
     def ran_out_of_gas(self) -> bool:
@@ -317,8 +357,12 @@ class ContractDeclaration(StarknetReceipt):
             if not contract_type.source_id:
                 continue
 
-            code = contract_type.get_deployment_bytecode() or b""
-            contract_class = ContractClass.deserialize(code)
+            code = (
+                (contract_type.deployment_bytecode.bytecode or 0)
+                if contract_type.deployment_bytecode
+                else 0
+            )
+            contract_class = ContractClass.deserialize(HexBytes(code))
             contract_cls = get_contract_class(contract_class=contract_class)
             computed_class_hash = compute_class_hash(contract_cls)
             if computed_class_hash == self.class_hash:
