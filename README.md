@@ -80,9 +80,30 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
-### Contract Interaction
+### Declare and Deploy Contracts
 
-First, deploy your contract:
+In Starknet, you can declare contract types by publishing them to the chain.
+This allows other contracts to create instances of them using the [deploy system call](https://www.cairo-lang.org/docs/hello_starknet/deploying_from_contracts.html).
+
+To declare a contract using `ape-starknet`, do the following (in a script or console):
+
+```python
+from ape import project, networks
+
+provider = networks.active_provider
+declaration = provider.declare(project.MyContract)
+print(declaration.class_hash)
+```
+
+You can also `deploy()` from the declaration receipt:
+
+```python
+from ape import accounts
+
+receipt = declaration.deploy(1, 2, sender=accounts.load("MyAccount"))
+```
+
+Otherwise, you can use the legacy deploy system which works the same as Ethereum in ape:
 
 ```python
 from ape import project
@@ -90,9 +111,17 @@ from ape import project
 contract = project.MyContract.deploy()
 ```
 
-The ``deploy`` method returns a contract instance from which you can call methods on:
+### Contract Interaction
+
+After you have deployed your contracts, you can begin interacting with them.
+``deploy`` methods return a contract instance from which you can call methods on:
 
 ```python
+from ape import project
+
+contract = project.MyContract.deploy()
+
+# Interact with deployed contract
 receipt = contract.my_mutable_method(123)
 value = contract.my_view_method()
 ```
