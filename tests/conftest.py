@@ -74,16 +74,21 @@ def project(request, config):
     os.chdir(_HERE)
 
 
-@pytest.fixture(scope="module")
-def contract_type(project):
+@pytest.fixture(scope="session")
+def contract_container(project):
     return project.MyContract
 
 
-@pytest.fixture(scope="module")
-def contract(contract_type, provider):
-    deployed_contract = contract_type.deploy()
+@pytest.fixture(scope="session")
+def contract(contract_container, provider):
+    deployed_contract = contract_container.deploy()
     deployed_contract.initialize()
     return deployed_contract
+
+
+@pytest.fixture(scope="session")
+def factory_contract_container(provider, project):
+    return project.ContractFactory
 
 
 @pytest.fixture

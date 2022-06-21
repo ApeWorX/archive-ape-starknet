@@ -1,4 +1,3 @@
-# Declare this file as a StarkNet contract.
 %lang starknet
 
 from starkware.cairo.common.alloc import alloc
