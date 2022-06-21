@@ -1,4 +1,5 @@
 import pytest
+from ape import Contract
 from ape.contracts import ContractInstance
 from ape.exceptions import AccountsError, ContractLogicError
 
@@ -18,7 +19,7 @@ def test_deploy(project):
     assert deployment
 
 
-def test_declare_then_deploy(account, project, provider):
+def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
     # Declare contract type. The result should contain a 'class_hash'.
     declaration = provider.declare(project.MyContract)
     assert declaration.class_hash
@@ -27,11 +28,27 @@ def test_declare_then_deploy(account, project, provider):
     contract = declaration.deploy()
     assert isinstance(contract, ContractInstance)
 
-    # Ensure can interact with deployed contract from 'class_hash'.
+    # Ensure can interact with deployed contract from declaration.
     contract.initialize()
     balance_pre_call = contract.get_balance(account.contract_address)
     contract.increase_balance(account.contract_address, 9, sender=account)
     assert contract.get_balance(account.contract_address) == balance_pre_call + 9
+
+    # Ensure can use class_hash in factory contract
+    factory = factory_contract_container.deploy(declaration.class_hash)
+    receipt = factory.create_my_contract()
+    logs = list(receipt.decode_logs(factory.contract_deployed))
+    new_contract_address = provider.starknet.decode_address(logs[0].contract_address)
+
+    # TODO: Can remove after ape 0.3.2 release
+    chain.contracts._local_contracts[new_contract_address] = contract.contract_type
+
+    # Ensure can interact with deployed contract from 'class_hash'.
+    new_contract_instance = Contract(new_contract_address, contract_type=contract.contract_type)
+    new_contract_instance.initialize()
+    balance_pre_call = new_contract_instance.get_balance(account.contract_address)
+    new_contract_instance.increase_balance(account.contract_address, 9, sender=account)
+    assert new_contract_instance.get_balance(account.contract_address) == balance_pre_call + 9
 
 
 def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):

@@ -95,7 +95,38 @@ declaration = provider.declare(project.MyContract)
 print(declaration.class_hash)
 ```
 
-You can also `deploy()` from the declaration receipt:
+Then, you can use the class hash in a deploy system call in a Factory contract:
+
+```cairo
+@external
+func deploy_my_contract{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+    let (current_salt) = salt.read()
+    let (class_hash) = ownable_class_hash.read()
+    let (calldata_ptr) = alloc()
+    let (contract_address) = deploy(
+        class_hash=class_hash,
+        contract_address_salt=current_salt,
+        constructor_calldata_size=0,
+        constructor_calldata=calldata_ptr,
+    )
+    salt.write(value=current_salt + 1)
+```
+
+Then, you can make calls to the factory method using `ape` and create contract instances that way:
+
+```python
+from ape import Contract, project
+
+factory = project.ContractFactory.deploy(declaration.class_hash)
+contract_address = project.starknet.decode_address(contract_address_int)
+contract = Contract(contract_address, contract_address)
+```
+
+You can also `deploy()` from the declaration receipt (which uses the legacy Deploy transaction):
 
 ```python
 from ape import accounts
