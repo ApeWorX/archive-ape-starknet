@@ -116,13 +116,14 @@ func deploy_my_contract{
     salt.write(value=current_salt + 1)
 ```
 
-Then, you can make calls to the factory method using `ape` and create contract instances that way:
+After deploying the factory contract, you can use it to create contract instances:
 
 ```python
 from ape import Contract, project
 
 factory = project.ContractFactory.deploy(declaration.class_hash)
-contract_address = project.starknet.decode_address(contract_address_int)
+call_result = factory.deploy_my_contract()
+contract_address = project.starknet.decode_address(call_result)
 contract = Contract(contract_address, contract_address)
 ```
 
