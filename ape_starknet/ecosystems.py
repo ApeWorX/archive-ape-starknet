@@ -84,7 +84,11 @@ class Starknet(EcosystemAPI):
             num_rest = len(rest)
             return clear_lengths(rest) if arr_len == num_rest else arr
 
-        is_arr = abi.outputs[0].name == "arr_len" and abi.outputs[1].type == "felt*"
+        is_arr = (
+            len(abi.outputs) >= 2
+            and abi.outputs[0].name == "arr_len"
+            and abi.outputs[1].type == "felt*"
+        )
         has_leftover_length = len(raw_data) > 1 and not is_arr
         if (
             len(abi.outputs) == 2
