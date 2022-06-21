@@ -30,7 +30,10 @@ python3 setup.py install
 
 ### Account Management
 
-Deploy a new account:
+Accounts are used to execute transactions and sign call data.
+Accounts are smart contracts in Starknet.
+
+To deploy a new account:
 
 ```bash
 ape starknet accounts create <ALIAS> --network starknet:testnet

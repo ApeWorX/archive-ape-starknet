@@ -234,6 +234,12 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """Aliased"""
     txn_hash: str = Field(alias="transaction_hash")
 
+    @validator("nonce", pre=True, allow_reuse=True)
+    def validate(cls, value):
+        if isinstance(value, str):
+            breakpoint()
+            return int(value, 16)
+
     @validator("block_hash", pre=True, allow_reuse=True)
     def validate_block_hash(cls, value):
         return HexBytes(value).hex() if value else value

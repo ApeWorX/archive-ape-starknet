@@ -59,7 +59,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     client: Optional[StarknetClient] = None
     token_manager: TokenManager = TokenManager()
     default_gas_cost: int = 0
-    contract_type_by_class_hash: Dict[int, ContractType] = {}
 
     @property
     def process_name(self) -> str:
@@ -256,21 +255,16 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             message = error.get("message", error)
             raise ProviderError(message)
 
-        if invoking:
-            # Return felts as ints and let calling context decide if hexstr is more appropriate.
-            return_value = [
-                self.starknet.encode_primitive_value(v) if isinstance(v, str) else v
-                for v in txn_info.get("result", [])
-            ]
-            if return_value and isinstance(txn, InvokeFunctionTransaction):
-                return_value = self.starknet.decode_returndata(txn.method_abi, return_value)
-                if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
-                    return_value = return_value[0]
-
         txn_hash = txn_info["transaction_hash"]
         receipt = self.get_transaction(txn_hash)
 
         if invoking:
+            return_value = self.starknet.decode_returndata(
+                txn.method_abi, txn_info.get("result", [])
+            )
+            if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
+                return_value = return_value[0]
+
             receipt.return_value = return_value
 
         return receipt

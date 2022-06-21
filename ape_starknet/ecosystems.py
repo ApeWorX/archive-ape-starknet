@@ -76,6 +76,8 @@ class Starknet(EcosystemAPI):
         return starknet_object.deserialize()
 
     def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> List[Any]:  # type: ignore
+        raw_data = [self.encode_primitive_value(v) if isinstance(v, str) else v for v in raw_data]
+
         def clear_lengths(arr):
             arr_len = arr[0]
             rest = arr[1:]
