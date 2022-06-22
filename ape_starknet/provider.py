@@ -248,7 +248,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         invoking = txn.type == TransactionType.INVOKE_FUNCTION
 
         if "code" in txn_info and txn_info["code"] != StarkErrorCode.TRANSACTION_RECEIVED.name:
-            raise TransactionError(message="Transaction not receiver.")
+            raise TransactionError(message="Transaction not received.")
 
         error = txn_info.get("error", {})
         if error:
