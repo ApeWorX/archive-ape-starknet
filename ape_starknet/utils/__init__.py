@@ -18,6 +18,7 @@ from starknet_py.net.client import BadRequest  # type: ignore
 from starknet_py.net.models import TransactionType  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+    DeclareSpecificInfo,
     DeploySpecificInfo,
     InvokeSpecificInfo,
 )
@@ -129,12 +130,31 @@ def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
     return ContractLogicError(revert_message=err_msg)
 
 
-def get_dict_from_tx_info(txn_info: Union[DeploySpecificInfo, InvokeSpecificInfo]) -> Dict:
-    txn_dict = txn_info.dump()
+def get_dict_from_tx_info(
+    txn_info: Union[DeploySpecificInfo, InvokeSpecificInfo], **extra_kwargs
+) -> Dict:
+    txn_dict = {**txn_info.dump(), **extra_kwargs}
     if isinstance(txn_info, DeploySpecificInfo):
-        txn_dict["type"] = TransactionType.DEPLOY
+        txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
         txn_dict["max_fee"] = 0
+        txn_dict["type"] = TransactionType.DEPLOY
     elif isinstance(txn_info, InvokeSpecificInfo):
+        txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
+
+        if "events" in txn_dict:
+            txn_dict["events"] = [vars(e) for e in txn_dict["events"]]
+
+        txn_dict["max_fee"] = txn_dict["max_fee"]
+
+        if "method_abi" in txn_dict:
+            txn_dict["method_abi"] = txn_dict.get("method_abi")
+
+        if "entry_point_selector" in txn_dict:
+            txn_dict["entry_point_selector"] = txn_dict.get("entry_point_selector")
+
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
+    elif isinstance(txn_info, DeclareSpecificInfo):
+        txn_dict["sender"] = to_checksum_address(txn_info.sender_address)
+        txn_dict["type"] = TransactionType.DECLARE
 
     return txn_dict

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from ape_starknet.provider import StarknetProvider
 
 
-class StarknetMixin(ManagerAccessMixin):
+class StarknetBase(ManagerAccessMixin):
     @property
     def starknet(self) -> "Starknet":
         return self.network_manager.starknet  # type: ignore

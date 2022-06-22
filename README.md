@@ -30,7 +30,10 @@ python3 setup.py install
 
 ### Account Management
 
-Deploy a new account:
+Accounts are used to execute transactions and sign call data.
+Accounts are smart contracts in Starknet.
+
+To deploy a new account:
 
 ```bash
 ape starknet accounts create <ALIAS> --network starknet:testnet
@@ -77,9 +80,68 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
-### Contract Interaction
+### Declare and Deploy Contracts
 
-First, deploy your contract:
+In Starknet, you can declare contract types by publishing them to the chain.
+This allows other contracts to create instances of them using the [deploy system call](https://www.cairo-lang.org/docs/hello_starknet/deploying_from_contracts.html).
+
+To declare a contract using `ape-starknet`, do the following (in a script or console):
+
+```python
+from ape import project, networks
+
+provider = networks.active_provider
+declaration = provider.declare(project.MyContract)
+print(declaration.class_hash)
+```
+
+Then, you can use the class hash in a deploy system call in a factory contract:
+
+```cairo
+from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.syscalls import deploy
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+
+@external
+func deploy_my_contract{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+    let (current_salt) = salt.read()
+    let (class_hash) = ownable_class_hash.read()
+    let (calldata_ptr) = alloc()
+    let (contract_address) = deploy(
+        class_hash=class_hash,
+        contract_address_salt=current_salt,
+        constructor_calldata_size=0,
+        constructor_calldata=calldata_ptr,
+    )
+    salt.write(value=current_salt + 1)
+```
+
+After deploying the factory contract, you can use it to create contract instances:
+
+```python
+from ape import Contract, project
+
+declaration = project.provider.declare(project.MyContract)
+factory = project.ContractFactory.deploy(declaration.class_hash)
+call_result = factory.deploy_my_contract()
+contract_address = project.starknet.decode_address(call_result)
+contract = Contract(contract_address, contract_address)
+```
+
+You can also `deploy()` from the declaration receipt (which uses the legacy deploy transaction):
+
+```python
+from ape import accounts, project
+
+declaration = project.provider.declare(project.MyContract)
+receipt = declaration.deploy(1, 2, sender=accounts.load("MyAccount"))
+```
+
+Otherwise, you can use the legacy deploy system which works the same as Ethereum in ape except no sender is needed:
 
 ```python
 from ape import project
@@ -87,9 +149,17 @@ from ape import project
 contract = project.MyContract.deploy()
 ```
 
-The ``deploy`` method returns a contract instance from which you can call methods on:
+### Contract Interaction
+
+After you have deployed your contracts, you can begin interacting with them.
+``deploy`` methods return a contract instance from which you can call methods on:
 
 ```python
+from ape import project
+
+contract = project.MyContract.deploy()
+
+# Interact with deployed contract
 receipt = contract.my_mutable_method(123)
 value = contract.my_view_method()
 ```

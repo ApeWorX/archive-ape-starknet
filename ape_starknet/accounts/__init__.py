@@ -8,7 +8,6 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
@@ -31,7 +30,7 @@ from starkware.crypto.signature.signature import get_random_private_key  # type:
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
 from ape_starknet.utils import get_chain_id
-from ape_starknet.utils.basemodel import StarknetMixin
+from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
 """
@@ -41,7 +40,7 @@ specific to the ape-starknet plugin.
 APP_KEY_FILE_VERSION = "0.1.0"
 
 
-class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
+class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     ephemeral_accounts: Dict[str, Dict] = {}
     """Local-network accounts that do not persist."""
@@ -211,7 +210,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetMixin):
         key_pair = KeyPair.from_private_key(private_key)
 
         contract_address = self.provider._deploy(
-            COMPILED_ACCOUNT_CONTRACT, key_pair.public_key, token=token
+            key_pair.public_key, contract_data=COMPILED_ACCOUNT_CONTRACT, token=token
         )
         self.import_account(alias, network_name, contract_address, key_pair.private_key)
         return contract_address
@@ -233,7 +232,7 @@ class StarknetAccountDeployment:
     contract_address: AddressType
 
 
-class BaseStarknetAccount(AccountAPI, StarknetMixin):
+class BaseStarknetAccount(AccountAPI, StarknetBase):
     token_manager: TokenManager = TokenManager()
 
     @abstractmethod
@@ -390,9 +389,6 @@ class BaseStarknetAccount(AccountAPI, StarknetMixin):
             raise ValueError("Contract address cannot be None")
 
         return self.token_manager.transfer(self.contract_address, receiver, value, **kwargs)
-
-    def deploy(self, contract: ContractContainer, *args, **kwargs) -> ContractInstance:
-        return contract.deploy(sender=self)
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
         return next(
