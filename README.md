@@ -129,7 +129,7 @@ declaration = project.provider.declare(project.MyContract)
 factory = project.ContractFactory.deploy(declaration.class_hash)
 call_result = factory.deploy_my_contract()
 contract_address = project.starknet.decode_address(call_result)
-contract = Contract(contract_address, contract_address)
+contract = Contract(contract_address, contract_type=project.MyContract.contract_type)
 ```
 
 You can also `deploy()` from the declaration receipt (which uses the legacy deploy transaction):
