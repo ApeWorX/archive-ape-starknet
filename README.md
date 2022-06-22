@@ -98,6 +98,10 @@ print(declaration.class_hash)
 Then, you can use the class hash in a deploy system call in a factory contract:
 
 ```cairo
+from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.syscalls import deploy
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+
 @external
 func deploy_my_contract{
     syscall_ptr : felt*,
@@ -121,6 +125,7 @@ After deploying the factory contract, you can use it to create contract instance
 ```python
 from ape import Contract, project
 
+declaration = project.provider.declare(project.MyContract)
 factory = project.ContractFactory.deploy(declaration.class_hash)
 call_result = factory.deploy_my_contract()
 contract_address = project.starknet.decode_address(call_result)
@@ -130,8 +135,9 @@ contract = Contract(contract_address, contract_address)
 You can also `deploy()` from the declaration receipt (which uses the legacy deploy transaction):
 
 ```python
-from ape import accounts
+from ape import accounts, project
 
+declaration = project.provider.declare(project.MyContract)
 receipt = declaration.deploy(1, 2, sender=accounts.load("MyAccount"))
 ```
 
