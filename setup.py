@@ -61,12 +61,12 @@ setup(
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
-        "eth-ape>=0.3.0,<0.4.0",
+        "eth-ape>=0.3.4,<0.4.0",
         "ethpm-types",  # Use same as `eth-ape`.
         "starknet.py>=0.3.2a0,<0.4",
         "starknet-devnet>=0.2.3,<0.3",
         "importlib-metadata ; python_version<'3.8'",
-    ],  # NOTE: Add 3rd party libraries here
+    ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.7.2,<3.10",
     extras_require=extras_require,

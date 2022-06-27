@@ -40,9 +40,6 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     logs = list(receipt.decode_logs(factory.contract_deployed))
     new_contract_address = provider.starknet.decode_address(logs[0].contract_address)
 
-    # TODO: Can remove after ape 0.3.2 release
-    chain.contracts._local_contracts[new_contract_address] = contract.contract_type
-
     # Ensure can interact with deployed contract from 'class_hash'.
     new_contract_instance = Contract(new_contract_address, contract_type=contract.contract_type)
     new_contract_instance.initialize()
