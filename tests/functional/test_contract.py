@@ -30,9 +30,9 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
 
     # Ensure can interact with deployed contract from declaration.
     contract.initialize()
-    balance_pre_call = contract.get_balance(account.address)
-    contract.increase_balance(account.address, 9, sender=account)
-    assert contract.get_balance(account.address) == balance_pre_call + 9
+    balance_pre_call = contract.get_balance(account)
+    contract.increase_balance(account, 9, sender=account)
+    assert contract.get_balance(account) == balance_pre_call + 9
 
     # Ensure can use class_hash in factory contract
     factory = factory_contract_container.deploy(declaration.class_hash)
@@ -43,25 +43,27 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     # Ensure can interact with deployed contract from 'class_hash'.
     new_contract_instance = Contract(new_contract_address, contract_type=contract.contract_type)
     new_contract_instance.initialize()
-    balance_pre_call = new_contract_instance.get_balance(account.address)
-    new_contract_instance.increase_balance(account.address, 9, sender=account)
-    assert new_contract_instance.get_balance(account.address) == balance_pre_call + 9
+    balance_pre_call = new_contract_instance.get_balance(account)
+    new_contract_instance.increase_balance(account, 9, sender=account)
+    assert new_contract_instance.get_balance(account) == balance_pre_call + 9
 
 
-def test_contract_transaction_handles_non_felt_arguments(contract, account, initial_balance):
+def test_validate_signature_on_chain(contract, account, initial_balance):
     # NOTE: This test validates the account signature but the transaction
     # is not directly sent from the account.
     increase_amount = 234
 
     signature = account.sign_message(increase_amount)
-    contract.increase_balance_signed(account.address, increase_amount, signature)
+    contract.increase_balance_signed(
+        account.public_key, account.address, increase_amount, signature
+    )
 
     actual = contract.get_balance(account)
     expected = initial_balance + increase_amount
     assert actual == expected
 
 
-def test_signed_contract_transaction(contract, account, initial_balance):
+def test_transact_from_account(contract, account, initial_balance):
     increase_amount = 123456
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
     actual_from_receipt = receipt.return_value

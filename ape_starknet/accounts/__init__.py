@@ -253,6 +253,10 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         raise AccountsError("Account not deployed.")
 
     @property
+    def address_int(self) -> int:
+        return self.starknet.encode_address(self.address)
+
+    @property
     def public_key(self) -> AddressType:
         key = self.get_account_data()["address"]
         return self.starknet.decode_address(key)

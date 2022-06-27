@@ -126,7 +126,7 @@ end
 func increase_balance_signed{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
         range_check_ptr, ecdsa_ptr : SignatureBuiltin*}(
-        user : felt, amount : felt, sig : (felt, felt)):
+        public_key : felt, user: felt, amount : felt, sig : (felt, felt)):
     # Compute the hash of the message.
     # The hash of (x, 0) is equivalent to the hash of (x).
     let (amount_hash) = hash2{hash_ptr=pedersen_ptr}(amount, 0)
@@ -134,7 +134,7 @@ func increase_balance_signed{
     # Verify the user's signature.
     verify_ecdsa_signature(
         message=amount_hash,
-        public_key=user,
+        public_key=public_key,
         signature_r=sig[0],
         signature_s=sig[1])
 

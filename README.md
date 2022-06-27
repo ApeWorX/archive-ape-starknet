@@ -126,7 +126,10 @@ After deploying the factory contract, you can use it to create contract instance
 from ape import Contract, project
 
 declaration = project.provider.declare(project.MyContract)
+
+# NOTE: Assuming you have a contract named 'ContractFactory'.
 factory = project.ContractFactory.deploy(declaration.class_hash)
+
 call_result = factory.deploy_my_contract()
 contract_address = project.starknet.decode_address(call_result)
 contract = Contract(contract_address, contract_address)
