@@ -5,12 +5,12 @@ from ape_starknet.utils import is_checksum_address
 
 
 def test_get_nonce(provider, account, contract):
-    initial_nonce = provider.get_nonce(account.contract_address)
+    initial_nonce = provider.get_nonce(account.address)
 
     # Transact to increase nonce
     contract.increase_balance(account.address, 123, sender=account)
 
-    actual = provider.get_nonce(account.contract_address)
+    actual = provider.get_nonce(account.address)
     assert actual == initial_nonce + 1
 
 
@@ -59,7 +59,7 @@ def test_get_transactions_by_block(provider, account, contract):
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id
     assert transactions[0].method_abi == expected_abi
-    assert transactions[0].receiver == account.contract_address
+    assert transactions[0].receiver == account.address
     assert transactions[0].value == 0
     assert is_checksum_address(transactions[0].receiver)
     expected_data = [
