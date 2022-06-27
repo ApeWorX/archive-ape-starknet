@@ -89,16 +89,16 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             self.network_manager.starknet.decode_address(item) if isinstance(item, int) else item
         )
 
-        # First, assume it is the contract address
+        # First, check if user accessing via public key
         for account in self.accounts:
             if not isinstance(account, BaseStarknetAccount):
                 continue
 
-            if account.address and account.address == address:
+            if account.public_key == address:
                 return super().__getitem__(account.address)
 
-        # Else, use the account's public key (what Ape is used to).
-        return super().__getitem__(address.public_key)
+        # Else, use the contract address (more expected)
+        return super().__getitem__(address)
 
     def get_account(self, address: Union[AddressType, int]) -> "BaseStarknetAccount":
         return self[address]  # type: ignore
@@ -139,7 +139,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             for account in key_file_data["argent"]["accounts"]:
                 network = _clean_network_name(account["network"])
                 deployment = StarknetAccountDeployment(
-                    network_name=network, address=account["address"]
+                    network_name=network, contract_address=account["address"]
                 )
                 deployments.append(vars(deployment))
 
@@ -228,7 +228,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 @dataclass
 class StarknetAccountDeployment:
     network_name: str
-    address: AddressType
+    contract_address: AddressType
 
 
 class BaseStarknetAccount(AccountAPI, StarknetBase):
@@ -248,7 +248,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             network_name = deployment.network_name
             network = self.starknet.networks[network_name]
             if network_name == network.name:
-                return self.starknet.decode_address(deployment.address)
+                return self.starknet.decode_address(deployment.contract_address)
 
         raise AccountsError("Account not deployed.")
 
@@ -268,10 +268,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @cached_property
     def contract_type(self) -> Optional[ContractType]:
-        if not self.address:
-            # Contract not deployed to this network yet
-            return None
-
         contract_type = self.chain_manager.contracts.get(self.address)
         if not contract_type:
             raise AccountsError(f"Account '{self.address}' was expected but not found.")
@@ -281,7 +277,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     @cached_property
     def execute_abi(self) -> Optional[MethodABI]:
         contract_type = self.contract_type
-        if not self.address or not contract_type:
+        if not contract_type:
             return None
 
         execute_abi_ls = [
@@ -314,7 +310,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
         execute_abi = self.execute_abi
-        if not self.address or not execute_abi:
+        if not execute_abi:
             raise AccountsError(
                 f"Account is not deployed to network '{self.provider.network.name}'."
             )
@@ -398,8 +394,8 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         data: int,
         signature: Optional[ECSignature] = None,  # TransactionAPI doesn't need it
     ) -> bool:
-        int_address = self.starknet.encode_address(self.address)
-        return verify_ecdsa_sig(int_address, data, signature)
+        public_key_int = self.starknet.encode_address(self.public_key)
+        return verify_ecdsa_sig(public_key_int, data, signature)
 
     def get_deployments(self) -> List[StarknetAccountDeployment]:
         plugin_key_file_data = self.get_account_data()[APP_KEY_FILE_KEY]
@@ -519,7 +515,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             vars(d) for d in self.get_deployments() if d.network_name not in network_name
         ]
         new_deployment = StarknetAccountDeployment(
-            network_name=network_name, address=contract_address
+            network_name=network_name, contract_address=contract_address
         )
         deployments.append(vars(new_deployment))
 
