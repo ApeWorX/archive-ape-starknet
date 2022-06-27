@@ -17,6 +17,4 @@ def test_console_accounts_object(ape_cli, console_runner, existing_key_file_acco
     output = console_runner.invoke(
         input=["accounts", "accounts['{existing_key_file_account.alias}']", "exit"]
     )
-    assert existing_key_file_account.contract_address in output, [
-        e.name for e in networks.ecosystems
-    ]
+    assert existing_key_file_account.address in output, [e.name for e in networks.ecosystems]

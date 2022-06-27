@@ -105,14 +105,14 @@ def test_import(accounts_runner, existing_key_file_account, account_container):
         # Corrupted from previous test
         account_path.unlink()
 
-    private_key = str(existing_key_file_account.contract_address)
+    private_key = str(existing_key_file_account.address)
     accounts_runner.invoke(
         "import",
         NEW_ALIAS,
         "--network",
         network,
         "--address",
-        existing_key_file_account.contract_address,
+        existing_key_file_account.address,
         input=[private_key, PASSWORD, PASSWORD],
     )
 
