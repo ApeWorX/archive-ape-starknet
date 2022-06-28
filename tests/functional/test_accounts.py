@@ -28,6 +28,14 @@ def test_sign_message_and_check_signature(account):
     assert result, "Failed to validate signature"
 
 
+def test_sign_message_and_check_signature_using_deployed_account(ephemeral_account):
+    data = 500
+    signature = ephemeral_account.sign_message(data)
+    data_hash = pedersen_hash(data, 0)
+    result = ephemeral_account.check_signature(data_hash, signature)
+    assert result, "Failed to validate signature"
+
+
 @pytest.mark.parametrize(
     "get_address",
     [
