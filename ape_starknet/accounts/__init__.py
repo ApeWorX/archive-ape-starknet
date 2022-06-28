@@ -13,14 +13,14 @@ from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
-from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, abstractmethod, cached_property
+from ape.utils import abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
 from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
 from services.external_api.client import BadRequest  # type: ignore
-from starknet_devnet.account import Account
+from starknet_devnet.account import Account  # type: ignore
 from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
     COMPILED_ACCOUNT_CONTRACT,
@@ -30,14 +30,14 @@ from starknet_py.utils.crypto.facade import ECSignature, sign_calldata  # type: 
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.crypto.signature.signature import private_to_stark_key  # type: ignore
-from starkware.starknet.core.os.contract_address.contract_address import (
-    calculate_contract_address_from_hash,  # type: ignore
+from starkware.starknet.core.os.contract_address.contract_address import (  # type: ignore
+    calculate_contract_address_from_hash,
 )
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils import DEFAULT_ACCOUNT_SEED, get_chain_id
+from ape_starknet.utils import get_chain_id
 from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -74,6 +74,10 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
     """Accounts created in a live network that persist in key-files."""
 
     @property
+    def provider_config(self) -> Dict:
+        return self.starknet_config["provider"]
+
+    @property
     def number_of_devnet_accounts(self) -> int:
         if not self.network_manager.active_provider:
             return 0
@@ -81,11 +85,11 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         if self.provider.network.name != LOCAL_NETWORK_NAME:
             return 0
 
-        return DEFAULT_NUMBER_OF_TEST_ACCOUNTS
+        return self.provider_config.local["number_of_accounts"]  # type: ignore
 
     @property
     def devnet_account_seed(self) -> int:
-        return DEFAULT_ACCOUNT_SEED
+        return self.provider_config.local["seed"]  # type: ignore
 
     @property
     def _key_file_paths(self) -> Iterator[Path]:
@@ -299,6 +303,10 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def get_account_data(self) -> Dict:
         ...
 
+    @abstractmethod
+    def get_contract_type(self) -> ContractType:
+        ...
+
     @property
     def address(self) -> AddressType:
         for deployment in self.get_deployments():
@@ -329,7 +337,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @cached_property
     def execute_abi(self) -> Optional[MethodABI]:
-        contract_type = self.contract_type
+        contract_type = self.get_contract_type()
         if not contract_type:
             return None
 
@@ -456,8 +464,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
 
 class StarknetDevelopmentAccount(BaseStarknetAccount):
-    @cached_property
-    def contract_type(self) -> ContractType:
+    def get_contract_type(self) -> ContractType:
         return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
 
     def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
@@ -536,17 +543,16 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     locked: bool = True
     __cached_key: Optional[int] = None
 
-    @cached_property
-    def contract_type(self) -> Optional[ContractType]:
+    @property
+    def alias(self) -> Optional[str]:
+        return self.key_file_path.stem
+
+    def get_contract_type(self) -> Optional[ContractType]:
         contract_type = self.chain_manager.contracts.get(self.address)
         if not contract_type:
             raise AccountsError(f"Account '{self.address}' was expected but not found.")
 
         return contract_type
-
-    @property
-    def alias(self) -> Optional[str]:
-        return self.key_file_path.stem
 
     def write(
         self,

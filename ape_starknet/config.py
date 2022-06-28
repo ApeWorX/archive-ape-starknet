@@ -1,5 +1,10 @@
 from ape.api import PluginConfig
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS
+
+from ape_starknet.utils import DEFAULT_ACCOUNT_SEED
+
+DEFAULT_PORT = 8545
 
 
 class NetworkConfig(PluginConfig):
@@ -11,7 +16,11 @@ class NetworkConfig(PluginConfig):
 class ProviderConfig(PluginConfig):
     mainnet: dict = {"uri": "https://alpha-mainnet.starknet.io"}
     testnet: dict = {"uri": "https://alpha4.starknet.io"}
-    local: dict = {"uri": "http://127.0.0.1:8545"}
+    local: dict = {
+        "uri": f"http://127.0.0.1:{DEFAULT_PORT}",
+        "seed": DEFAULT_ACCOUNT_SEED,
+        "number_of_accounts": DEFAULT_NUMBER_OF_TEST_ACCOUNTS,
+    }
 
 
 class StarknetConfig(PluginConfig):
@@ -19,4 +28,4 @@ class StarknetConfig(PluginConfig):
     testnet: NetworkConfig = NetworkConfig(required_confirmations=2, block_time=15)
     local: NetworkConfig = NetworkConfig()
     default_network: str = LOCAL_NETWORK_NAME
-    providers: ProviderConfig = ProviderConfig()
+    provider: ProviderConfig = ProviderConfig()

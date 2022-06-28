@@ -8,7 +8,6 @@ from starkware.cairo.common.signature import (
     verify_ecdsa_signature)
 from starkware.cairo.common.bool import TRUE, FALSE
 
-
 @storage_var
 func balance(user : felt) -> (res : felt):
 end
@@ -23,10 +22,6 @@ end
 
 @storage_var
 func array_get_counter() -> (res: felt):
-end
-
-@storage_var
-func owner() -> (res: felt):
 end
 
 @event

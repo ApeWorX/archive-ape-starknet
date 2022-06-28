@@ -28,7 +28,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
 )
 from starkware.starkware_utils.error_handling import StarkErrorCode  # type: ignore
 
-from ape_starknet.config import StarknetConfig
+from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import (
     ContractDeclaration,
@@ -45,8 +45,6 @@ from ape_starknet.utils import (
     handle_client_errors,
 )
 from ape_starknet.utils.basemodel import StarknetBase
-
-DEFAULT_PORT = 8545
 
 
 class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
@@ -100,7 +98,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @cached_property
     def uri(self) -> str:
-        network_config = self.plugin_config.providers.dict().get(self.network.name)
+        network_config = self.plugin_config.provider.dict().get(self.network.name)
         if not network_config:
             raise ProviderError(f"Unknown network '{self.network.name}'.")
 

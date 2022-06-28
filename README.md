@@ -189,6 +189,16 @@ receipt = contract.my_mutable_method(123, sender=account)
 receipt = contract.store_my_list(3, [1, 2, 3])
 ```
 
+### Testing
+
+#### Accounts
+
+You can use Starknet-devnet accounts in your tests.
+
+```python
+
+```
+
 ### Mainnet Alpha Whitelist Deployment Token
 
 You can deploy contracts by doing:
