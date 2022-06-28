@@ -1,5 +1,6 @@
 import contextlib
 import json
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
@@ -11,13 +12,14 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
-from ape.utils import abstractmethod, cached_property
+from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json  # type: ignore
 from eth_utils import text_if_str, to_bytes
 from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
 from services.external_api.client import BadRequest  # type: ignore
+from starknet_devnet.account import Account
 from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
     COMPILED_ACCOUNT_CONTRACT,
@@ -26,10 +28,14 @@ from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner  # type: 
 from starknet_py.utils.crypto.facade import ECSignature, sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
 from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
+from starkware.crypto.signature.signature import private_to_stark_key  # type: ignore
+from starkware.starknet.core.os.contract_address.contract_address import (
+    calculate_contract_address_from_hash,  # type: ignore
+)
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils import get_chain_id
+from ape_starknet.utils import DEFAULT_ACCOUNT_SEED, get_chain_id
 from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -46,6 +52,21 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
     """Local-network accounts that do not persist."""
 
     cached_accounts: Dict[str, "StarknetKeyfileAccount"] = {}
+    """Accounts created in a live network that persist in key-files."""
+
+    @property
+    def number_of_devnet_accounts(self) -> int:
+        if not self.network_manager.active_provider:
+            return 0
+
+        if self.provider.network.name != LOCAL_NETWORK_NAME:
+            return 0
+
+        return DEFAULT_NUMBER_OF_TEST_ACCOUNTS
+
+    @property
+    def devnet_account_seed(self) -> int:
+        return DEFAULT_ACCOUNT_SEED
 
     @property
     def _key_file_paths(self) -> Iterator[Path]:
@@ -61,6 +82,15 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
     def public_key_addresses(self) -> Iterator[AddressType]:
         for account in self.accounts:
             yield account.address
+
+    @property
+    def test_accounts(self) -> List["StarknetDevnetAccount"]:
+        random_generator = random.Random()
+        random_generator.seed(self.devnet_account_seed)
+        return [
+            StarknetDevnetAccount(private_key=random_generator.getrandbits(128))
+            for _ in range(self.number_of_devnet_accounts)
+        ]
 
     @property
     def accounts(self) -> Iterator[AccountAPI]:
@@ -411,6 +441,51 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def get_deployments(self) -> List[StarknetAccountDeployment]:
         plugin_key_file_data = self.get_account_data()[APP_KEY_FILE_KEY]
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data["deployments"]]
+
+
+class StarknetDevnetAccount(BaseStarknetAccount):
+    """
+    Accounts generated in the starknet-devnet process.
+    """
+
+    private_key: int
+
+    @cached_property
+    def public_key(self) -> AddressType:
+        public_key = private_to_stark_key(self.private_key)
+        return self.starknet.decode_address(public_key)
+
+    @cached_property
+    def address(self) -> AddressType:
+        address_int = calculate_contract_address_from_hash(
+            salt=Account.SALT,
+            class_hash=Account.HASH,
+            constructor_calldata=[self.public_key],
+            deployer_address=0,
+        )
+        return self.starknet.decode_address(address_int)
+
+    def _get_key(self) -> int:
+        return self.private_key
+
+    def get_account_data(self) -> Dict:
+        deployments = [
+            {
+                "contract_address": self.address,
+                "network_name": LOCAL_NETWORK_NAME,
+            }
+        ]
+        return {
+            "private_key": self.private_key,
+            "public_key": self.public_key,
+            APP_KEY_FILE_KEY: {"deployments": deployments},
+        }
+
+    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
+        if not isinstance(msg, (list, tuple)):
+            msg = [msg]
+
+        return sign_calldata(msg, self.private_key)
 
 
 class StarknetEphemeralAccount(BaseStarknetAccount):

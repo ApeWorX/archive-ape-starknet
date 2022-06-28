@@ -14,7 +14,7 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.types import AddressType, BlockID, ContractLog
-from ape.utils import cached_property
+from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI
 from hexbytes import HexBytes
@@ -39,6 +39,7 @@ from ape_starknet.transactions import (
 )
 from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
+    DEFAULT_ACCOUNT_SEED,
     PLUGIN_NAME,
     get_chain_id,
     get_dict_from_tx_info,
@@ -83,7 +84,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
-        return ["starknet-devnet", "--host", str(parts.hostname), "--port", str(parts.port)]
+        return [
+            "starknet-devnet",
+            "--host",
+            str(parts.hostname),
+            "--port",
+            str(parts.port),
+            "--accounts",
+            str(DEFAULT_NUMBER_OF_TEST_ACCOUNTS),
+            "--seed",
+            str(DEFAULT_ACCOUNT_SEED),
+        ]
 
     @cached_property
     def plugin_config(self) -> StarknetConfig:
