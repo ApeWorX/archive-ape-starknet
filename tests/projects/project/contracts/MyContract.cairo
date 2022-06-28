@@ -7,6 +7,7 @@ from starkware.cairo.common.hash import hash2
 from starkware.cairo.common.signature import (
     verify_ecdsa_signature)
 from starkware.cairo.common.bool import TRUE, FALSE
+from starkware.starknet.common.syscalls import get_caller_address
 
 @storage_var
 func balance(user : felt) -> (res : felt):
@@ -89,6 +90,16 @@ func get_array{
     let (current_count) = array_get_counter.read()
     array_get_counter.write(current_count + 1)
     return (ARRAY_SIZE, ptr)
+end
+
+@external
+func get_caller{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (caller):
+    let (caller) = get_caller_address()
+    return (caller)
 end
 
 @view
