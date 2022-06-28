@@ -48,6 +48,11 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     assert new_contract_instance.get_balance(account) == balance_pre_call + 9
 
 
+def test_get_caller_address(contract, account, provider):
+    expected = provider.starknet.encode_address(account.address)
+    assert contract.get_caller(sender=account).return_value == expected
+
+
 def test_validate_signature_on_chain(contract, account, initial_balance):
     # NOTE: This test validates the account signature but the transaction
     # is not directly sent from the account.
@@ -65,9 +70,19 @@ def test_validate_signature_on_chain(contract, account, initial_balance):
 
 def test_transact_from_account(contract, account, initial_balance):
     increase_amount = 123456
-    receipt = contract.increase_balance(account.address, increase_amount, sender=account)
+    receipt = contract.increase_balance(account, increase_amount, sender=account)
     actual_from_receipt = receipt.return_value
-    actual_from_call = contract.get_balance(account.address)
+    actual_from_call = contract.get_balance(account)
+    expected = initial_balance + increase_amount
+    assert actual_from_receipt == actual_from_call == expected
+
+
+def test_contracts_as_arguments(contract, account):
+    initial_balance = contract.get_balance(contract)
+    increase_amount = 123456
+    receipt = contract.increase_balance(contract, increase_amount, sender=account)
+    actual_from_receipt = receipt.return_value
+    actual_from_call = contract.get_balance(contract)
     expected = initial_balance + increase_amount
     assert actual_from_receipt == actual_from_call == expected
 
