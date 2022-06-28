@@ -117,7 +117,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         # Track all devnet account contracts in chain manager for look-up purposes
         for account in devnet_accounts:
-            self.chain_manager.contracts._local_contracts[account.address] = account.contract_type
+            self.chain_manager.contracts._local_contracts[
+                account.address
+            ] = account.get_contract_type()
 
         return devnet_accounts
 
@@ -547,7 +549,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def alias(self) -> Optional[str]:
         return self.key_file_path.stem
 
-    def get_contract_type(self) -> Optional[ContractType]:
+    def get_contract_type(self) -> ContractType:
         contract_type = self.chain_manager.contracts.get(self.address)
         if not contract_type:
             raise AccountsError(f"Account '{self.address}' was expected but not found.")
