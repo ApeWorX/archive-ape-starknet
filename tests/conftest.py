@@ -8,11 +8,7 @@ import ape
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
 
-from ape_starknet.accounts import (
-    StarknetAccountContracts,
-    StarknetEphemeralAccount,
-    StarknetKeyfileAccount,
-)
+from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
 from ape_starknet.utils import PLUGIN_NAME
 
 # NOTE: Ensure that we don't use local paths for these
@@ -244,13 +240,6 @@ def existing_key_file_account(config, key_file_account_data):
 
     if test_key_file_path.exists():
         test_key_file_path.unlink()
-
-
-@pytest.fixture(autouse=True, scope="session")
-def existing_ephemeral_account(config, ephemeral_account_data):
-    return StarknetEphemeralAccount(
-        account_key=EXISTING_EPHEMERAL_ALIAS, raw_account_data=ephemeral_account_data
-    )
 
 
 @pytest.fixture(scope="session")

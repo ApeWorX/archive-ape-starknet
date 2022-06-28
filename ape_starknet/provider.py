@@ -16,12 +16,10 @@ from ape.exceptions import (
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
-from ethpm_types.abi import ConstructorABI, EventABI
-from hexbytes import HexBytes
+from ethpm_types.abi import EventABI
 from starknet_py.net import Client as StarknetClient  # type: ignore
 from starknet_py.net.models import parse_address  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
     DeclareSpecificInfo,
     DeploySpecificInfo,
@@ -327,41 +325,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def declare(self, contract_type: ContractType) -> ContractDeclaration:
         transaction = self.starknet.encode_contract_declaration(contract_type)
         return self.provider.send_transaction(transaction)
-
-    def _deploy(
-        self,
-        *args,
-        contract_data: Optional[Union[str, Dict]] = None,
-        class_hash: Optional[int] = None,
-        token: Optional[str] = None,
-        **kwargs,
-    ) -> str:
-        """
-        Helper for deploying a Starknet-compiled artifact, such as imported
-        compiled account contracts from OZ.
-        """
-        wl_token = token or os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
-        contract = (
-            ContractClass.load(contract_data)
-            if isinstance(contract_data, dict)
-            else ContractClass.loads(contract_data)
-        )
-        data: Dict = next(
-            (member for member in contract.abi if member["type"] == "constructor"),
-            {},
-        )
-        constructor_abi = ConstructorABI(**data)
-        transaction = self.starknet.encode_deployment(
-            HexBytes(contract.serialize()),
-            constructor_abi,
-            *args,
-        )
-        receipt = self.send_transaction(transaction, token=wl_token)
-        address = receipt.contract_address
-        if not address:
-            raise ProviderError("Failed to deploy contract.")
-
-        return address
 
 
 __all__ = ["StarknetProvider"]

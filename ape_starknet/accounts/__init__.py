@@ -9,6 +9,7 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, ProviderError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
@@ -32,6 +33,7 @@ from starkware.crypto.signature.signature import private_to_stark_key  # type: i
 from starkware.starknet.core.os.contract_address.contract_address import (
     calculate_contract_address_from_hash,  # type: ignore
 )
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
@@ -44,6 +46,23 @@ The key-file stanza containing custom properties
 specific to the ape-starknet plugin.
 """
 APP_KEY_FILE_VERSION = "0.1.0"
+OPEN_ZEPPELIN_ACCOUNT_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
+
+
+def _get_oz_account_contract_type() -> ContractType:
+    contract_class = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
+    return ContractType.parse_obj(
+        {
+            "contractName": "Account",
+            "sourceId": "openzeppelin.account.Account.cairo",
+            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
+            "runtimeBytecode": {},
+            "abi": contract_class.abi,
+        }
+    )
+
+
+OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = _get_oz_account_contract_type()
 
 
 class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
@@ -83,17 +102,26 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         for account in self.accounts:
             yield account.address
 
-    @property
+    @cached_property
     def test_accounts(self) -> List["StarknetDevnetAccount"]:
         random_generator = random.Random()
         random_generator.seed(self.devnet_account_seed)
-        return [
+        devnet_accounts = [
             StarknetDevnetAccount(private_key=random_generator.getrandbits(128))
             for _ in range(self.number_of_devnet_accounts)
         ]
 
+        # Track all devnet account contracts in chain manager for look-up purposes
+        for account in devnet_accounts:
+            self.chain_manager.contracts._local_contracts[account.address] = account.contract_type
+
+        return devnet_accounts
+
     @property
     def accounts(self) -> Iterator[AccountAPI]:
+        for account in self.test_accounts:
+            yield account
+
         for alias, account_data in self.ephemeral_accounts.items():
             yield StarknetEphemeralAccount(raw_account_data=account_data, account_key=alias)
 
@@ -238,11 +266,10 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         private_key = private_key or get_random_private_key()
         key_pair = KeyPair.from_private_key(private_key)
 
-        contract_address = self.provider._deploy(
-            key_pair.public_key, contract_data=COMPILED_ACCOUNT_CONTRACT, token=token
-        )
-        self.import_account(alias, network_name, contract_address, key_pair.private_key)
-        return contract_address
+        account_container = ContractContainer(contract_type=OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE)
+        instance = account_container.deploy(key_pair.public_key, token=token)
+        self.import_account(alias, network_name, instance.address, key_pair.private_key)
+        return instance.address
 
     def delete_account(
         self, alias: str, network: Optional[str] = None, passphrase: Optional[str] = None
@@ -299,14 +326,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             key_pair=key_pair,
             chain_id=get_chain_id(self.provider.chain_id),
         )
-
-    @cached_property
-    def contract_type(self) -> Optional[ContractType]:
-        contract_type = self.chain_manager.contracts.get(self.address)
-        if not contract_type:
-            raise AccountsError(f"Account '{self.address}' was expected but not found.")
-
-        return contract_type
 
     @cached_property
     def execute_abi(self) -> Optional[MethodABI]:
@@ -436,7 +455,19 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data["deployments"]]
 
 
-class StarknetDevnetAccount(BaseStarknetAccount):
+class StarknetDevelopmentAccount(BaseStarknetAccount):
+    @cached_property
+    def contract_type(self) -> ContractType:
+        return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
+
+    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
+        if not isinstance(msg, (list, tuple)):
+            msg = [msg]
+
+        return sign_calldata(msg, self._get_key())
+
+
+class StarknetDevnetAccount(StarknetDevelopmentAccount):
     """
     Accounts generated in the starknet-devnet process.
     """
@@ -444,16 +475,19 @@ class StarknetDevnetAccount(BaseStarknetAccount):
     private_key: int
 
     @cached_property
+    def public_key_int(self) -> int:
+        return private_to_stark_key(self.private_key)
+
+    @cached_property
     def public_key(self) -> AddressType:
-        public_key = private_to_stark_key(self.private_key)
-        return self.starknet.decode_address(public_key)
+        return self.starknet.decode_address(self.public_key_int)
 
     @cached_property
     def address(self) -> AddressType:
         address_int = calculate_contract_address_from_hash(
             salt=Account.SALT,
             class_hash=Account.HASH,
-            constructor_calldata=[self.public_key],
+            constructor_calldata=[self.public_key_int],
             deployer_address=0,
         )
         return self.starknet.decode_address(address_int)
@@ -474,14 +508,12 @@ class StarknetDevnetAccount(BaseStarknetAccount):
             APP_KEY_FILE_KEY: {"deployments": deployments},
         }
 
-    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
-        if not isinstance(msg, (list, tuple)):
-            msg = [msg]
 
-        return sign_calldata(msg, self.private_key)
+class StarknetEphemeralAccount(StarknetDevelopmentAccount):
+    """
+    Accounts deployed on a local Starknet chain.
+    """
 
-
-class StarknetEphemeralAccount(BaseStarknetAccount):
     raw_account_data: Dict
     account_key: str
 
@@ -498,17 +530,23 @@ class StarknetEphemeralAccount(BaseStarknetAccount):
 
         return self.raw_account_data["private_key"]
 
-    def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
-        if not isinstance(msg, (list, tuple)):
-            msg = [msg]
-
-        return sign_calldata(msg, self._get_key())
-
 
 class StarknetKeyfileAccount(BaseStarknetAccount):
     key_file_path: Path
     locked: bool = True
     __cached_key: Optional[int] = None
+
+    @cached_property
+    def contract_type(self) -> Optional[ContractType]:
+        contract_type = self.chain_manager.contracts.get(self.address)
+        if not contract_type:
+            raise AccountsError(f"Account '{self.address}' was expected but not found.")
+
+        return contract_type
+
+    @property
+    def alias(self) -> Optional[str]:
+        return self.key_file_path.stem
 
     def write(
         self,
@@ -531,10 +569,6 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         account_data = {**account_data, **key_file_data}
         self.key_file_path.write_text(json.dumps(account_data))
-
-    @property
-    def alias(self) -> Optional[str]:
-        return self.key_file_path.stem
 
     def get_account_data(self) -> Dict:
         if self.key_file_path.is_file():
