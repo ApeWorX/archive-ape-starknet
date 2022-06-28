@@ -110,18 +110,22 @@ def account_container(accounts):
 
 @pytest.fixture(scope="session")
 def account(account_container, provider):
-    _ = provider  # Need connection to deploy account.
-    account_container.deploy_account(ALIAS)
-    yield account_container.load(ALIAS)
-    account_container.delete_account(ALIAS)
+    _ = provider  # Connection required
+    return account_container.test_accounts[0]
 
 
 @pytest.fixture(scope="session")
 def second_account(account_container, provider):
+    _ = provider  # Connection required
+    return account_container.test_accounts[1]
+
+
+@pytest.fixture(scope="session")
+def ephemeral_account(account_container, provider):
     _ = provider  # Need connection to deploy account.
-    account_container.deploy_account(SECOND_ALIAS)
-    yield account_container.load(SECOND_ALIAS)
-    account_container.delete_account(SECOND_ALIAS)
+    account_container.deploy_account(ALIAS)
+    yield account_container.load(ALIAS)
+    account_container.delete_account(ALIAS)
 
 
 @pytest.fixture(scope="session")
