@@ -5,8 +5,8 @@ from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
 from ape_starknet.utils import is_hex_address
 
 
-def test_address(existing_key_file_account, public_key):
-    actual = existing_key_file_account.address
+def test_public_keys(existing_key_file_account, public_key):
+    actual = existing_key_file_account.public_key
     assert actual != public_key, "Result is not checksummed"
     assert remove_0x_prefix(actual.lower()) == public_key
     assert is_hex_address(actual)
@@ -16,9 +16,8 @@ def test_sign_message_using_key_file_account(existing_key_file_account, password
     assert existing_key_file_account.sign_message(5, passphrase=password)
 
 
-def test_contact_address(account):
-    address = account.contract_address
-    assert is_hex_address(address)
+def test_address(account):
+    assert is_hex_address(account.address)
 
 
 def test_sign_message_and_check_signature(account):
@@ -34,8 +33,8 @@ def test_sign_message_and_check_signature(account):
     [
         lambda a, _: a.address,
         lambda a, e: e.encode_address(a.address),
-        lambda a, _: a.contract_address,
-        lambda a, e: e.encode_address(a.contract_address),
+        lambda a, _: a.public_key,
+        lambda a, e: e.encode_address(a.public_key),
     ],
 )
 def test_access_account_by_str_address(account, account_container, ecosystem, get_address):

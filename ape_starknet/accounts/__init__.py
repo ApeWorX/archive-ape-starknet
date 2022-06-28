@@ -119,16 +119,15 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             self.network_manager.starknet.decode_address(item) if isinstance(item, int) else item
         )
 
-        # First, assume it is the contract address
+        # First, check if user accessing via public key
         for account in self.accounts:
             if not isinstance(account, BaseStarknetAccount):
                 continue
 
-            contract_address = account.contract_address
-            if contract_address and contract_address == address:
+            if account.public_key == address:
                 return super().__getitem__(account.address)
 
-        # First, use the account's public key (what Ape is used to).
+        # Else, use the contract address (more expected)
         return super().__getitem__(address)
 
     def get_account(self, address: Union[AddressType, int]) -> "BaseStarknetAccount":
@@ -274,54 +273,52 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         ...
 
     @property
-    def contract_address(self) -> Optional[AddressType]:
+    def address(self) -> AddressType:
         for deployment in self.get_deployments():
             network_name = deployment.network_name
             network = self.starknet.networks[network_name]
             if network_name == network.name:
-                address = deployment.contract_address
-                return self.starknet.decode_address(address)
+                return self.starknet.decode_address(deployment.contract_address)
 
-        return None
+        raise AccountsError("Account not deployed.")
 
     @property
-    def address(self) -> AddressType:
-        public_key = self.get_account_data()["address"]
-        return self.starknet.decode_address(public_key)
+    def address_int(self) -> int:
+        return self.starknet.encode_address(self.address)
+
+    @property
+    def public_key(self) -> AddressType:
+        key = self.get_account_data()["address"]
+        return self.starknet.decode_address(key)
 
     @cached_property
     def signer(self) -> StarkCurveSigner:
         key_pair = KeyPair.from_private_key(self._get_key())
         return StarkCurveSigner(
-            account_address=self.contract_address,
+            account_address=self.address,
             key_pair=key_pair,
             chain_id=get_chain_id(self.provider.chain_id),
         )
 
     @cached_property
     def contract_type(self) -> Optional[ContractType]:
-        if not self.contract_address:
-            # Contract not deployed to this network yet
-            return None
-
-        contract_type = self.chain_manager.contracts.get(self.contract_address)
+        contract_type = self.chain_manager.contracts.get(self.address)
         if not contract_type:
-            raise AccountsError(f"Account '{self.contract_address}' was expected but not found.")
+            raise AccountsError(f"Account '{self.address}' was expected but not found.")
 
         return contract_type
 
     @cached_property
     def execute_abi(self) -> Optional[MethodABI]:
-        contract_address = self.contract_address
         contract_type = self.contract_type
-        if not contract_address or not contract_type:
+        if not contract_type:
             return None
 
         execute_abi_ls = [
             abi for abi in contract_type.abi if getattr(abi, "name", "") == "__execute__"
         ]
         if not execute_abi_ls:
-            raise AccountsError(f"Account '{contract_address}' does not have __execute__ method.")
+            raise AccountsError(f"Account '{self.address}' does not have __execute__ method.")
 
         abi = execute_abi_ls[0]
         if not isinstance(abi, MethodABI):
@@ -330,7 +327,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return abi
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self.contract_address}>"
+        return f"<{self.__class__.__name__} {self.address}>"
 
     def call(self, txn: TransactionAPI, send_everything: bool = False) -> ReceiptAPI:
         if send_everything:
@@ -346,9 +343,8 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return self.provider.send_transaction(txn)
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        contract_address = self.contract_address
         execute_abi = self.execute_abi
-        if not contract_address or not execute_abi:
+        if not execute_abi:
             raise AccountsError(
                 f"Account is not deployed to network '{self.provider.network.name}'."
             )
@@ -364,11 +360,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             "data_offset": 0,
             "data_len": len(stark_tx.calldata),
         }
-        contract_type = self.chain_manager.contracts[contract_address]
+        contract_type = self.chain_manager.contracts[self.address]
         txn.data = self.starknet.encode_calldata(
             contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
         )
-        txn.receiver = contract_address
+        txn.receiver = self.address
         txn.sender = None
         txn.method_abi = execute_abi
         txn.signature = self.sign_transaction(txn)
@@ -415,10 +411,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         else:
             raise TypeError(f"Unable to handle account type '{type(account)}'.")
 
-        if self.contract_address is None:
-            raise ValueError("Contract address cannot be None")
-
-        return self.token_manager.transfer(self.contract_address, receiver, value, **kwargs)
+        return self.token_manager.transfer(self.address, receiver, value, **kwargs)
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
         return next(
@@ -435,8 +428,8 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         data: int,
         signature: Optional[ECSignature] = None,  # TransactionAPI doesn't need it
     ) -> bool:
-        int_address = self.starknet.encode_address(self.address)
-        return verify_ecdsa_sig(int_address, data, signature)
+        public_key_int = self.starknet.encode_address(self.public_key)
+        return verify_ecdsa_sig(public_key_int, data, signature)
 
     def get_deployments(self) -> List[StarknetAccountDeployment]:
         plugin_key_file_data = self.get_account_data()[APP_KEY_FILE_KEY]

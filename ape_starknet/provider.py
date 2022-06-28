@@ -137,8 +137,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             return 0
 
         account = self.account_contracts[address]
-        account_contract_address = account.contract_address  # type: ignore
-        return self.token_manager.get_balance(account_contract_address)
+        return self.token_manager.get_balance(account.address)
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
@@ -152,7 +151,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def get_nonce(self, address: AddressType) -> int:
         # Check if passing a public-key address of a local account
         if address in self.account_contracts.public_key_addresses:
-            contract_address = self.account_contracts.get_account(address).contract_address
+            contract_address = self.account_contracts.get_account(address).address
             if contract_address:
                 address = contract_address
 
