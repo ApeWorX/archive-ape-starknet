@@ -30,6 +30,11 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         if isinstance(address, int):
             address = self.network.ecosystem.decode_address(address)
 
+        is_proxy = self.starknet.get_proxy_info(address)
+        if is_proxy:
+            # Handled in ape-core
+            return None
+
         code = self.provider.get_code_and_abi(address)
         return ContractType.parse_obj(code)
 

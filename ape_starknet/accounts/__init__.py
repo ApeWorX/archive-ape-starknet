@@ -37,7 +37,7 @@ from starkware.starknet.services.api.contract_class import ContractClass  # type
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils import get_chain_id
+from ape_starknet.utils import convert_contract_class_to_contract_type, get_chain_id
 from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -51,15 +51,7 @@ OPEN_ZEPPELIN_ACCOUNT_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONT
 
 def _get_oz_account_contract_type() -> ContractType:
     contract_class = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
-    return ContractType.parse_obj(
-        {
-            "contractName": "Account",
-            "sourceId": "openzeppelin.account.Account.cairo",
-            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
-            "runtimeBytecode": {},
-            "abi": contract_class.abi,
-        }
-    )
+    return convert_contract_class_to_contract_type(contract_class)
 
 
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = _get_oz_account_contract_type()
@@ -117,9 +109,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         # Track all devnet account contracts in chain manager for look-up purposes
         for account in devnet_accounts:
-            self.chain_manager.contracts._local_contracts[
-                account.address
-            ] = account.get_contract_type()
+            self.chain_manager.contracts[account.address] = account.get_contract_type()
 
         return devnet_accounts
 

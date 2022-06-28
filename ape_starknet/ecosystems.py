@@ -1,12 +1,15 @@
-from typing import Any, Dict, Iterator, List, Tuple, Type, Union
+from enum import Enum
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
-from ape.contracts import ContractContainer
+from ape.api.networks import ProxyInfoAPI
+from ape.contracts import ContractContainer, ContractInstance
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
+from starknet_py.constants import OZ_PROXY_STORAGE_KEY  # type: ignore
 from starknet_py.net.models.address import parse_address  # type: ignore
 from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
@@ -27,6 +30,7 @@ from ape_starknet.transactions import (
     StarknetTransaction,
 )
 from ape_starknet.utils import to_checksum_address
+from ape_starknet.utils.basemodel import StarknetBase
 
 NETWORKS = {
     # chain_id, network_id
@@ -41,7 +45,21 @@ class StarknetBlock(BlockAPI):
     """
 
 
-class Starknet(EcosystemAPI):
+class ProxyType(Enum):
+    LEGACY = 0
+    ARGENT_X = 1
+    OPEN_ZEPPELIN = 2
+
+
+class StarknetProxy(ProxyInfoAPI):
+    """
+    An proxy contract in Starknet.
+    """
+
+    type: ProxyType
+
+
+class Starknet(EcosystemAPI, StarknetBase):
     """
     The Starknet ``EcosystemAPI`` implementation.
     """
@@ -318,3 +336,40 @@ class Starknet(EcosystemAPI):
                 block_hash=log["block_hash"],
                 block_number=log["block_number"],
             )
+
+    def get_proxy_info(self, address: AddressType) -> Optional[StarknetProxy]:
+        contract = self.chain_manager.contracts.instance_at(address)
+        if not isinstance(contract, ContractInstance):
+            return None
+
+        proxy_type: Optional[ProxyType] = None
+        target: Optional[int] = None
+
+        # Legacy proxy check
+        if "implementation" in contract.contract_type.view_methods:
+            instance = self.chain_manager.contracts.instance_at(address)
+            target = instance.implementation()  # type: ignore
+            proxy_type = ProxyType.LEGACY
+
+        # Argent-X proxy check
+        elif "get_implementation" in contract.contract_type.view_methods:
+            instance = self.chain_manager.contracts.instance_at(address)
+            target = instance.get_implementation()  # type: ignore
+            proxy_type = ProxyType.ARGENT_X
+
+        # OpenZeppelin proxy check
+        elif self.provider.client is not None:
+            address_int = self.encode_address(address)
+            target = self.provider.client.get_storage_at_sync(
+                contract_address=address_int, key=OZ_PROXY_STORAGE_KEY
+            )
+            if target == "0x0":
+                target = None
+
+            proxy_type = ProxyType.OPEN_ZEPPELIN
+
+        return (
+            StarknetProxy(target=self.decode_address(target), type=proxy_type)
+            if target and proxy_type
+            else None
+        )

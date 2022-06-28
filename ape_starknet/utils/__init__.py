@@ -14,9 +14,11 @@ from eth_utils import (
     remove_0x_prefix,
     to_hex,
 )
+from ethpm_types import ContractType
 from starknet_py.net.client import BadRequest  # type: ignore
 from starknet_py.net.models import TransactionType  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
+from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
     DeclareSpecificInfo,
     DeploySpecificInfo,
@@ -159,3 +161,15 @@ def get_dict_from_tx_info(
         txn_dict["type"] = TransactionType.DECLARE
 
     return txn_dict
+
+
+def convert_contract_class_to_contract_type(contract_class: ContractClass):
+    return ContractType.parse_obj(
+        {
+            "contractName": "Account",
+            "sourceId": "openzeppelin.account.Account.cairo",
+            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
+            "runtimeBytecode": {},
+            "abi": contract_class.abi,
+        }
+    )
