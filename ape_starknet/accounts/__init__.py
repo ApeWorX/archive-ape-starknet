@@ -125,8 +125,8 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     @property
     def accounts(self) -> Iterator[AccountAPI]:
-        for account in self.test_accounts:
-            yield account
+        for test_account in self.test_accounts:
+            yield test_account
 
         for alias, account_data in self.ephemeral_accounts.items():
             yield StarknetEphemeralAccount(raw_account_data=account_data, account_key=alias)

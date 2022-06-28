@@ -54,7 +54,9 @@ def test_get_transactions_by_block(provider, account, contract):
     transactions = [t for t in provider.get_transactions_by_block("latest")]
 
     expected_chain_id = provider.chain_id
-    expected_abi = [a for a in account.contract_type.mutable_methods if a.name == "__execute__"][0]
+    expected_abi = [
+        a for a in account.get_contract_type().mutable_methods if a.name == "__execute__"
+    ][0]
     expected_nonce = account.nonce - 1
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id
