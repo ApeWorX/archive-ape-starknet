@@ -33,6 +33,17 @@ python3 setup.py install
 Accounts are used to execute transactions and sign call data.
 Accounts are smart contracts in Starknet.
 
+Out of the box, `ape-starknet` comes with development accounts.
+Access them like this:
+
+```python
+from ape import accounts
+
+container = accounts.containers["starknet"]
+owner = container.test_accounts
+```
+
+However, when using a live network, you have to deploy the accounts yourself.
 To deploy a new account:
 
 ```bash
