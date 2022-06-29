@@ -35,7 +35,7 @@ def test_get_negative_block_number(account, provider, contract):
 def test_get_block_negative_number_resulting_less_than_zero(provider, contract):
     _ = contract  # Contract fixture used to increase blocks (since deploys happen)
     latest_block_number = provider.get_block("latest").number
-    value = -100
+    value = -1000000000000000
     with pytest.raises(ValueError) as err:
         provider.get_block(value)
 
