@@ -27,6 +27,8 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     StarknetBlock,
 )
 from starkware.starkware_utils.error_handling import StarkErrorCode  # type: ignore
+import json
+import requests
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.tokens import TokenManager
@@ -311,6 +313,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             txn.max_fee = self.estimate_gas_cost(txn)
 
         return txn
+
+    def _make_request(self, rpc: str, seconds: Union[str, int]) -> Any:
+        requests.post(
+            url=f"http://localhost:8545/{rpc}",
+            data=json.dumps({"time": seconds})
+        )
+
+    def set_timestamp(self, new_timestamp: int):
+        pending_timestamp = self.get_block("pending").timestamp
+        seconds_to_increase = new_timestamp - pending_timestamp
+        self._make_request("increase_time", seconds_to_increase)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
