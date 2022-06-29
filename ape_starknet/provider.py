@@ -321,7 +321,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         )
         response.raise_for_status()
         response_data = response.json()
-        if "next_block_timestamp" not in response_data:
+        if "timestamp_increased_by" not in response_data:
             raise ProviderError(response_data)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
