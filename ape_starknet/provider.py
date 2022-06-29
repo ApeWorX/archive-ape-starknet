@@ -127,11 +127,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_balance(self, address: AddressType) -> int:
-        network = self.network.name
-        if network == LOCAL_NETWORK_NAME:
-            # Fees / balances are currently not supported in local
-            return 0
-
         account = self.account_contracts[address]
         return self.token_manager.get_balance(account.address)
 
