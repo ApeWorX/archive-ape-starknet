@@ -10,24 +10,24 @@ from .conftest import ApeStarknetCliRunner
 NEW_ALIAS = f"{ALIAS}new"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def accounts_runner(ape_cli):
     return ApeStarknetCliRunner(ape_cli, ["starknet", "accounts"])
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def root_accounts_runner(ape_cli):
     return ApeStarknetCliRunner(ape_cli, ["accounts"])
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def deployed_account(account_container):
     account_container.deploy_account(NEW_ALIAS)
     yield account_container.load(NEW_ALIAS)
     account_container.delete_account(NEW_ALIAS)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def argent_x_backup(argent_x_key_file_account_data):
     with tempfile.TemporaryDirectory() as temp_dir:
         key_file_path = Path(temp_dir) / "argent-x-backup.json"

@@ -103,7 +103,10 @@ def _import(cli_ctx, alias, network, address, keyfile):
     container = _get_container(cli_ctx)
     if alias in container.aliases:
         existing_account = container.load(alias)
-        if existing_account.get_deployment(network):
+
+        if existing_account.get_deployment(network) or not isinstance(
+            existing_account, StarknetKeyfileAccount
+        ):
             cli_ctx.abort(f"Account already imported with '{network}' network.")
 
         click.echo(f"Importing existing account to network '{network}'.")
