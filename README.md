@@ -40,7 +40,7 @@ Access them like this:
 from ape import accounts
 
 container = accounts.containers["starknet"]
-owner = container.test_accounts
+owner = container.test_accounts[0]
 ```
 
 See the section below about [Testing](#Testing) to learn more about test accounts.
