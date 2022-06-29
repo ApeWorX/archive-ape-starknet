@@ -53,7 +53,7 @@ class ProxyType(Enum):
 
 class StarknetProxy(ProxyInfoAPI):
     """
-    An proxy contract in Starknet.
+    A proxy contract in Starknet.
     """
 
     type: ProxyType
@@ -365,8 +365,8 @@ class Starknet(EcosystemAPI, StarknetBase):
             )
             if target == "0x0":
                 target = None
-
-            proxy_type = ProxyType.OPEN_ZEPPELIN
+            else:
+                proxy_type = ProxyType.OPEN_ZEPPELIN
 
         return (
             StarknetProxy(target=self.decode_address(target), type=proxy_type)

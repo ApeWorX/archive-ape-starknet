@@ -46,7 +46,6 @@ The key-file stanza containing custom properties
 specific to the ape-starknet plugin.
 """
 APP_KEY_FILE_VERSION = "0.1.0"
-OPEN_ZEPPELIN_ACCOUNT_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
 
 
 def _get_oz_account_contract_type() -> ContractType:
