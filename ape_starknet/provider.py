@@ -4,6 +4,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
@@ -27,8 +28,6 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     StarknetBlock,
 )
 from starkware.starkware_utils.error_handling import StarkErrorCode  # type: ignore
-import json
-import requests
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.tokens import TokenManager
@@ -314,16 +313,16 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
         return txn
 
-    def _make_request(self, rpc: str, seconds: Union[str, int]) -> Any:
-        requests.post(
-            url=f"http://localhost:8545/{rpc}",
-            data=json.dumps({"time": seconds})
-        )
-
     def set_timestamp(self, new_timestamp: int):
         pending_timestamp = self.get_block("pending").timestamp
         seconds_to_increase = new_timestamp - pending_timestamp
-        self._make_request("increase_time", seconds_to_increase)
+        response = requests.post(
+            url=f"{self.uri}/increase_time", json={"time": seconds_to_increase}
+        )
+        response.raise_for_status()
+        response_data = response.json()
+        if "next_block_timestamp" not in response_data:
+            raise ProviderError(response_data)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)

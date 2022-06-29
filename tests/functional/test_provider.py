@@ -79,7 +79,6 @@ def test_get_transactions_by_block(provider, account, contract):
 
 
 def test_set_timestamp(provider, contract):
-    _ = contract
     start_time = provider.get_block("pending").timestamp
     provider.set_timestamp(start_time + 5)
     new_time = provider.get_block("pending").timestamp
