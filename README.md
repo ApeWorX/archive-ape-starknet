@@ -43,6 +43,8 @@ container = accounts.containers["starknet"]
 owner = container.test_accounts
 ```
 
+See the section below about [Testing](#Testing) to learn more about test accounts.
+
 However, when using a live network, you have to deploy the accounts yourself.
 To deploy a new account:
 
