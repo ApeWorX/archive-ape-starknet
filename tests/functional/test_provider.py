@@ -35,7 +35,7 @@ def test_get_negative_block_number(account, provider, contract):
 def test_get_block_negative_number_resulting_less_than_zero(provider, contract):
     _ = contract  # Contract fixture used to increase blocks (since deploys happen)
     latest_block_number = provider.get_block("latest").number
-    value = -100
+    value = -1000000000000000
     with pytest.raises(ValueError) as err:
         provider.get_block(value)
 
@@ -54,7 +54,9 @@ def test_get_transactions_by_block(provider, account, contract):
     transactions = [t for t in provider.get_transactions_by_block("latest")]
 
     expected_chain_id = provider.chain_id
-    expected_abi = [a for a in account.contract_type.mutable_methods if a.name == "__execute__"][0]
+    expected_abi = [
+        a for a in account.get_contract_type().mutable_methods if a.name == "__execute__"
+    ][0]
     expected_nonce = account.nonce - 1
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id

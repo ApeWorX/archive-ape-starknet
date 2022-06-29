@@ -8,11 +8,7 @@ import ape
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
 
-from ape_starknet.accounts import (
-    StarknetAccountContracts,
-    StarknetEphemeralAccount,
-    StarknetKeyfileAccount,
-)
+from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
 from ape_starknet.utils import PLUGIN_NAME
 
 # NOTE: Ensure that we don't use local paths for these
@@ -29,7 +25,7 @@ EXISTING_EPHEMERAL_ALIAS = f"{ALIAS}existing_ephemeral"
 PASSWORD = "123"
 PUBLIC_KEY = "140dfbab0d711a23dd58842be2ee16318e3de1c7"
 CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B387463a183"
-TOKEN_INITIAL_SUPPLY = 10000000000
+TOKEN_INITIAL_SUPPLY = 1000000000000000000000
 
 
 @pytest.fixture(scope="session")
@@ -114,18 +110,22 @@ def account_container(accounts):
 
 @pytest.fixture(scope="session")
 def account(account_container, provider):
-    _ = provider  # Need connection to deploy account.
-    account_container.deploy_account(ALIAS)
-    yield account_container.load(ALIAS)
-    account_container.delete_account(ALIAS)
+    _ = provider  # Connection required
+    return account_container.test_accounts[0]
 
 
 @pytest.fixture(scope="session")
 def second_account(account_container, provider):
+    _ = provider  # Connection required
+    return account_container.test_accounts[1]
+
+
+@pytest.fixture(scope="session")
+def ephemeral_account(account_container, provider):
     _ = provider  # Need connection to deploy account.
-    account_container.deploy_account(SECOND_ALIAS)
-    yield account_container.load(SECOND_ALIAS)
-    account_container.delete_account(SECOND_ALIAS)
+    account_container.deploy_account(ALIAS)
+    yield account_container.load(ALIAS)
+    account_container.delete_account(ALIAS)
 
 
 @pytest.fixture(scope="session")
@@ -240,13 +240,6 @@ def existing_key_file_account(config, key_file_account_data):
 
     if test_key_file_path.exists():
         test_key_file_path.unlink()
-
-
-@pytest.fixture(autouse=True, scope="session")
-def existing_ephemeral_account(config, ephemeral_account_data):
-    return StarknetEphemeralAccount(
-        account_key=EXISTING_EPHEMERAL_ALIAS, raw_account_data=ephemeral_account_data
-    )
 
 
 @pytest.fixture(scope="session")

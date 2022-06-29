@@ -21,6 +21,16 @@ func constructor{
     return ()
 end
 
+@view
+func implementation{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (res):
+    let (impl) = Proxy.get_implementation()
+    return (impl)
+end
+
 #
 # Fallback functions
 #

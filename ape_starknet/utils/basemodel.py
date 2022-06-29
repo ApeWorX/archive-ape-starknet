@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from ape.api import PluginConfig
 from ape.utils import ManagerAccessMixin
 
 if TYPE_CHECKING:
@@ -9,6 +10,10 @@ if TYPE_CHECKING:
 
 
 class StarknetBase(ManagerAccessMixin):
+    @property
+    def starknet_config(self) -> PluginConfig:
+        return self.config_manager.get_config("starknet")
+
     @property
     def starknet(self) -> "Starknet":
         return self.network_manager.starknet  # type: ignore

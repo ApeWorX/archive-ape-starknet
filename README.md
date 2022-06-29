@@ -123,7 +123,7 @@ func deploy_my_contract{
 After deploying the factory contract, you can use it to create contract instances:
 
 ```python
-from ape import Contract, project
+from ape import Contract, networks, project
 
 declaration = project.provider.declare(project.MyContract)
 
@@ -131,7 +131,7 @@ declaration = project.provider.declare(project.MyContract)
 factory = project.ContractFactory.deploy(declaration.class_hash)
 
 call_result = factory.deploy_my_contract()
-contract_address = project.starknet.decode_address(call_result)
+contract_address = networks.starknet.decode_address(call_result)
 contract = Contract(contract_address, contract_type=project.MyContract.contract_type)
 ```
 
@@ -187,6 +187,43 @@ receipt = contract.my_mutable_method(123, sender=account)
 
 ```python
 receipt = contract.store_my_list(3, [1, 2, 3])
+```
+
+### Testing
+
+#### Accounts
+
+You can use ``starknet-devnet`` accounts in your tests.
+
+```python
+import pytest
+import ape
+
+
+@pytest.fixture
+def devnet_accounts():
+    return ape.accounts.containers["starknet"].test_accounts
+
+
+@pytest.fixture
+def owner(devnet_accounts):
+    return devnet_accounts[0]
+```
+
+Additionally, any accounts deployed in the local network are **not** saved to disk and are ephemeral.
+
+```python
+import pytest
+import ape
+
+
+@pytest.fixture(scope="session")
+def ephemeral_account():
+    accounts = ape.accounts.containers["starknet"]
+    accounts.deploy_account("ALIAS")
+
+    # This account only exists in the devnet and is not a key-file account.
+    return accounts.load("ALIAS")
 ```
 
 ### Mainnet Alpha Whitelist Deployment Token
