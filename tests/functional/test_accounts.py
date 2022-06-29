@@ -52,4 +52,4 @@ def test_access_account_by_str_address(account, account_container, ecosystem, ge
 
 
 def test_balance(account):
-    assert account.balance == 0
+    assert account.balance == 1000000000000000000000
