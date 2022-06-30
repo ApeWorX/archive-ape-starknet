@@ -1,13 +1,14 @@
 import json
+import random
 import tempfile
 from pathlib import Path
 
 import pytest
+from hexbytes import HexBytes
+from starkware.crypto.signature.signature import get_random_private_key
 
-from ..conftest import ALIAS, CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
+from ..conftest import CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
 from .conftest import ApeStarknetCliRunner
-
-NEW_ALIAS = f"{ALIAS}new"
 
 
 @pytest.fixture(scope="module")
@@ -18,11 +19,6 @@ def accounts_runner(ape_cli):
 @pytest.fixture(scope="module")
 def root_accounts_runner(ape_cli):
     return ApeStarknetCliRunner(ape_cli, ["accounts"])
-
-
-@pytest.fixture(scope="module")
-def dev_account(account_container):
-    return account_container.test_accounts[3]
 
 
 @pytest.fixture(scope="module")
@@ -39,13 +35,9 @@ def test_create(accounts_runner):
     It all happens under one test because it is really slow to deploy accounts.
     """
 
-    output = accounts_runner.invoke("create", NEW_ALIAS)
+    random_alias = "".join(random.choice(["a", "b", "c", "d", "e", "f"]) for _ in range(6))
+    output = accounts_runner.invoke("create", random_alias)
     assert "Account successfully deployed to" in output
-    output = accounts_runner.invoke("list")
-    assert NEW_ALIAS in output
-
-    # Delete newly created account (clean-up)
-    accounts_runner.invoke("delete", NEW_ALIAS)
 
 
 def test_delete(accounts_runner, existing_key_file_account):
@@ -97,27 +89,28 @@ def test_delete(accounts_runner, existing_key_file_account):
 
 def test_import(accounts_runner, existing_key_file_account, account_container):
     network = "starknet:testnet"  # NOTE: Does not actually connect
-    account_path = account_container.data_folder / f"{NEW_ALIAS}.json"
+    account_path = account_container.data_folder / f"{EXISTING_KEY_FILE_ALIAS}.json"
+    address = existing_key_file_account.address
 
     if account_path.is_file():
         # Corrupted from previous test
         account_path.unlink()
 
-    private_key = str(existing_key_file_account.address)
+    private_key = HexBytes(get_random_private_key()).hex()
     accounts_runner.invoke(
         "import",
-        NEW_ALIAS,
+        EXISTING_KEY_FILE_ALIAS,
         "--network",
         network,
         "--address",
-        existing_key_file_account.address,
+        address,
         input=[private_key, PASSWORD, PASSWORD],
     )
 
     # Clean-up
     accounts_runner.invoke(
         "delete",
-        NEW_ALIAS,
+        EXISTING_KEY_FILE_ALIAS,
         "--network",
         network,
         input=[PASSWORD, "y"],

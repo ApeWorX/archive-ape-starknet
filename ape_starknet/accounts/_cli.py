@@ -58,7 +58,11 @@ def create(cli_ctx, alias, network, token):
 def _list(cli_ctx):
     """List your Starknet accounts"""
 
-    starknet_accounts = cast(List[StarknetKeyfileAccount], list(_get_container(cli_ctx).accounts))
+    starknet_accounts = [
+        k
+        for k in cast(List[StarknetKeyfileAccount], list(_get_container(cli_ctx).accounts))
+        if isinstance(k, StarknetKeyfileAccount)
+    ]
 
     if len(starknet_accounts) == 0:
         cli_ctx.logger.warning("No accounts found.")
