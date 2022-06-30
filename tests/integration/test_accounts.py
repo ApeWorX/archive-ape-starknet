@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from hexbytes import HexBytes
-from starkware.crypto.signature.signature import get_random_private_key
+from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 
 from ..conftest import CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
 from .conftest import ApeStarknetCliRunner
