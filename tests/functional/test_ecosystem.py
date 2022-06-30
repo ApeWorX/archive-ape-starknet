@@ -9,7 +9,7 @@ HEXBYTES_ADDRESS = HexBytes(STR_ADDRESS)
 EVENT_NAME = "balance_increased"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def raw_logs():
     return [
         {
@@ -23,7 +23,7 @@ def raw_logs():
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def event_abi(contract):
     return contract.balance_increased.abi
 
