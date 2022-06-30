@@ -1,4 +1,5 @@
 import pytest
+import time
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 
 from ape_starknet.utils import is_checksum_address
@@ -78,9 +79,9 @@ def test_get_transactions_by_block(provider, account, contract):
     assert transactions[0].data == expected_data
 
 
-def test_set_timestamp(provider, contract):
+def test_set_timestamp(provider, account, contract):
     start_time = provider.get_block("pending").timestamp
-    provider.set_timestamp(start_time + 5)
-    # new_time = provider.get_block("pending").timestamp
-    # Note: cannot assert until starknet_devnet corrects the rpc endpoint
-    # assert 4 <= new_time - start_time <= 6
+    provider.set_timestamp(start_time + 8600)
+    contract.increase_balance(account.address, 123, sender=account)
+    curr_time = time.time()
+    assert pytest.approx(curr_time + 8600) == provider.get_block("latest").timestamp
