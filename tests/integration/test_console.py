@@ -4,7 +4,7 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from .conftest import ApeStarknetCliRunner
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def console_runner(ape_cli):
     return ApeStarknetCliRunner(
         ape_cli, ["console", "--network", f"ethereum:{LOCAL_NETWORK_NAME}:test"]
