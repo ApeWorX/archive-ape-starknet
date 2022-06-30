@@ -450,8 +450,8 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return verify_ecdsa_sig(public_key_int, data, signature)
 
     def get_deployments(self) -> List[StarknetAccountDeployment]:
-        plugin_key_file_data = self.get_account_data()[APP_KEY_FILE_KEY]
-        return [StarknetAccountDeployment(**d) for d in plugin_key_file_data["deployments"]]
+        plugin_key_file_data = self.get_account_data().get(APP_KEY_FILE_KEY, {})
+        return [StarknetAccountDeployment(**d) for d in plugin_key_file_data.get("deployments", [])]
 
 
 class StarknetDevelopmentAccount(BaseStarknetAccount):

@@ -36,7 +36,7 @@ def test_get_balance(tokens, account, token_initial_supply, token):
 
 def test_get_fee_balance(tokens, account):
     # Separate from test above because likely fees have been spent already
-    assert 900000000000000000000 < tokens.get_balance(account) <= 1000000000000000000000
+    assert int(9e20) < tokens.get_balance(account) <= int(1e21)
 
 
 @pytest.mark.parametrize("token", ("eth", "test_token", "proxy_token"))

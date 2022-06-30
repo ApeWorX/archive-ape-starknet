@@ -124,8 +124,7 @@ def second_account(account_container, provider):
 def ephemeral_account(account_container, provider):
     _ = provider  # Need connection to deploy account.
     account_container.deploy_account(ALIAS)
-    yield account_container.load(ALIAS)
-    account_container.delete_account(ALIAS)
+    return account_container.load(ALIAS)
 
 
 @pytest.fixture(scope="session")
@@ -225,7 +224,7 @@ def ephemeral_account_data():
     }
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture
 def existing_key_file_account(config, key_file_account_data):
     temp_accounts_dir = Path(config.DATA_FOLDER) / "starknet"
     temp_accounts_dir.mkdir(exist_ok=True, parents=True)
