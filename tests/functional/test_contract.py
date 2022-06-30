@@ -1,7 +1,7 @@
 import pytest
 from ape import Contract
 from ape.contracts import ContractInstance
-from ape.exceptions import AccountsError, ContractLogicError
+from ape.exceptions import ContractLogicError, OutOfGasError
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -154,13 +154,5 @@ def test_view_call_array_outputs(contract, account):
 
 
 def test_unable_to_afford_transaction(contract, account, provider):
-    # This also indirectly tests `estimate_gas_cost()`.
-
-    try:
-        provider.default_gas_cost = 123321123321
-        with pytest.raises(AccountsError) as err:
-            contract.increase_balance(account.address, 1, sender=account)
-
-        assert "Transfer value meets or exceeds account balance." in str(err.value)
-    finally:
-        provider.default_gas_cost = 0
+    with pytest.raises(OutOfGasError):
+        contract.increase_balance(account.address, 1, sender=account, max_fee=1)

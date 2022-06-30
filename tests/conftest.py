@@ -80,9 +80,9 @@ def contract_container(project):
 
 
 @pytest.fixture(scope="session")
-def contract(contract_container, provider):
+def contract(account, contract_container, provider):
     deployed_contract = contract_container.deploy()
-    deployed_contract.initialize()
+    deployed_contract.initialize(sender=account)
     return deployed_contract
 
 
@@ -130,22 +130,6 @@ def ephemeral_account(account_container, provider):
 @pytest.fixture(scope="session")
 def ecosystem(provider) -> EcosystemAPI:
     return provider.network.ecosystem
-
-
-@pytest.fixture(autouse=True)
-def clean_cache(project):
-    """
-    Use this fixture to ensure a project
-    does not have a cached compilation.
-    """
-    cache_file = project._project.manifest_cachefile
-    if cache_file.exists():
-        cache_file.unlink()
-
-    yield
-
-    if cache_file.exists():
-        cache_file.unlink()
 
 
 @pytest.fixture(scope="session")
