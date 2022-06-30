@@ -2,7 +2,13 @@ import re
 from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ApeException, ContractLogicError, ProviderError, VirtualMachineError
+from ape.exceptions import (
+    ApeException,
+    ContractLogicError,
+    OutOfGasError,
+    ProviderError,
+    VirtualMachineError,
+)
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -17,6 +23,7 @@ from eth_utils import (
 from ethpm_types import ContractType
 from starknet_py.net.client import BadRequest  # type: ignore
 from starknet_py.net.models import TransactionType  # type: ignore
+from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
@@ -103,7 +110,8 @@ def handle_client_errors(f):
         except ApeException:
             # Don't catch ApeExceptions, let them raise as they would.
             raise
-        except Exception as err:
+
+        except TransactionRejectedError as err:
             vm_error = get_virtual_machine_error(err)
             if vm_error:
                 raise vm_error from err
@@ -115,8 +123,12 @@ def handle_client_errors(f):
 
 def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
     err_msg = str(err)
+
     if "rejected" not in err_msg:
         return None
+
+    elif "actual fee exceeded max fee" in err_msg.lower():
+        return OutOfGasError()  # type: ignore
 
     if "Error message: " in err_msg:
         err_msg = err_msg.split("Error message: ")[-1]
