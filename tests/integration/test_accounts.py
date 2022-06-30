@@ -21,10 +21,8 @@ def root_accounts_runner(ape_cli):
 
 
 @pytest.fixture(scope="module")
-def deployed_account(account_container):
-    account_container.deploy_account(NEW_ALIAS)
-    yield account_container.load(NEW_ALIAS)
-    account_container.delete_account(NEW_ALIAS)
+def dev_account(account_container):
+    return account_container.test_accounts[3]
 
 
 @pytest.fixture(scope="module")

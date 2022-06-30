@@ -78,7 +78,6 @@ def test_get_transactions_by_block(provider, account, contract):
     assert transactions[0].data == expected_data
 
 
-@pytest.skip
 def test_set_timestamp(provider, contract):
     start_time = provider.get_block("pending").timestamp
     provider.set_timestamp(start_time + 5)
