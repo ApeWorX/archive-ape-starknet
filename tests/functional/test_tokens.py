@@ -45,7 +45,7 @@ def test_get_fee_balance(tokens, account):
     assert tokens.get_balance(account)
 
 
-@pytest.mark.parametrize("token", ("eth", "test_token", "proxy_token"))
+@pytest.mark.parametrize("token", ("eth",))
 def test_transfer(tokens, account, second_account, token):
     initial_balance = tokens.get_balance(second_account.address, token=token)
     tokens.transfer(account.address, second_account.address, 10, token=token)
