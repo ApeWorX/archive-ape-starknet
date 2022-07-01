@@ -11,11 +11,3 @@ def test_deploy_txn_hash(project, convert, provider):
 
     # Ensure pre-calculated hash equals client response hash.
     assert deploy_txn.txn_hash.hex() == receipt.txn_hash
-
-
-def test_invoke_txn_hash(contract, provider, account):
-    invoke_txn = contract.increase_balance.as_transaction(account.address, 999, sender=account)
-    receipt = provider.send_transaction(invoke_txn)
-
-    # Ensure pre-calculated hash equals client response hash.
-    assert invoke_txn.txn_hash.hex() == receipt.txn_hash
