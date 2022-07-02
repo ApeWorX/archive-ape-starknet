@@ -13,7 +13,6 @@ from starknet_py.constants import OZ_PROXY_STORAGE_KEY  # type: ignore
 from starknet_py.net.models.address import parse_address  # type: ignore
 from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
-from starkware.starknet.compiler.compile import get_selector_from_name  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
