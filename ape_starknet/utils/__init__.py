@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ApeException, ContractLogicError, ProviderError, VirtualMachineError
+from ape.exceptions import ApeException, ContractLogicError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -24,6 +24,8 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     DeploySpecificInfo,
     InvokeSpecificInfo,
 )
+
+from ape_starknet.exceptions import StarknetProviderError
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -93,13 +95,13 @@ def handle_client_errors(f):
             result = f(*args, **kwargs)
             if isinstance(result, dict) and result.get("error"):
                 message = result["error"].get("message") or "Transaction failed"
-                raise ProviderError(message)
+                raise StarknetProviderError(message)
 
             return result
 
         except BadRequest as err:
             msg = err.text if hasattr(err, "text") else str(err)
-            raise ProviderError(msg) from err
+            raise StarknetProviderError(msg) from err
         except ApeException:
             # Don't catch ApeExceptions, let them raise as they would.
             raise
