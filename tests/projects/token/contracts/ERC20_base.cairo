@@ -287,8 +287,8 @@ func _transfer{
     Transfer.emit(sender, recipient, amount)
 
     # emit a falsy event
-    let ten = Uint256(10, 0)
-    Mint.emit(sender, amount, ten, recipient)
+    let large_number = Uint256(308580416249208569525703126576732831744, 123426)
+    Mint.emit(sender, amount, large_number, recipient)
 
     return ()
 end
