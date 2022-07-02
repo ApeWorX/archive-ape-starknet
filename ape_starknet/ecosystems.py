@@ -335,7 +335,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         def decode_items(
             abi_types: List[EventABIType], data: List[int]
         ) -> List[Union[int, Tuple[int, int]]]:
-            decoded = []
+            decoded: List[Union[int, Tuple[int, int]]] = []
             for abi_type in abi_types:
                 if abi_type.type == "Uint256":
                     # unint256 are stored using 2 slots
