@@ -7,12 +7,7 @@ from urllib.request import urlopen
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
-from ape.exceptions import (
-    ProviderError,
-    ProviderNotConnectedError,
-    TransactionError,
-    VirtualMachineError,
-)
+from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualMachineError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
@@ -29,6 +24,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
 from starkware.starkware_utils.error_handling import StarkErrorCode  # type: ignore
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
+from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import (
     ContractDeclaration,
@@ -74,14 +70,14 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     @property
     def starknet_client(self) -> StarknetClient:
         if not self.is_connected:
-            raise ProviderError("Provider is not connected to Starknet.")
+            raise StarknetProviderError("Provider is not connected to Starknet.")
 
         return self.client
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
         return [
-            "starknet-devnet",
+            self.process_name,
             "--host",
             str(parts.hostname),
             "--port",
@@ -100,7 +96,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def uri(self) -> str:
         network_config = self.plugin_config.provider.dict().get(self.network.name)
         if not network_config:
-            raise ProviderError(f"Unknown network '{self.network.name}'.")
+            raise StarknetProviderError(f"Unknown network '{self.network.name}'.")
 
         return network_config.get("uri") or f"http://127.0.0.1:{DEFAULT_PORT}"
 
@@ -155,7 +151,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         contract = self.chain_manager.contracts.instance_at(checksum_address)
 
         if not isinstance(contract, ContractInstance):
-            raise ProviderError(f"Account contract '{checksum_address}' not found.")
+            raise StarknetProviderError(f"Account contract '{checksum_address}' not found.")
 
         return contract.get_nonce()
 
@@ -165,7 +161,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             return self.default_gas_cost
 
         if not isinstance(txn, StarknetTransaction):
-            raise ProviderError(
+            raise StarknetEcosystemError(
                 "Unable to estimate the gas cost for a non-Starknet transaction "
                 "using Starknet provider."
             )
@@ -220,7 +216,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def send_call(self, txn: TransactionAPI) -> bytes:
         if not isinstance(txn, InvokeFunctionTransaction):
             type_str = f"{txn.type!r}" if isinstance(txn.type, bytes) else str(txn.type)
-            raise ProviderError(
+            raise StarknetProviderError(
                 f"Transaction must be from an invocation. Received type {type_str}."
             )
 
@@ -259,7 +255,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         error = txn_info.get("error", {})
         if error:
             message = error.get("message", error)
-            raise ProviderError(message)
+            raise StarknetProviderError(message)
 
         txn_hash = txn_info["transaction_hash"]
         receipt = self.get_transaction(txn_hash)
@@ -286,7 +282,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
 
         if not isinstance(txn, StarknetTransaction):
-            raise ProviderError(
+            raise StarknetEcosystemError(
                 "Unable to send non-Starknet transaction using a Starknet provider."
             )
 
