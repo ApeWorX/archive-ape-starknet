@@ -77,7 +77,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
         return [
-            "starknet-devnet",
+            self.process_name,
             "--host",
             str(parts.hostname),
             "--port",
