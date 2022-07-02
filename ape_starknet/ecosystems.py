@@ -13,6 +13,7 @@ from starknet_py.constants import OZ_PROXY_STORAGE_KEY  # type: ignore
 from starknet_py.net.models.address import parse_address  # type: ignore
 from starknet_py.net.models.chains import StarknetChainId  # type: ignore
 from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
+from starkware.starknet.compiler.compile import get_selector_from_name  # type: ignore
 from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
 from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
 from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
@@ -326,7 +327,10 @@ class Starknet(EcosystemAPI, StarknetBase):
         return txn_cls(**txn_data)
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
-        for index, log in enumerate(raw_logs):
+        event_key = get_selector_from_name(abi.name)
+        matching_logs = [log for log in raw_logs if event_key in log["keys"]]
+
+        for index, log in enumerate(matching_logs):
             event_args = dict(zip([a.name for a in abi.inputs], log["data"]))
             yield ContractLog(  # type: ignore
                 name=abi.name,
