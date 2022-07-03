@@ -7,7 +7,7 @@ from ape.contracts import ContractContainer, ContractInstance
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
-from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
+from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY  # type: ignore
 from starknet_py.net.models.address import parse_address  # type: ignore
@@ -329,8 +329,26 @@ class Starknet(EcosystemAPI, StarknetBase):
         return txn_cls(**txn_data)
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
-        for index, log in enumerate(raw_logs):
-            event_args = dict(zip([a.name for a in abi.inputs], log["data"]))
+        event_key = get_selector_from_name(abi.name)
+        matching_logs = [log for log in raw_logs if event_key in log["keys"]]
+
+        def decode_items(
+            abi_types: List[EventABIType], data: List[int]
+        ) -> List[Union[int, Tuple[int, int]]]:
+            decoded: List[Union[int, Tuple[int, int]]] = []
+            iter_data = iter(data)
+            for abi_type in abi_types:
+                if abi_type.type == "Uint256":
+                    # unint256 are stored using 2 slots
+                    decoded.append((next(iter_data), next(iter_data)))
+                else:
+                    decoded.append(next(iter_data))
+            return decoded
+
+        for index, log in enumerate(matching_logs):
+            event_args = dict(
+                zip([a.name for a in abi.inputs], decode_items(abi.inputs, log["data"]))
+            )
             yield ContractLog(  # type: ignore
                 name=abi.name,
                 index=index,

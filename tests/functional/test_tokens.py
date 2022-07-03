@@ -50,3 +50,24 @@ def test_transfer(tokens, account, second_account, token):
     initial_balance = tokens.get_balance(second_account.address, token=token)
     tokens.transfer(account.address, second_account.address, 10, token=token)
     assert tokens.get_balance(second_account.address, token=token) == initial_balance + 10
+
+
+def test_event_log_arguments(token_contract, account, second_account):
+    amount0, amount0_uint256 = 10, (10, 0)
+    amount1, amount1_uint256 = 2**128 + 42, (42, 1)
+    receipt = token_contract.fire_events(second_account.address, amount0, amount1, sender=account)
+
+    transfer_logs = list(receipt.decode_logs(token_contract.Transfer))
+    assert len(transfer_logs) == 1
+    log = transfer_logs[0]
+    assert log.from_ == int(account.address, 16)
+    assert log.to == int(second_account.address, 16)
+    assert log.value == amount0_uint256
+
+    mint_logs = list(receipt.decode_logs(token_contract.Mint))
+    assert len(mint_logs) == 1
+    log = mint_logs[0]
+    assert log.sender == int(account.address, 16)
+    assert log.amount0 == amount0_uint256
+    assert log.amount1 == amount1_uint256
+    assert log.to == int(second_account.address, 16)
