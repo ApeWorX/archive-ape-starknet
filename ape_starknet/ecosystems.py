@@ -327,7 +327,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
     def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
         event_key = get_selector_from_name(abi.name)
-        matching_logs = [log for log in raw_logs if not log["keys"] or event_key in log["keys"]]
+        matching_logs = [log for log in raw_logs if event_key in log["keys"]]
 
         def decode_items(
             abi_types: List[EventABIType], data: List[int]
