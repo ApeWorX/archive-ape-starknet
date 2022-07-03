@@ -340,7 +340,6 @@ class Starknet(EcosystemAPI, StarknetBase):
                     decoded.append((next(iter_data), next(iter_data)))
                 else:
                     decoded.append(next(iter_data))
-            assert not list(iter_data)
             return decoded
 
         for index, log in enumerate(matching_logs):
