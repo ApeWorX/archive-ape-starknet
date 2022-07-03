@@ -206,6 +206,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         network_name: str,
         contract_address: str,
         private_key: Union[int, str],
+        passphrase: Optional[str] = None,
     ):
         if isinstance(private_key, str):
             private_key = private_key.strip("'\"")
@@ -226,7 +227,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             # Only write keyfile if not in a local network
             path = self.data_folder.joinpath(f"{alias}.json")
             new_account = StarknetKeyfileAccount(key_file_path=path)
-            new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
+            new_account.write(
+                passphrase=passphrase, private_key=private_key, deployments=deployments
+            )
 
         # Add account contract to cache
         address = self.starknet.decode_address(contract_address)
