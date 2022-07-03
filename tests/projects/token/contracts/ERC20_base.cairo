@@ -36,18 +36,6 @@ func ERC20_allowances(owner: felt, spender: felt) -> (allowance: Uint256):
 end
 
 #
-# Events
-#
-
-@event
-func Mint(sender : felt, amount0 : Uint256, amount1 : Uint256, to : felt):
-end
-
-@event
-func Transfer(from_ : felt, to : felt, value : Uint256):
-end
-
-#
 # Constructor
 #
 
@@ -282,13 +270,5 @@ func _transfer{
     # overflow is not possible because sum is guaranteed by mint to be less than total supply
     let (new_recipient_balance, _: Uint256) = uint256_add(recipient_balance, amount)
     ERC20_balances.write(recipient, new_recipient_balance)
-
-    # emit a legit event
-    Transfer.emit(sender, recipient, amount)
-
-    # emit a falsy event
-    let large_number = Uint256(308580416249208569525703126576732831744, 123426)
-    Mint.emit(sender, amount, large_number, recipient)
-
     return ()
 end

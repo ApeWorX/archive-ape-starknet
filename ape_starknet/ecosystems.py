@@ -336,13 +336,14 @@ class Starknet(EcosystemAPI, StarknetBase):
             abi_types: List[EventABIType], data: List[int]
         ) -> List[Union[int, Tuple[int, int]]]:
             decoded: List[Union[int, Tuple[int, int]]] = []
+            iter_data = iter(data)
             for abi_type in abi_types:
                 if abi_type.type == "Uint256":
                     # unint256 are stored using 2 slots
-                    decoded.append((data.pop(0), data.pop(0)))
+                    decoded.append((next(iter_data), next(iter_data)))
                 else:
-                    decoded.append(data.pop(0))
-            assert not data
+                    decoded.append(next(iter_data))
+            assert not list(iter_data)
             return decoded
 
         for index, log in enumerate(matching_logs):
