@@ -80,9 +80,9 @@ def contract_container(project):
 
 
 @pytest.fixture(scope="session")
-def contract(contract_container, provider):
+def contract(account, contract_container, provider):
     deployed_contract = contract_container.deploy()
-    deployed_contract.initialize()
+    deployed_contract.initialize(sender=account)
     return deployed_contract
 
 
@@ -124,29 +124,12 @@ def second_account(account_container, provider):
 def ephemeral_account(account_container, provider):
     _ = provider  # Need connection to deploy account.
     account_container.deploy_account(ALIAS)
-    yield account_container.load(ALIAS)
-    account_container.delete_account(ALIAS)
+    return account_container.load(ALIAS)
 
 
 @pytest.fixture(scope="session")
 def ecosystem(provider) -> EcosystemAPI:
     return provider.network.ecosystem
-
-
-@pytest.fixture(autouse=True)
-def clean_cache(project):
-    """
-    Use this fixture to ensure a project
-    does not have a cached compilation.
-    """
-    cache_file = project._project.manifest_cachefile
-    if cache_file.exists():
-        cache_file.unlink()
-
-    yield
-
-    if cache_file.exists():
-        cache_file.unlink()
 
 
 @pytest.fixture(scope="session")
@@ -225,7 +208,7 @@ def ephemeral_account_data():
     }
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture
 def existing_key_file_account(config, key_file_account_data):
     temp_accounts_dir = Path(config.DATA_FOLDER) / "starknet"
     temp_accounts_dir.mkdir(exist_ok=True, parents=True)

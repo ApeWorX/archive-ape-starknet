@@ -1,7 +1,7 @@
 import pytest
 from ape import Contract
 from ape.contracts import ContractInstance
-from ape.exceptions import AccountsError, ContractLogicError
+from ape.exceptions import ContractLogicError, OutOfGasError
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -29,20 +29,20 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     assert isinstance(contract, ContractInstance)
 
     # Ensure can interact with deployed contract from declaration.
-    contract.initialize()
+    contract.initialize(sender=account)
     balance_pre_call = contract.get_balance(account)
     contract.increase_balance(account, 9, sender=account)
     assert contract.get_balance(account) == balance_pre_call + 9
 
     # Ensure can use class_hash in factory contract
     factory = factory_contract_container.deploy(declaration.class_hash)
-    receipt = factory.create_my_contract()
+    receipt = factory.create_my_contract(sender=account)
     logs = list(receipt.decode_logs(factory.contract_deployed))
     new_contract_address = provider.starknet.decode_address(logs[0].contract_address)
 
-    # Ensure can interact with deployed contract from 'class_hash'.
+    # # Ensure can interact with deployed contract from 'class_hash'.
     new_contract_instance = Contract(new_contract_address, contract_type=contract.contract_type)
-    new_contract_instance.initialize()
+    new_contract_instance.initialize(sender=account)
     balance_pre_call = new_contract_instance.get_balance(account)
     new_contract_instance.increase_balance(account, 9, sender=account)
     assert new_contract_instance.get_balance(account) == balance_pre_call + 9
@@ -154,13 +154,5 @@ def test_view_call_array_outputs(contract, account):
 
 
 def test_unable_to_afford_transaction(contract, account, provider):
-    # This also indirectly tests `estimate_gas_cost()`.
-
-    try:
-        provider.default_gas_cost = 123321123321
-        with pytest.raises(AccountsError) as err:
-            contract.increase_balance(account.address, 1, sender=account)
-
-        assert "Transfer value meets or exceeds account balance." in str(err.value)
-    finally:
-        provider.default_gas_cost = 0
+    with pytest.raises(OutOfGasError):
+        contract.increase_balance(account.address, 1, sender=account, max_fee=1)

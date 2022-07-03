@@ -73,17 +73,15 @@ class Starknet(EcosystemAPI, StarknetBase):
         Make a checksum address given a supported format.
         Borrowed from ``eth_utils.to_checksum_address()`` but supports
         non-length 42 addresses.
-
         Args:
             raw_address (Union[int, str, bytes]): The value to convert.
-
         Returns:
             ``AddressType``: The converted address.
         """
         return to_checksum_address(raw_address)
 
     @classmethod
-    def encode_address(cls, address: AddressType) -> int:
+    def encode_address(cls, address: Union[AddressType, str]) -> int:
         return parse_address(address)
 
     def serialize_transaction(self, transaction: TransactionAPI) -> bytes:
@@ -206,17 +204,22 @@ class Starknet(EcosystemAPI, StarknetBase):
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = TransactionType(data["type"])
-        cls: Union[Type[ContractDeclaration], Type[DeployReceipt], Type[InvocationReceipt]]
+        receipt_cls: Union[Type[ContractDeclaration], Type[DeployReceipt], Type[InvocationReceipt]]
         if txn_type == TransactionType.INVOKE_FUNCTION:
-            cls = InvocationReceipt
+            receipt_cls = InvocationReceipt
         elif txn_type == TransactionType.DEPLOY:
-            cls = DeployReceipt
+            receipt_cls = DeployReceipt
         elif txn_type == TransactionType.DECLARE:
-            cls = ContractDeclaration
+            receipt_cls = ContractDeclaration
         else:
             raise ValueError(f"Unable to handle contract type '{txn_type.value}'.")
 
-        return cls.parse_obj(data)
+        receipt = receipt_cls.parse_obj(data)
+
+        if receipt is None:
+            raise ValueError("Failed to parse receipt from data.")
+
+        return receipt
 
     def decode_block(self, data: dict) -> BlockAPI:
         return StarknetBlock(

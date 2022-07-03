@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from ape.api import Address
 from ape.contracts import ContractInstance
@@ -6,8 +6,12 @@ from ape.exceptions import ContractError
 from ape.types import AddressType
 from starknet_devnet.fee_token import FeeToken  # type: ignore
 
+from ape_starknet.ecosystems import StarknetProxy
 from ape_starknet.utils import convert_contract_class_to_contract_type
 from ape_starknet.utils.basemodel import StarknetBase
+
+if TYPE_CHECKING:
+    from ape_starknet.accounts import BaseStarknetAccount
 
 
 def missing_contract_error(token: str, contract_address: AddressType) -> ContractError:
@@ -17,6 +21,9 @@ def missing_contract_error(token: str, contract_address: AddressType) -> Contrac
 class TokenManager(StarknetBase):
     # The 'test_token' refers to the token that comes with Argent-X
     additional_tokens: Dict = {}
+
+    # NOTE: Can be deleted once ape can correctly cache local proxy deploys
+    token_proxy_infos: Dict[AddressType, Optional[StarknetProxy]] = {}
 
     @property
     def token_address_map(self) -> Dict:
@@ -62,24 +69,34 @@ class TokenManager(StarknetBase):
 
     def transfer(
         self,
-        sender: Union[int, AddressType],
-        receiver: Union[int, AddressType],
+        sender: Union[int, AddressType, "BaseStarknetAccount"],
+        receiver: Union[int, AddressType, "BaseStarknetAccount"],
         amount: int,
         token: str = "eth",
     ):
-        if not isinstance(sender, int):
-            sender = self.starknet.encode_address(sender)
-
-        if not isinstance(receiver, int):
-            receiver = self.starknet.encode_address(receiver)
-
         contract_address = self._get_contract_address(token=token)
         if not contract_address:
             return
 
+        if isinstance(receiver, int):
+            receiver_address = receiver
+        elif hasattr(receiver, "address_int"):
+            receiver_address = receiver.address_int  # type: ignore
+        elif isinstance(receiver, str):
+            receiver_address = self.starknet.encode_address(receiver)
+        else:
+            raise TypeError(
+                f"Unhandled type for receiver '{receiver}'. Expects int, str, or account."
+            )
+
         contract = self._get_contract(contract_address)
-        sender_account = self.account_contracts[sender]
-        return contract.transfer(receiver, amount, sender=sender_account)
+
+        if isinstance(sender, (int, str)):
+            sender_account = self.account_contracts[sender]
+        else:
+            sender_account = sender
+
+        return contract.transfer(receiver_address, amount, sender=sender_account)
 
     def _get_contract_address(self, token: str = "eth") -> Optional[AddressType]:
         network = self.provider.network.name
@@ -88,7 +105,12 @@ class TokenManager(StarknetBase):
     def _get_contract(self, address: AddressType) -> ContractInstance:
         # TODO: can remove proxy check once bug in ape regarding cached local
         #  proxies is resolved
-        proxy_info = self.starknet.get_proxy_info(address)
+        if address in self.token_proxy_infos:
+            proxy_info = self.token_proxy_infos[address]
+        else:
+            proxy_info = self.starknet.get_proxy_info(address)
+            self.token_proxy_infos[address] = proxy_info
+
         if proxy_info:
             contract_type = self.chain_manager.contracts[proxy_info.target]
             return ContractInstance(proxy_info.target, contract_type)

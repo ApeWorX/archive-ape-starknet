@@ -58,7 +58,11 @@ def create(cli_ctx, alias, network, token):
 def _list(cli_ctx):
     """List your Starknet accounts"""
 
-    starknet_accounts = cast(List[StarknetKeyfileAccount], list(_get_container(cli_ctx).accounts))
+    starknet_accounts = [
+        k
+        for k in cast(List[StarknetKeyfileAccount], list(_get_container(cli_ctx).accounts))
+        if isinstance(k, StarknetKeyfileAccount)
+    ]
 
     if len(starknet_accounts) == 0:
         cli_ctx.logger.warning("No accounts found.")
@@ -103,7 +107,10 @@ def _import(cli_ctx, alias, network, address, keyfile):
     container = _get_container(cli_ctx)
     if alias in container.aliases:
         existing_account = container.load(alias)
-        if existing_account.get_deployment(network):
+
+        if existing_account.get_deployment(network) or not isinstance(
+            existing_account, StarknetKeyfileAccount
+        ):
             cli_ctx.abort(f"Account already imported with '{network}' network.")
 
         click.echo(f"Importing existing account to network '{network}'.")

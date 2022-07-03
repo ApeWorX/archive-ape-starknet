@@ -4,6 +4,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
@@ -123,11 +124,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_balance(self, address: AddressType) -> int:
-        network = self.network.name
-        if network == LOCAL_NETWORK_NAME:
-            # Fees / balances are currently not supported in local
-            return 0
-
         account = self.account_contracts[address]
         return self.token_manager.get_balance(account.address)
 
@@ -307,6 +303,17 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             txn.max_fee = self.estimate_gas_cost(txn)
 
         return txn
+
+    def set_timestamp(self, new_timestamp: int):
+        pending_timestamp = self.get_block("pending").timestamp
+        seconds_to_increase = new_timestamp - pending_timestamp
+        response = requests.post(
+            url=f"{self.uri}/increase_time", json={"time": seconds_to_increase}
+        )
+        response.raise_for_status()
+        response_data = response.json()
+        if "timestamp_increased_by" not in response_data:
+            raise StarknetProviderError(response_data)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)

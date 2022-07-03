@@ -22,24 +22,30 @@ def proxy_token_contract(config, account, token_initial_supply, token_contract, 
         return project.Proxy.deploy(token_contract.address)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def tokens(token_contract, proxy_token_contract, provider, account):
     _tokens.add_token("test_token", LOCAL_NETWORK_NAME, token_contract.address)
     _tokens.add_token("proxy_token", LOCAL_NETWORK_NAME, proxy_token_contract.address)
     return _tokens
 
 
-@pytest.mark.parametrize("token", ("proxy_token",))
+@pytest.mark.parametrize(
+    "token",
+    (
+        "test_token",
+        "proxy_token",
+    ),
+)
 def test_get_balance(tokens, account, token_initial_supply, token):
     assert tokens.get_balance(account, token=token) == token_initial_supply
 
 
 def test_get_fee_balance(tokens, account):
     # Separate from test above because likely fees have been spent already
-    assert 900000000000000000000 < tokens.get_balance(account) <= 1000000000000000000000
+    assert tokens.get_balance(account)
 
 
-@pytest.mark.parametrize("token", ("eth", "test_token", "proxy_token"))
+@pytest.mark.parametrize("token", ("eth",))
 def test_transfer(tokens, account, second_account, token):
     initial_balance = tokens.get_balance(second_account.address, token=token)
     tokens.transfer(account.address, second_account.address, 10, token=token)
