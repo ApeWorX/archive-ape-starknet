@@ -2,7 +2,7 @@ import pytest
 from ape.types import AddressType
 from eth_typing import HexAddress, HexStr
 from hexbytes import HexBytes
-from starkware.starknet.public.abi import get_selector_from_name
+from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
 
 INT_ADDRESS = 14543129564252315649550252856970912276603599239311963926081534426621736121411
 STR_ADDRESS = "0x20271ea04cB854E105d948019Ba1FCdFa61d76D73539700Ff6DD456bcB7bF443"

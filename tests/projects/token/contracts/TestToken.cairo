@@ -37,6 +37,18 @@ func constructor{
 end
 
 #
+# Events
+#
+
+@event
+func Mint(sender : felt, amount0 : Uint256, amount1 : Uint256, to : felt):
+end
+
+@event
+func Transfer(from_ : felt, to : felt, value : Uint256):
+end
+
+#
 # Getters
 #
 
@@ -146,4 +158,16 @@ func transfer{
     ERC20_transfer(recipient, amount)
     # Cairo equivalent to 'return (true)'
     return (1)
+end
+
+@external
+func fire_events{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }(recipient: felt, amount0: Uint256, amount1: Uint256) -> ():
+    let (sender) = get_caller_address()
+    Transfer.emit(sender, recipient, amount0)
+    Mint.emit(sender, amount0, amount1, recipient)
+    return ()
 end
