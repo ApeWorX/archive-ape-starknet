@@ -81,7 +81,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         return to_checksum_address(raw_address)
 
     @classmethod
-    def encode_address(cls, address: AddressType) -> int:
+    def encode_address(cls, address: Union[AddressType, str]) -> int:
         return parse_address(address)
 
     def serialize_transaction(self, transaction: TransactionAPI) -> bytes:

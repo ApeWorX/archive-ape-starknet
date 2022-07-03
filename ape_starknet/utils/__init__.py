@@ -2,13 +2,7 @@ import re
 from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import (
-    ApeException,
-    ContractLogicError,
-    OutOfGasError,
-    ProviderError,
-    VirtualMachineError,
-)
+from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import (
@@ -23,7 +17,7 @@ from eth_utils import (
 from ethpm_types import ContractType
 from starknet_py.net.client import BadRequest  # type: ignore
 from starknet_py.net.models import TransactionType  # type: ignore
-from starknet_py.transaction_exceptions import TransactionRejectedError
+from starknet_py.transaction_exceptions import TransactionRejectedError  # type: ignore
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
@@ -31,6 +25,8 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (  #
     DeploySpecificInfo,
     InvokeSpecificInfo,
 )
+
+from ape_starknet.exceptions import StarknetProviderError
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -100,13 +96,13 @@ def handle_client_errors(f):
             result = f(*args, **kwargs)
             if isinstance(result, dict) and result.get("error"):
                 message = result["error"].get("message") or "Transaction failed"
-                raise ProviderError(message)
+                raise StarknetProviderError(message)
 
             return result
 
         except BadRequest as err:
             msg = err.text if hasattr(err, "text") else str(err)
-            raise ProviderError(msg) from err
+            raise StarknetProviderError(msg) from err
         except ApeException:
             # Don't catch ApeExceptions, let them raise as they would.
             raise
@@ -165,7 +161,7 @@ def get_dict_from_tx_info(
             txn_dict["method_abi"] = txn_dict.get("method_abi")
 
         if "entry_point_selector" in txn_dict:
-            txn_dict["entry_point_selector"] = txn_dict.get("entry_point_selector")
+            txn_dict["entry_point_selector"] = txn_dict["entry_point_selector"]
 
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
     elif isinstance(txn_info, DeclareSpecificInfo):

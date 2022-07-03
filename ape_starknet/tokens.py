@@ -82,8 +82,12 @@ class TokenManager(StarknetBase):
             receiver_address = receiver
         elif hasattr(receiver, "address_int"):
             receiver_address = receiver.address_int  # type: ignore
-        else:
+        elif isinstance(receiver, str):
             receiver_address = self.starknet.encode_address(receiver)
+        else:
+            raise TypeError(
+                f"Unhandled type for receiver '{receiver}'. Expects int, str, or account."
+            )
 
         contract = self._get_contract(contract_address)
 
