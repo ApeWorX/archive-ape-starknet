@@ -1,8 +1,9 @@
 import pytest
+from ape.api.networks import LOCAL_NETWORK_NAME
 from eth_utils import remove_0x_prefix
-from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
+from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
-from ape_starknet.utils import is_hex_address
+from ape_starknet.utils import get_random_private_key, is_hex_address, to_checksum_address
 
 
 def test_public_keys(existing_key_file_account, public_key):
@@ -53,3 +54,16 @@ def test_access_account_by_str_address(account, account_container, ecosystem, ge
 
 def test_balance(account):
     assert account.balance > 0
+
+
+def test_import_with_passphrase(account_container):
+    alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
+    private_key = int(get_random_private_key(), 16)
+    address = hex(private_key)
+
+    account_container.import_account(
+        alias, LOCAL_NETWORK_NAME, address, private_key, passphrase="p@55W0rd"
+    )
+
+    account = account_container.load(alias)
+    assert account.address == to_checksum_address(address)

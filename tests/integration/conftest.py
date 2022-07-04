@@ -20,7 +20,11 @@ class ApeStarknetCliRunner:
     def invoke(
         self, *cmd, input: Optional[Union[str, List[str]]] = None, ensure_successful: bool = True
     ):
-        input_str = "\n".join(input) if isinstance(input, (list, tuple)) else (input or "")
+        if isinstance(input, (list, tuple)):
+            input_str = "\n".join([str(i) for i in input])
+        else:
+            input_str = input or ""
+
         ape_cmd = self._get_cmd(*cmd)
         catch_exceptions = not ensure_successful
         result = self.runner.invoke(

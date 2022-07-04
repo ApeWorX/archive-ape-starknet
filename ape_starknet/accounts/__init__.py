@@ -28,7 +28,6 @@ from starknet_py.net.account.compiled_account_contract import (  # type: ignore
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner  # type: ignore
 from starknet_py.utils.crypto.facade import ECSignature, sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
-from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.crypto.signature.signature import private_to_stark_key  # type: ignore
 from starkware.starknet.core.os.contract_address.contract_address import (  # type: ignore
     calculate_contract_address_from_hash,
@@ -37,7 +36,12 @@ from starkware.starknet.services.api.contract_class import ContractClass  # type
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils import convert_contract_class_to_contract_type, get_chain_id
+from ape_starknet.utils import (
+    convert_contract_class_to_contract_type,
+    get_chain_id,
+    get_random_private_key,
+    pad_hex_str,
+)
 from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -206,10 +210,13 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         network_name: str,
         contract_address: str,
         private_key: Union[int, str],
+        passphrase: Optional[str] = None,
     ):
-        if isinstance(private_key, str):
-            private_key = private_key.strip("'\"")
+        if isinstance(private_key, str) and private_key.startswith("0x"):
+            private_key = pad_hex_str(private_key.strip("'\""))
             private_key = int(private_key, 16)
+        elif isinstance(private_key, str):
+            private_key = int(private_key)
 
         network_name = _clean_network_name(network_name)
         key_pair = KeyPair.from_private_key(private_key)
@@ -226,7 +233,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             # Only write keyfile if not in a local network
             path = self.data_folder.joinpath(f"{alias}.json")
             new_account = StarknetKeyfileAccount(key_file_path=path)
-            new_account.write(passphrase=None, private_key=private_key, deployments=deployments)
+            new_account.write(
+                passphrase=passphrase, private_key=private_key, deployments=deployments
+            )
 
         # Add account contract to cache
         address = self.starknet.decode_address(contract_address)
@@ -258,7 +267,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         network_name = self.provider.network.name
         logger.info(f"Deploying an account to '{network_name}' network ...")
 
-        private_key = private_key or get_random_private_key()
+        private_key = private_key or int(get_random_private_key(), 16)
         key_pair = KeyPair.from_private_key(private_key)
 
         account_container = ContractContainer(contract_type=OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE)
@@ -665,9 +674,9 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
     def __encrypt_key_file(self, passphrase: str, private_key: Optional[int] = None) -> Dict:
         private_key = self._get_key(passphrase=passphrase) if private_key is None else private_key
-        key_bytes = HexBytes(private_key)
+        key_str = pad_hex_str(HexBytes(private_key).hex())
         passphrase_bytes = text_if_str(to_bytes, passphrase)
-        return create_keyfile_json(key_bytes, passphrase_bytes, kdf="scrypt")
+        return create_keyfile_json(HexBytes(key_str), passphrase_bytes, kdf="scrypt")
 
     def __decrypt_key_file(self, passphrase: str) -> HexBytes:
         key_file_dict = json.loads(self.key_file_path.read_text())

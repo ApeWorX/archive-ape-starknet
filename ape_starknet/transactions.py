@@ -9,30 +9,26 @@ from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.constants import TxStatus  # type: ignore
-from starknet_py.net.models.transaction import (  # type: ignore
+from starknet_py.constants import TxStatus
+from starknet_py.net.models.transaction import (
     Declare,
     Deploy,
     InvokeFunction,
     Transaction,
     TransactionType,
 )
-from starkware.starknet.core.os.class_hash import compute_class_hash  # type: ignore
-from starkware.starknet.core.os.contract_address.contract_address import (  # type: ignore
-    calculate_contract_address,
-)
-from starkware.starknet.core.os.transaction_hash.transaction_hash import (  # type: ignore
+from starkware.starknet.core.os.class_hash import compute_class_hash
+from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
+from starkware.starknet.core.os.transaction_hash.transaction_hash import (
     TransactionHashPrefix,
     calculate_declare_transaction_hash,
     calculate_deploy_transaction_hash,
     calculate_transaction_hash_common,
 )
-from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
-from starkware.starknet.services.api.gateway.transaction import (  # type: ignore
-    DECLARE_SENDER_ADDRESS,
-)
-from starkware.starknet.testing.contract_utils import get_contract_class  # type: ignore
+from starkware.starknet.public.abi import get_selector_from_name
+from starkware.starknet.services.api.contract_class import ContractClass
+from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
+from starkware.starknet.testing.contract_utils import get_contract_class
 
 from ape_starknet.utils import to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
@@ -280,7 +276,7 @@ class InvocationReceipt(StarknetReceipt):
     max_fee: int
     method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
-    returndata: List[int] = []
+    returndata: List[Any] = []
     return_value: List[int] = []
 
     """Aliased"""
