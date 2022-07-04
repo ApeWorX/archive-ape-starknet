@@ -47,11 +47,23 @@ def test_get_fee_balance(tokens, account):
     assert tokens.get_balance(account)
 
 
-@pytest.mark.parametrize("token", ("eth",))
-def test_transfer(tokens, account, second_account, token):
-    initial_balance = tokens.get_balance(second_account.address, token=token)
-    tokens.transfer(account.address, second_account.address, 10, token=token)
-    assert tokens.get_balance(second_account.address, token=token) == initial_balance + 10
+def test_transfer(tokens, account, second_account):
+    initial_balance = tokens.get_balance(second_account.address)
+    tokens.transfer(account.address, second_account.address, 10)
+    assert tokens.get_balance(second_account.address) == initial_balance + 10
+
+
+def test_large_transfer(tokens, account, second_account):
+    initial_balance = tokens.get_balance(second_account.address, token="test_token")
+
+    # Value large enough to properly test Uint256 logic
+    balance_to_transfer = 2**128 + 1
+    tokens.transfer(
+        account.address, second_account.address, balance_to_transfer, token="test_token"
+    )
+    actual = tokens.get_balance(second_account.address, token="test_token")
+    expected = initial_balance + balance_to_transfer
+    assert actual == expected
 
 
 def test_event_log_arguments(token_contract, account, second_account):
