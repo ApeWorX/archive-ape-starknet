@@ -280,7 +280,7 @@ class InvocationReceipt(StarknetReceipt):
     max_fee: int
     method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
-    returndata: List[int] = []
+    returndata: List[Any] = []
     return_value: List[int] = []
 
     """Aliased"""
