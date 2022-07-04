@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
@@ -181,3 +181,8 @@ def convert_contract_class_to_contract_type(contract_class: ContractClass):
             "abi": contract_class.abi,
         }
     )
+
+
+def from_uint(value: Tuple[int, int]) -> int:
+    """Takes in Uint256-ish tuple, returns value."""
+    return value[0] + (value[1] << 128)

@@ -7,7 +7,7 @@ from ape.types import AddressType
 from starknet_devnet.fee_token import FeeToken  # type: ignore
 
 from ape_starknet.ecosystems import StarknetProxy
-from ape_starknet.utils import convert_contract_class_to_contract_type
+from ape_starknet.utils import convert_contract_class_to_contract_type, from_uint
 from ape_starknet.utils.basemodel import StarknetBase
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ class TokenManager(StarknetBase):
             return 0
 
         contract = self._get_contract(contract_address)
-        return contract.balanceOf(account)[0]
+        return from_uint(contract.balanceOf(account))
 
     def transfer(
         self,

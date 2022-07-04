@@ -56,7 +56,7 @@ def test_get_caller_address(contract, account, provider):
 def test_validate_signature_on_chain(contract, account, initial_balance):
     # NOTE: This test validates the account signature but the transaction
     # is not directly sent from the account.
-    increase_amount = 234
+    increase_amount = 42 * 2**152
 
     signature = account.sign_message(increase_amount)
     contract.increase_balance_signed(
