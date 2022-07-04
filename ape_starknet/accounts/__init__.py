@@ -425,8 +425,8 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             else:
                 raise ValueError("value is not an integer.")
 
-        if not isinstance(account, str) and hasattr(account, "contract_address"):
-            receiver = getattr(account, "contract_address")
+        if not isinstance(account, str) and hasattr(account, "address"):
+            receiver = getattr(account, "address")
 
         elif isinstance(account, str):
             checksummed_address = self.starknet.decode_address(account)

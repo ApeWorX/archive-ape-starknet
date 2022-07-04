@@ -53,6 +53,8 @@ def test_access_account_by_str_address(account, account_container, ecosystem, ge
 
 
 def test_balance(account):
+    balance = account.balance
+    assert isinstance(balance, int)
     assert account.balance > 0
 
 
@@ -67,3 +69,9 @@ def test_import_with_passphrase(account_container):
 
     account = account_container.load(alias)
     assert account.address == to_checksum_address(address)
+
+
+def test_transfer(account, second_account):
+    initial_balance = second_account.balance
+    account.transfer(second_account, 10)
+    assert second_account.balance == initial_balance + 10
