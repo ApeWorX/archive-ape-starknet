@@ -11,7 +11,9 @@ def token_contract(config, account, token_initial_supply, project):
     project_path = Path(__file__).parent.parent / "projects" / "token"
 
     with config.using_project(project_path):
-        yield project.TestToken.deploy(123123, 321321, token_initial_supply, account.address)
+        yield project.get_contract("TestToken").deploy(
+            123123, 321321, token_initial_supply, account.address
+        )
 
 
 @pytest.fixture(scope="module")
@@ -19,7 +21,7 @@ def proxy_token_contract(config, account, token_initial_supply, token_contract, 
     project_path = Path(__file__).parent.parent / "projects" / "proxy"
 
     with config.using_project(project_path):
-        return project.Proxy.deploy(token_contract.address)
+        return project.get_contract("Proxy").deploy(token_contract.address)
 
 
 @pytest.fixture(scope="module")
