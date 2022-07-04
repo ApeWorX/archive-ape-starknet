@@ -188,13 +188,8 @@ def convert_contract_class_to_contract_type(contract_class: ContractClass):
 
 
 def get_random_private_key() -> str:
-    tries = 0
     private_key = HexBytes(get_random_pkey()).hex()
-    while tries < 10 and len(private_key) != 66:
-        private_key = HexBytes(get_random_pkey()).hex()
-        tries += 1
-
-    if not len(private_key) == 66:
-        raise ValueError(f"Failed to create random private key after '{tries}' attempts.")
-
-    return private_key
+    key = private_key.replace("0x", "")
+    actual_len = len(key)
+    padding = "0" * (64 - actual_len)
+    return f"0x{padding}{key}"
