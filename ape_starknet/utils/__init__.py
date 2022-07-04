@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
@@ -195,3 +195,8 @@ def pad_hex_str(value: str, to_length: int = 66) -> str:
     actual_len = len(val)
     padding = "0" * (to_length - 2 - actual_len)
     return f"0x{padding}{val}"
+
+
+def from_uint(value: Tuple[int, int]) -> int:
+    """Takes in Uint256-ish tuple, returns value."""
+    return value[0] + (value[1] << 128)
