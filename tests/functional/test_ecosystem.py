@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pytest
 from ape.types import AddressType
 from eth_typing import HexAddress, HexStr
@@ -13,7 +15,7 @@ EVENT_NAME = "balance_increased"
 
 class CustomABI(MethodABI):
     name: str = "Custom"
-    type: str = "function"
+    type: Literal["function"] = "function"
 
 
 @pytest.fixture(scope="module")
