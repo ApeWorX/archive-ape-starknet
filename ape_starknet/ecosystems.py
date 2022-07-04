@@ -1,4 +1,5 @@
 from enum import Enum
+from itertools import zip_longest
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
@@ -91,31 +92,44 @@ class Starknet(EcosystemAPI, StarknetBase):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> List[Any]:  # type: ignore
-        raw_data = [self.encode_primitive_value(v) if isinstance(v, str) else v for v in raw_data]
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> Any:  # type: ignore
+        if not raw_data:
+            return raw_data
 
-        def clear_lengths(arr):
-            arr_len = arr[0]
-            rest = arr[1:]
-            num_rest = len(rest)
-            return clear_lengths(rest) if arr_len == num_rest else arr
+        raw_data = [self.encode_primitive_value(v) for v in raw_data]
+        iter_data = iter(raw_data)
+        decoded: List[Any] = []
 
-        is_arr = (
-            len(abi.outputs) >= 2
-            and abi.outputs[0].name == "arr_len"
-            and abi.outputs[1].type == "felt*"
-        )
-        has_leftover_length = len(raw_data) > 1 and not is_arr
-        if (
-            len(abi.outputs) == 2
-            and is_arr
-            and len(raw_data) >= 2
-            and all([isinstance(i, int) for i in raw_data])
-        ) or has_leftover_length:
-            # Is array - check if need to strip off arr_len
-            return clear_lengths(raw_data)
+        # Given that the caller is StarkNetProvider.send_transaction().
+        # In the caller, we removed the first item which was the total items when
+        # a sender is specified to the invoke TX.
+        # Now, we are dealing with a 1-item array, it's safe to simply return it.
+        if len(raw_data) == 1:
+            return raw_data[0]
 
-        return raw_data
+        for abi_output_cur, abi_output_next in zip_longest(abi.outputs, abi.outputs[1:]):
+            if abi_output_cur.type == "Uint256":
+                # Unint256 are stored using 2 slots
+                decoded.append((next(iter_data), next(iter_data)))
+            elif (
+                abi_output_cur.type == "felt"
+                and abi_output_next
+                and abi_output_next.type == "felt*"
+            ):
+                # Array - strip off leading length
+                array_len = next(iter_data)
+                decoded.append([next(iter_data) for _ in range(array_len)])  # type: ignore
+            elif abi_output_cur.type == "felt*":
+                # The array was handled by the previous condition at the previous iteration
+                continue
+            else:
+                decoded.append(next(iter_data))
+
+        # Keep only the expected data instead of a 1-item array
+        if len(abi.outputs) == 1 or (len(abi.outputs) == 2 and abi.outputs[1].type == "felt*"):
+            decoded = decoded[0]
+
+        return decoded
 
     def encode_calldata(
         self,
