@@ -140,11 +140,13 @@ def test_array_inputs(contract, account):
 
 def test_external_call_array_outputs(contract, account):
     receipt = contract.get_array()
+    assert receipt.returndata == ["0x3", "0x1", "0x2", "0x3"]
     assert receipt.return_value == [1, 2, 3]
 
 
 def test_external_call_array_outputs_from_account(contract, account):
     receipt = contract.get_array(sender=account)
+    assert receipt.returndata == ["0x4", "0x3", "0x1", "0x2", "0x3"]
     assert receipt.return_value == [1, 2, 3]
 
 
