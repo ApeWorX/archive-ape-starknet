@@ -58,7 +58,7 @@ def test_balance(account):
 
 def test_import_with_passphrase(account_container):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
-    private_key = get_random_private_key()
+    private_key = int(get_random_private_key(), 16)
     address = hex(private_key)
 
     account_container.import_account(
