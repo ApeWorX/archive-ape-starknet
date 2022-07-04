@@ -154,7 +154,7 @@ class Starknet(EcosystemAPI, StarknetBase):
                 encoded_arg = self._pre_encode_value(call_arg)
                 pre_encoded_args.append(encoded_arg)
             elif (
-                input_type.name in ("arr_len", "call_array_len")
+                input_type.name.endswith("_len")
                 and index < last_index
                 and str(method_abi.inputs[index + 1].type).endswith("*")
             ):
