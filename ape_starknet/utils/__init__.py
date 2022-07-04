@@ -187,7 +187,11 @@ def convert_contract_class_to_contract_type(contract_class: ContractClass):
 
 def get_random_private_key() -> str:
     private_key = HexBytes(get_random_pkey()).hex()
-    key = private_key.replace("0x", "")
-    actual_len = len(key)
-    padding = "0" * (64 - actual_len)
-    return f"0x{padding}{key}"
+    return pad_hex_str(private_key)
+
+
+def pad_hex_str(value: str, to_length: int = 66) -> str:
+    val = value.replace("0x", "")
+    actual_len = len(val)
+    padding = "0" * (to_length - 2 - actual_len)
+    return f"0x{padding}{val}"
