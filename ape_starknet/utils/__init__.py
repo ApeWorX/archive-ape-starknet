@@ -15,12 +15,14 @@ from eth_utils import (
     to_hex,
 )
 from ethpm_types import ContractType
-from starknet_py.net.client import BadRequest  # type: ignore
-from starknet_py.net.models import TransactionType  # type: ignore
-from starknet_py.transaction_exceptions import TransactionRejectedError  # type: ignore
-from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
-from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+from hexbytes import HexBytes
+from starknet_py.net.client import BadRequest
+from starknet_py.net.models import TransactionType
+from starknet_py.transaction_exceptions import TransactionRejectedError
+from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
+from starkware.starknet.definitions.general_config import StarknetChainId
+from starkware.starknet.services.api.contract_class import ContractClass
+from starkware.starknet.services.api.feeder_gateway.response_objects import (
     DeclareSpecificInfo,
     DeploySpecificInfo,
     InvokeSpecificInfo,
@@ -186,3 +188,15 @@ def convert_contract_class_to_contract_type(contract_class: ContractClass):
 def from_uint(value: Tuple[int, int]) -> int:
     """Takes in Uint256-ish tuple, returns value."""
     return value[0] + (value[1] << 128)
+
+
+def get_random_private_key() -> str:
+    private_key = HexBytes(get_random_pkey()).hex()
+    return pad_hex_str(private_key)
+
+
+def pad_hex_str(value: str, to_length: int = 66) -> str:
+    val = value.replace("0x", "")
+    actual_len = len(val)
+    padding = "0" * (to_length - 2 - actual_len)
+    return f"0x{padding}{val}"
