@@ -248,11 +248,6 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
         if isinstance(value, str):
             return int(value, 16)
 
-    @validator("nonce", pre=True, allow_reuse=True)
-    def validate(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-
     @validator("block_hash", pre=True, allow_reuse=True)
     def validate_block_hash(cls, value):
         return HexBytes(value).hex() if value else value
