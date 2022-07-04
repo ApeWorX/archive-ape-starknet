@@ -220,8 +220,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise ProviderNotConnectedError()
 
         starknet_obj = txn.as_starknet_object()
-        return_value = self.client.call_contract_sync(starknet_obj)
-        return self.starknet.decode_returndata(txn.method_abi, return_value)  # type: ignore
+        return self.client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
