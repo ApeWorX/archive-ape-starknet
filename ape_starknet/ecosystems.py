@@ -142,7 +142,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         transformer = DataTransformer(method_abi.dict(), id_manager)
         pre_encoded_args: List[Any] = []
         index = 0
-        last_index = len(method_abi.inputs) - 1
+        last_index = min(len(method_abi.inputs), len(call_args)) - 1
         did_process_array_during_arr_len = False
 
         for call_arg, input_type in zip(call_args, method_abi.inputs):
@@ -161,7 +161,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             ):
                 pre_encoded_arg = self._pre_encode_value(call_arg)
 
-                if isinstance(pre_encoded_arg, int) and index + 1 < len(call_args):
+                if isinstance(pre_encoded_arg, int):
                     # 'arr_len' was provided.
                     array_index = index + 1
                     pre_encoded_array = self._pre_encode_array(call_args[array_index])
