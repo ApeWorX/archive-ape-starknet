@@ -138,7 +138,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             ):
                 pre_encoded_arg = self._pre_encode_value(call_arg)
 
-                if isinstance(pre_encoded_arg, int):
+                if isinstance(pre_encoded_arg, int) and index + 1 < len(call_args):
                     # 'arr_len' was provided.
                     array_index = index + 1
                     pre_encoded_array = self._pre_encode_array(call_args[array_index])
