@@ -16,15 +16,13 @@ from eth_utils import (
 )
 from ethpm_types import ContractType
 from hexbytes import HexBytes
-from starknet_py.net.client import BadRequest  # type: ignore
-from starknet_py.net.models import TransactionType  # type: ignore
-from starknet_py.transaction_exceptions import TransactionRejectedError  # type: ignore
-from starkware.crypto.signature.signature import (
-    get_random_private_key as get_random_pkey,  # type: ignore
-)
-from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
-from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+from starknet_py.net.client import BadRequest
+from starknet_py.net.models import TransactionType
+from starknet_py.transaction_exceptions import TransactionRejectedError
+from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
+from starkware.starknet.definitions.general_config import StarknetChainId
+from starkware.starknet.services.api.contract_class import ContractClass
+from starkware.starknet.services.api.feeder_gateway.response_objects import (
     DeclareSpecificInfo,
     DeploySpecificInfo,
     InvokeSpecificInfo,
