@@ -1,10 +1,7 @@
-from dataclasses import dataclass
-from typing import List
-
 import pytest
 from ape.types import AddressType
 from eth_typing import HexAddress, HexStr
-from ethpm_types.abi import EventABIType
+from ethpm_types.abi import EventABIType, MethodABI
 from hexbytes import HexBytes
 from starkware.starknet.public.abi import get_selector_from_name
 
@@ -12,6 +9,11 @@ INT_ADDRESS = 145431295642523156495502528569709122766035992393119639260815344266
 STR_ADDRESS = "0x20271ea04cB854E105d948019Ba1FCdFa61d76D73539700Ff6DD456bcB7bF443"
 HEXBYTES_ADDRESS = HexBytes(STR_ADDRESS)
 EVENT_NAME = "balance_increased"
+
+
+class CustomABI(MethodABI):
+    name: str = "Custom"
+    type: str = "function"
 
 
 @pytest.fixture(scope="module")
@@ -50,20 +52,13 @@ def test_decode_logs(ecosystem, event_abi, raw_logs):
     assert actual[0].amount == "4321"
 
 
-@dataclass
-class CustomABI:
-    outputs: List[EventABIType]
-    name: str = "Custom"
-    type: str = "function"
-
-
 @pytest.mark.parametrize(
     "abi, raw_data, expected",
     [
         # Array without "arr_len" exact name
         (
             CustomABI(
-                [
+                outputs=[
                     EventABIType(name="response_len", type="felt"),
                     EventABIType(name="response", type="felt*"),
                 ],
@@ -74,7 +69,7 @@ class CustomABI:
         # Mimic a call made via account.__execute__()
         (
             CustomABI(
-                [
+                outputs=[
                     EventABIType(name="response_len", type="felt"),
                     EventABIType(name="response", type="felt*"),
                 ],
@@ -85,7 +80,7 @@ class CustomABI:
         # More than 2 arguments, but no array in there
         (
             CustomABI(
-                [
+                outputs=[
                     EventABIType(name="_pid", type="felt"),
                     EventABIType(name="_stable", type="felt"),
                     EventABIType(name="_token0", type="felt"),
@@ -113,26 +108,26 @@ class CustomABI:
         ),
         # Uint256 with no "high" value
         (
-            CustomABI([EventABIType(name="res", type="Uint256")]),
+            CustomABI(outputs=[EventABIType(name="res", type="Uint256")]),
             [63245553202367, 0],
             (63245553202367, 0),
         ),
         # Uint256 with "high" value
         (
-            CustomABI([EventABIType(name="res", type="Uint256")]),
+            CustomABI(outputs=[EventABIType(name="res", type="Uint256")]),
             [42, 2],
             (42, 2),
         ),
         # Uint256 with specific value known to break old plugin version (<=0.3.0a0)
         (
-            CustomABI([EventABIType(name="balance", type="Uint256")]),
+            CustomABI(outputs=[EventABIType(name="balance", type="Uint256")]),
             [1, 0],
             (1, 0),
         ),
         # Mix: more than 2 arguments, several arrays, and Uint256
         (
             CustomABI(
-                [
+                outputs=[
                     EventABIType(name="start", type="felt"),
                     EventABIType(name="arr_len", type="felt"),
                     EventABIType(name="arr", type="felt*"),
@@ -170,4 +165,4 @@ class CustomABI:
     ],
 )
 def test_decode_returndata(abi, raw_data, expected, ecosystem):
-    assert ecosystem.decode_returndata(abi, raw_data) == expected
+    assert ecosystem.decode_returndata(abi, raw_data) == expected  # type: ignore
