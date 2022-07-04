@@ -28,7 +28,6 @@ from starknet_py.net.account.compiled_account_contract import (  # type: ignore
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner  # type: ignore
 from starknet_py.utils.crypto.facade import ECSignature, sign_calldata  # type: ignore
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig  # type: ignore
-from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
 from starkware.crypto.signature.signature import private_to_stark_key  # type: ignore
 from starkware.starknet.core.os.contract_address.contract_address import (  # type: ignore
     calculate_contract_address_from_hash,
@@ -37,7 +36,11 @@ from starkware.starknet.services.api.contract_class import ContractClass  # type
 
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
-from ape_starknet.utils import convert_contract_class_to_contract_type, get_chain_id
+from ape_starknet.utils import (
+    convert_contract_class_to_contract_type,
+    get_chain_id,
+    get_random_private_key,
+)
 from ape_starknet.utils.basemodel import StarknetBase
 
 APP_KEY_FILE_KEY = "ape-starknet"
@@ -261,7 +264,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         network_name = self.provider.network.name
         logger.info(f"Deploying an account to '{network_name}' network ...")
 
-        private_key = private_key or get_random_private_key()
+        private_key = private_key or int(get_random_private_key(), 16)
         key_pair = KeyPair.from_private_key(private_key)
 
         account_container = ContractContainer(contract_type=OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE)

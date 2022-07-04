@@ -15,9 +15,13 @@ from eth_utils import (
     to_hex,
 )
 from ethpm_types import ContractType
+from hexbytes import HexBytes
 from starknet_py.net.client import BadRequest  # type: ignore
 from starknet_py.net.models import TransactionType  # type: ignore
 from starknet_py.transaction_exceptions import TransactionRejectedError  # type: ignore
+from starkware.crypto.signature.signature import (
+    get_random_private_key as get_random_pkey,  # type: ignore
+)
 from starkware.starknet.definitions.general_config import StarknetChainId  # type: ignore
 from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
 from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
@@ -181,3 +185,16 @@ def convert_contract_class_to_contract_type(contract_class: ContractClass):
             "abi": contract_class.abi,
         }
     )
+
+
+def get_random_private_key() -> str:
+    tries = 0
+    private_key = HexBytes(get_random_pkey()).hex()
+    while tries < 10 and len(private_key) != 66:
+        private_key = HexBytes(get_random_pkey()).hex()
+        tries += 1
+
+    if not len(private_key) == 66:
+        raise ValueError(f"Failed to create random private key after '{tries}' attempts.")
+
+    return private_key
