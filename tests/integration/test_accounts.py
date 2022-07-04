@@ -4,8 +4,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from hexbytes import HexBytes
-from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
+
+from ape_starknet.utils import get_random_private_key
 
 from ..conftest import CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
 from .conftest import ApeStarknetCliRunner
@@ -87,7 +87,15 @@ def test_delete(accounts_runner, existing_key_file_account):
     )
 
 
-def test_import(accounts_runner, existing_key_file_account, account_container):
+@pytest.mark.parametrize(
+    "private_key",
+    (
+        get_random_private_key(),
+        "0x0097a6a4998e2eb47d4cea623c9f8b3048764fc38a92616bdf1c3e68be8b5e28",
+        267944034277627769235577208827196223019601239705086925741947749358138777128,
+    ),
+)
+def test_import(accounts_runner, existing_key_file_account, account_container, private_key):
     network = "starknet:testnet"  # NOTE: Does not actually connect
     account_path = account_container.data_folder / f"{EXISTING_KEY_FILE_ALIAS}.json"
     address = existing_key_file_account.address
@@ -96,7 +104,6 @@ def test_import(accounts_runner, existing_key_file_account, account_container):
         # Corrupted from previous test
         account_path.unlink()
 
-    private_key = HexBytes(get_random_private_key()).hex()
     accounts_runner.invoke(
         "import",
         EXISTING_KEY_FILE_ALIAS,

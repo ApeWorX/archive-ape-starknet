@@ -9,15 +9,15 @@ from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
-from starknet_py.constants import OZ_PROXY_STORAGE_KEY  # type: ignore
-from starknet_py.net.models.address import parse_address  # type: ignore
-from starknet_py.net.models.chains import StarknetChainId  # type: ignore
-from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
-from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
-from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
-from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
+from starknet_py.constants import OZ_PROXY_STORAGE_KEY
+from starknet_py.net.models.address import parse_address
+from starknet_py.net.models.chains import StarknetChainId
+from starknet_py.utils.data_transformer import DataTransformer
+from starkware.starknet.definitions.fields import ContractAddressSalt
+from starkware.starknet.definitions.transaction_type import TransactionType
+from starkware.starknet.public.abi import get_selector_from_name
+from starkware.starknet.public.abi_structs import identifier_manager_from_abi
+from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import StarknetEcosystemError
 from ape_starknet.transactions import (
@@ -128,7 +128,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         transformer = DataTransformer(method_abi.dict(), id_manager)
         pre_encoded_args: List[Any] = []
         index = 0
-        last_index = len(method_abi.inputs) - 1
+        last_index = min(len(method_abi.inputs), len(call_args)) - 1
         did_process_array_during_arr_len = False
 
         for call_arg, input_type in zip(call_args, method_abi.inputs):
@@ -140,7 +140,8 @@ class Starknet(EcosystemAPI, StarknetBase):
                 encoded_arg = self._pre_encode_value(call_arg)
                 pre_encoded_args.append(encoded_arg)
             elif (
-                input_type.name in ("arr_len", "call_array_len")
+                input_type.name is not None
+                and input_type.name.endswith("_len")
                 and index < last_index
                 and str(method_abi.inputs[index + 1].type).endswith("*")
             ):

@@ -4,7 +4,7 @@ from ape.api import Address
 from ape.contracts import ContractInstance
 from ape.exceptions import ContractError
 from ape.types import AddressType
-from starknet_devnet.fee_token import FeeToken  # type: ignore
+from starknet_devnet.fee_token import FeeToken
 
 from ape_starknet.ecosystems import StarknetProxy
 from ape_starknet.utils import convert_contract_class_to_contract_type

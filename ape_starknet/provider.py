@@ -13,16 +13,16 @@ from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
-from starknet_py.net import Client as StarknetClient  # type: ignore
-from starknet_py.net.models import parse_address  # type: ignore
-from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.services.api.feeder_gateway.response_objects import (  # type: ignore
+from starknet_py.net import Client as StarknetClient
+from starknet_py.net.models import parse_address
+from starkware.starknet.definitions.transaction_type import TransactionType
+from starkware.starknet.services.api.feeder_gateway.response_objects import (
     DeclareSpecificInfo,
     DeploySpecificInfo,
     InvokeSpecificInfo,
     StarknetBlock,
 )
-from starkware.starkware_utils.error_handling import StarkErrorCode  # type: ignore
+from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
@@ -220,8 +220,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise ProviderNotConnectedError()
 
         starknet_obj = txn.as_starknet_object()
-        return_value = self.client.call_contract_sync(starknet_obj)
-        return self.starknet.decode_returndata(txn.method_abi, return_value)  # type: ignore
+        return self.client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
