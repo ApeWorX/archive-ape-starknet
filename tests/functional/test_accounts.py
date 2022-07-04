@@ -1,7 +1,7 @@
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
 from eth_utils import remove_0x_prefix
-from starkware.cairo.lang.vm.cairo_runner import pedersen_hash  # type: ignore
+from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
 from ape_starknet.utils import get_random_private_key, is_hex_address, to_checksum_address
 

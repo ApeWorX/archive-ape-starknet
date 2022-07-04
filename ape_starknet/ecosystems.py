@@ -10,15 +10,15 @@ from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
-from starknet_py.constants import OZ_PROXY_STORAGE_KEY  # type: ignore
-from starknet_py.net.models.address import parse_address  # type: ignore
-from starknet_py.net.models.chains import StarknetChainId  # type: ignore
-from starknet_py.utils.data_transformer import DataTransformer  # type: ignore
-from starkware.starknet.definitions.fields import ContractAddressSalt  # type: ignore
-from starkware.starknet.definitions.transaction_type import TransactionType  # type: ignore
-from starkware.starknet.public.abi import get_selector_from_name  # type: ignore
-from starkware.starknet.public.abi_structs import identifier_manager_from_abi  # type: ignore
-from starkware.starknet.services.api.contract_class import ContractClass  # type: ignore
+from starknet_py.constants import OZ_PROXY_STORAGE_KEY
+from starknet_py.net.models.address import parse_address
+from starknet_py.net.models.chains import StarknetChainId
+from starknet_py.utils.data_transformer import DataTransformer
+from starkware.starknet.definitions.fields import ContractAddressSalt
+from starkware.starknet.definitions.transaction_type import TransactionType
+from starkware.starknet.public.abi import get_selector_from_name
+from starkware.starknet.public.abi_structs import identifier_manager_from_abi
+from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import StarknetEcosystemError
 from ape_starknet.transactions import (
