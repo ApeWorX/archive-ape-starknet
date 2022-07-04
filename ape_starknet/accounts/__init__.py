@@ -40,6 +40,7 @@ from ape_starknet.utils import (
     convert_contract_class_to_contract_type,
     get_chain_id,
     get_random_private_key,
+    pad_hex_str,
 )
 from ape_starknet.utils.basemodel import StarknetBase
 
@@ -212,7 +213,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         passphrase: Optional[str] = None,
     ):
         if isinstance(private_key, str):
-            private_key = private_key.strip("'\"")
+            private_key = pad_hex_str(private_key.strip("'\""))
             private_key = int(private_key, 16)
 
         network_name = _clean_network_name(network_name)
