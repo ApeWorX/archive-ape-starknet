@@ -4,8 +4,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from hexbytes import HexBytes
-from starkware.crypto.signature.signature import get_random_private_key  # type: ignore
+
+from ape_starknet.utils import get_random_private_key
 
 from ..conftest import CONTRACT_ADDRESS, EXISTING_KEY_FILE_ALIAS, PASSWORD
 from .conftest import ApeStarknetCliRunner
@@ -96,7 +96,7 @@ def test_import(accounts_runner, existing_key_file_account, account_container):
         # Corrupted from previous test
         account_path.unlink()
 
-    private_key = HexBytes(get_random_private_key()).hex()
+    private_key = get_random_private_key()
     accounts_runner.invoke(
         "import",
         EXISTING_KEY_FILE_ALIAS,
