@@ -256,12 +256,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         receipt = self.get_transaction(txn_hash)
 
         if invoking and isinstance(txn, InvokeFunctionTransaction):
-            return_value = self.starknet.decode_returndata(
-                txn.method_abi, txn_info.get("result", [])
-            )
+            returndata = txn_info.get("result", [])
+            receipt.returndata = returndata.copy()
+
+            return_value = self.starknet.decode_returndata(txn.method_abi, returndata)
             if isinstance(return_value, (list, tuple)) and len(return_value) == 1:
                 return_value = return_value[0]
-
             receipt.return_value = return_value
 
         return receipt
