@@ -212,9 +212,11 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         private_key: Union[int, str],
         passphrase: Optional[str] = None,
     ):
-        if isinstance(private_key, str):
+        if isinstance(private_key, str) and private_key.startswith("0x"):
             private_key = pad_hex_str(private_key.strip("'\""))
             private_key = int(private_key, 16)
+        elif isinstance(private_key, str):
+            private_key = int(private_key)
 
         network_name = _clean_network_name(network_name)
         key_pair = KeyPair.from_private_key(private_key)
@@ -672,9 +674,9 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
     def __encrypt_key_file(self, passphrase: str, private_key: Optional[int] = None) -> Dict:
         private_key = self._get_key(passphrase=passphrase) if private_key is None else private_key
-        key_bytes = HexBytes(private_key)
+        key_str = pad_hex_str(HexBytes(private_key).hex())
         passphrase_bytes = text_if_str(to_bytes, passphrase)
-        return create_keyfile_json(key_bytes, passphrase_bytes, kdf="scrypt")
+        return create_keyfile_json(HexBytes(key_str), passphrase_bytes, kdf="scrypt")
 
     def __decrypt_key_file(self, passphrase: str) -> HexBytes:
         key_file_dict = json.loads(self.key_file_path.read_text())
