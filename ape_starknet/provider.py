@@ -258,13 +258,18 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         if invoking and isinstance(txn, InvokeFunctionTransaction):
             returndata = txn_info.get("result", [])
             receipt.returndata = returndata.copy()
+            abi = txn.method_abi
 
-            if txn.signature:
-                # When specifying a sender, the return data is always
-                # prefixed with the number of items; remove it
+            if txn.original_method_abi:
+                # When that special attribute is set means the transation came from an
+                # account-specific call: it implies the original method ABI was replaced
+                # with the specific execute ABI in BaseStarknetAccount.prepare_transaction(),
+                # and that the return data is always prefixed with the number of items.
+                # We need to restore the former, and remove the later.
+                abi = txn.original_method_abi
                 returndata = returndata[1:]
 
-            return_value = self.starknet.decode_returndata(txn.method_abi, returndata)
+            return_value = self.starknet.decode_returndata(abi, returndata)
             receipt.return_value = return_value
 
         return receipt

@@ -144,10 +144,49 @@ def test_external_call_array_outputs(contract, account):
     assert receipt.return_value == [1, 2, 3]
 
 
+def test_external_call_felt_outputs_from_account(contract, account):
+    receipt = contract.get_felt(sender=account)
+    assert receipt.returndata == ["0x1", "0x2"]
+    assert receipt.return_value == 2
+
+
 def test_external_call_array_outputs_from_account(contract, account):
     receipt = contract.get_array(sender=account)
     assert receipt.returndata == ["0x4", "0x3", "0x1", "0x2", "0x3"]
     assert receipt.return_value == [1, 2, 3]
+
+
+def test_external_call_uint256_outputs_from_account(contract, account):
+    receipt = contract.get_uint256(sender=account)
+    assert receipt.returndata == ["0x2", "0x1", "0x0"]
+    assert receipt.return_value == (1, 0)
+
+
+def test_external_call_uint256s_outputs_from_account(contract, account):
+    receipt = contract.get_uint256s(sender=account)
+    assert receipt.returndata == ["0x6", "0x7b", "0x0", "0x0", "0x7b", "0x84", "0x7b"]
+    assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
+
+
+def test_external_call_mixed_outputs_from_account(contract, account):
+    receipt = contract.get_mix(sender=account)
+    assert receipt.returndata == [
+        "0xd",
+        "0x1",
+        "0x2",
+        "0x3",
+        "0x4",
+        "0x5",
+        "0x6",
+        "0x3",
+        "0x8",
+        "0x9",
+        "0xa",
+        "0xb",
+        "0xc",
+        "0xd",
+    ]
+    assert receipt.return_value == [1, [3, 4], (5, 6), [8, 9, 10], 11, (12, 13)]
 
 
 def test_view_call_array_outputs(contract, account):

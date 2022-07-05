@@ -7,6 +7,7 @@ from starkware.cairo.common.hash import hash2
 from starkware.cairo.common.signature import (
     verify_ecdsa_signature)
 from starkware.cairo.common.bool import TRUE, FALSE
+from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import get_caller_address
 
 @storage_var
@@ -90,6 +91,71 @@ func get_array{
     let (current_count) = array_get_counter.read()
     array_get_counter.write(current_count + 1)
     return (ARRAY_SIZE, ptr)
+end
+
+@external
+func get_felt{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (res: felt):
+    return (res=2)
+end
+
+@external
+func get_mix{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (
+            start: felt,
+            arr_len: felt,
+            arr: felt*,
+            some_uint256: Uint256,
+            arr2_len: felt,
+            arr2: felt*,
+            suffix: felt,
+            last_uint256: Uint256,
+        ):
+    alloc_locals
+
+    let (local arr : felt*) = alloc()
+    assert arr[0] = 3
+    assert arr[1] = 4
+
+    let some_uint256 = Uint256(5, 6)
+
+    let (local arr2 : felt*) = alloc()
+    assert arr2[0] = 8
+    assert arr2[1] = 9
+    assert arr2[2] = 10
+
+    let last_uint256 = Uint256(12, 13)
+
+    return (
+        start=1,
+        arr_len=2,
+        arr=arr,
+        some_uint256=some_uint256,
+        arr2_len=3,
+        arr2=arr2,
+        suffix=11,
+        last_uint256=last_uint256
+    )
+end
+
+@external
+func get_uint256{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (res: Uint256):
+    let res = Uint256(1, 0)
+    return (res=res)
+end
+
+@external
+func get_uint256s{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (res1: Uint256, res2: Uint256, res3: Uint256):
+    let res1 = Uint256(123, 0)
+    let res2 = Uint256(0, 123)
+    let res3 = Uint256(132, 123)
+    return (res1=res1, res2=res2, res3=res3)
 end
 
 @external
