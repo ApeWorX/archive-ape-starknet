@@ -100,13 +100,6 @@ class Starknet(EcosystemAPI, StarknetBase):
         iter_data = iter(raw_data)
         decoded: List[Any] = []
 
-        # Given that the caller is StarkNetProvider.send_transaction().
-        # In the caller, we removed the first item which was the total items when
-        # a sender is specified to the invoke TX.
-        # Now, we are dealing with a 1-item array, it's safe to simply return it.
-        if len(raw_data) == 1:
-            return raw_data[0]
-
         for abi_output_cur, abi_output_next in zip_longest(abi.outputs, abi.outputs[1:]):
             if abi_output_cur.type == "Uint256":
                 # Unint256 are stored using 2 slots
