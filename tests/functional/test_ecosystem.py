@@ -67,17 +67,6 @@ def test_decode_logs(ecosystem, event_abi, raw_logs):
             [1, 1],
             [1],
         ),
-        # Mimic a call made via account.__execute__()
-        (
-            CustomABI(
-                outputs=[
-                    EventABIType(name="response_len", type="felt"),
-                    EventABIType(name="response", type="felt*"),
-                ],
-            ),
-            [42],
-            42,
-        ),
         # More than 2 arguments, but no array in there
         (
             CustomABI(
