@@ -50,6 +50,9 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 
 
 def to_checksum_address(address: RawAddress) -> AddressType:
+    if isinstance(address, bytes):
+        address = HexBytes(address).hex()
+
     address_int = parse_address(address)
     address_str = pad_hex_str(HexBytes(address_int).hex().lower())
     chars = [c for c in remove_0x_prefix(HexStr(address_str))]
