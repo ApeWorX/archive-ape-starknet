@@ -35,7 +35,7 @@ class TokenManager(StarknetBase):
             "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
         )
         testnet_eth = self.starknet.decode_address(
-            "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+            "0x2dd93e385742984bf2fc887cd5d8b5ec6917d80af09cf7a00a63710ad51ba53"
         )
         testnet_test_token = self.starknet.decode_address(
             "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458ce245bc10"
@@ -108,7 +108,8 @@ class TokenManager(StarknetBase):
         if address in self.token_proxy_infos:
             proxy_info = self.token_proxy_infos[address]
         else:
-            proxy_info = self.starknet.get_proxy_info(address)
+            contract_type = self.provider.network.explorer.get_contract_type(address)
+            proxy_info = self.starknet._get_proxy_info(address, contract_type)
             self.token_proxy_infos[address] = proxy_info
 
         if proxy_info:

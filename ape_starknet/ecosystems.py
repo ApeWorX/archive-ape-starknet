@@ -376,13 +376,9 @@ class Starknet(EcosystemAPI, StarknetBase):
             )
 
     def get_proxy_info(self, address: AddressType) -> Optional[StarknetProxy]:
-        if address in self.proxy_info_cache:
-            return self.proxy_info_cache[address]
-
-        contract_type = self.provider.network.explorer.get_contract_type(address)
-        proxy_info = self._get_proxy_info(address, contract_type)
-        self.proxy_info_cache[address] = proxy_info
-        return proxy_info
+        # Proxies are handled elsewhere in Starknet due to ecosystem differences
+        # (namely, contract classes function different than proxy contracts in Ethereum).
+        return None
 
     def _get_proxy_info(
         self, address: AddressType, contract_type: ContractType

@@ -135,7 +135,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        return self.get_code_and_abi(address)["bytecode"]
+        # NOTE: Always return truthy value for code so that ape core works properly
+        return self.get_code_and_abi(address).get("bytecode", b"PROXY")
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
@@ -247,6 +248,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
+        print("ASDFASDF")
         txn_info = self._send_transaction(txn, token=token)
         invoking = txn.type == TransactionType.INVOKE_FUNCTION
 
@@ -327,7 +329,15 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]):
-        return self.starknet_client.get_code_sync(parse_address(address))
+        address_int = parse_address(address)
+        # Assume it's an instance
+        try:
+            self.starknet_client.get_code_sync(address_int)
+        except Exception:
+            pass
+
+        class_hash = self.starknet_client.get_class_hash_at_sync(address_int)
+        return self.starknet_client.get_class_by_hash_sync(class_hash)
 
     @handle_client_errors
     def declare(self, contract_type: ContractType) -> ContractDeclaration:
