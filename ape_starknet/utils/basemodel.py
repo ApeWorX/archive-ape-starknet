@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from ape_starknet.accounts import StarknetAccountContracts
     from ape_starknet.ecosystems import Starknet
     from ape_starknet.provider import StarknetProvider
+    from ape_starknet.tokens import TokenManager
 
 
 class StarknetBase(ManagerAccessMixin):
@@ -25,3 +26,9 @@ class StarknetBase(ManagerAccessMixin):
     @property
     def account_contracts(self) -> "StarknetAccountContracts":
         return self.account_manager.containers["starknet"]  # type: ignore
+
+    @property
+    def tokens(self) -> "TokenManager":
+        from ape_starknet import tokens
+
+        return tokens

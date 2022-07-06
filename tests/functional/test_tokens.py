@@ -2,8 +2,10 @@ from pathlib import Path
 
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractInstance
 
 from ape_starknet import tokens as _tokens
+from ape_starknet.tokens import ERC20
 
 
 @pytest.fixture(scope="module")
@@ -21,7 +23,8 @@ def proxy_token_contract(config, account, token_initial_supply, token_contract, 
     project_path = Path(__file__).parent.parent / "projects" / "proxy"
 
     with config.using_project(project_path):
-        return project.get_contract("Proxy").deploy(token_contract.address)
+        contract = project.get_contract("Proxy").deploy(token_contract.address)
+        return ContractInstance(contract.address, contract_type=ERC20)
 
 
 @pytest.fixture(scope="module")

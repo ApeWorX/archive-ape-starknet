@@ -548,11 +548,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return self.key_file_path.stem
 
     def get_contract_type(self) -> ContractType:
-        contract_type = self.chain_manager.contracts.get(self.address)
-        if not contract_type:
-            raise AccountsError(f"Account '{self.address}' was expected but not found.")
-
-        return contract_type
+        return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
 
     def write(
         self,

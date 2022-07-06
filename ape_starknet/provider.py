@@ -329,15 +329,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]):
         address_int = parse_address(address)
-
-        # Assume it's an instance
-        try:
-            return self.starknet_client.get_code_sync(address_int)
-        except Exception:
-            pass
-
-        class_hash = self.starknet_client.get_class_hash_at_sync(address_int)
-        return self.starknet_client.get_class_by_hash_sync(class_hash)
+        return self.starknet_client.get_code_sync(address_int)
 
     @handle_client_errors
     def declare(self, contract_type: ContractType) -> ContractDeclaration:
