@@ -1,6 +1,7 @@
 from typing import List, cast
 
 import click
+from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.cli import (
     NetworkBoundCommand,
     Path,
@@ -104,23 +105,31 @@ def _list(cli_ctx):
 @click.option("--keyfile", help="Import an existing key-file", type=Path())
 def _import(cli_ctx, alias, network, address, keyfile):
     """Add an existing account"""
+
     container = _get_container(cli_ctx)
+
+    with cli_ctx.network_manager.parse_network_choice(network) as provider:
+        network_name = provider.network.name
+
+    if network_name == LOCAL_NETWORK_NAME:
+        cli_ctx.abort("Must use --network option to specify non-local network.")
+
     if alias in container.aliases:
         existing_account = container.load(alias)
 
-        if existing_account.get_deployment(network) or not isinstance(
+        if existing_account.get_deployment(network_name) or not isinstance(
             existing_account, StarknetKeyfileAccount
         ):
-            cli_ctx.abort(f"Account already imported with '{network}' network.")
+            cli_ctx.abort(f"Account already imported with '{network_name}' network.")
 
-        click.echo(f"Importing existing account to network '{network}'.")
-        existing_account.add_deployment(network, address)
+        click.echo(f"Importing existing account to network '{network_name}'.")
+        existing_account.add_deployment(network_name, address)
 
     elif keyfile:
         container.import_account_from_key_file(alias, keyfile)
     elif address:
         private_key = click.prompt("Enter private key", hide_input=True)
-        container.import_account(alias, network, address, private_key)
+        container.import_account(alias, network_name, address, private_key)
     else:
         cli_ctx.abort("Please provide either --keyfile or --address to import this account.")
 
