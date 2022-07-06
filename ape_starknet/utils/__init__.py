@@ -62,7 +62,8 @@ def to_checksum_address(address: RawAddress) -> AddressType:
         msg = f"Value must be any string, int, or bytes, instead got type {type(address)}"
         raise ValueError(msg) from exc
 
-    cleaned_address = remove_0x_prefix(HexStr(hex_address))
+    hex_address = HexStr(pad_hex_str(hex_address))
+    cleaned_address = remove_0x_prefix(hex_address)
     address_hash = encode_hex(keccak(text=cleaned_address))
 
     checksum_address = add_0x_prefix(

@@ -1,4 +1,4 @@
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 from ape.api import ExplorerAPI, ReceiptAPI
 from ape.types import AddressType
@@ -12,6 +12,8 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         "testnet": "https://goerli.voyager.online",
         "mainnet": "https://voyager.online",
     }
+
+    cached_code: Dict[AddressType, Dict] = {}
 
     @property
     def base_uri(self) -> str:
@@ -27,20 +29,11 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         return f"{base_uri}/txns/{transaction_hash}" if base_uri else ""
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
-        code = self.provider.get_code_and_abi(address)
+        if address not in self.cached_code:
+            self.cached_code[address] = self.provider.get_code_and_abi(address)
+
+        code = self.cached_code[address]
         contract_type = ContractType.parse_obj(code)
-        proxy_info = self.starknet._get_proxy_info(address, contract_type)
-        if proxy_info:
-            print("HERE")
-            contract_type = self.get_contract_type(proxy_info.target)
-            self.chain_manager.contracts[proxy_info.target] = contract_type
-            self.chain_manager.contracts._local_proxies[address] = proxy_info
-            if self.provider.network.name != LOCAL_NETWORK_NAME:
-                self.chain_manager.contracts._cache_proxy_info_to_disk(address, proxy_info)
-
-        else:
-            self.chain_manager.contracts[address] = contract_type
-
         return contract_type
 
     def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:

@@ -1,4 +1,3 @@
-import contextlib
 import json
 import random
 from dataclasses import dataclass
@@ -10,7 +9,7 @@ from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer
-from ape.exceptions import AccountsError, ProviderError, SignatureError
+from ape.exceptions import AccountsError, SignatureError
 from ape.logging import logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
 from ape.utils import abstractmethod, cached_property
@@ -19,7 +18,6 @@ from eth_utils import text_if_str, to_bytes
 from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
-from services.external_api.client import BadRequest  # type: ignore
 from starknet_devnet.account import Account  # type: ignore
 from starknet_py.net import KeyPair  # type: ignore
 from starknet_py.net.account.compiled_account_contract import (  # type: ignore
@@ -240,7 +238,8 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         # Ensure contract gets cached
         if not self.provider.is_connected:
-            with self.starknet.get_network(network_name).use_provider() as provider:
+            network = self.starknet.get_network(network_name)
+            with network.use_provider(network.default_provider or "starknet"):
                 _ = self.chain_manager.contracts[address]
         else:
             _ = self.chain_manager.contracts[address]

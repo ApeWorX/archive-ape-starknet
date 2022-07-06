@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
-from xmlrpc.client import FastMarshaller
 
 import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
@@ -61,7 +60,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @property
     def is_connected(self) -> bool:
-        was_successful = FastMarshaller
+        was_successful = False
         try:
             urlopen(self.uri)
             was_successful = True
@@ -328,8 +327,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]):
-        address_int = address if isinstance(address, int) else parse_address(address)
-        return self.starknet_client.get_code_sync(address_int)
+        return self.starknet_client.get_code_sync(parse_address(address))
 
     @handle_client_errors
     def declare(self, contract_type: ContractType) -> ContractDeclaration:
