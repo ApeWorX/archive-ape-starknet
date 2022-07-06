@@ -268,7 +268,10 @@ class Starknet(EcosystemAPI, StarknetBase):
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
         # NOTE: This method only works for invoke-transactions
-        contract_type = self.provider.network.explorer.get_contract_type(address)
+        contract_type = self.starknet_explorer.get_contract_type(address)
+        if not contract_type:
+            raise ValueError(f"No contract found at address '{address}'.")
+
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
 
         return InvokeFunctionTransaction(
