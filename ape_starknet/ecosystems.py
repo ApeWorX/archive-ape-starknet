@@ -374,22 +374,22 @@ class Starknet(EcosystemAPI, StarknetBase):
             )
 
     def get_proxy_info(self, address: AddressType) -> Optional[StarknetProxy]:
-        contract = self.chain_manager.contracts.instance_at(address)
-        if not isinstance(contract, ContractInstance):
-            return None
+        contract_type = self.provider.network.explorer.get_contract_type(address)
+        return self._get_proxy_info(address, self.chain_manager.contracts[address])
 
+    def _get_proxy_info(self, address: AddressType, contract_type: ContractType) -> StarknetProxy:
         proxy_type: Optional[ProxyType] = None
         target: Optional[int] = None
 
         # Legacy proxy check
-        if "implementation" in contract.contract_type.view_methods:
+        if "implementation" in contract_type.view_methods:
             instance = self.chain_manager.contracts.instance_at(address)
             target = instance.implementation()  # type: ignore
             proxy_type = ProxyType.LEGACY
 
         # Argent-X proxy check
-        elif "get_implementation" in contract.contract_type.view_methods:
-            instance = self.chain_manager.contracts.instance_at(address)
+        elif "get_implementation" in contract_type.view_methods:
+            instance = self.chain_manager.contracts.instance_at(address) fa
             target = instance.get_implementation()  # type: ignore
             proxy_type = ProxyType.ARGENT_X
 

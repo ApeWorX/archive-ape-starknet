@@ -3,6 +3,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
+from xmlrpc.client import FastMarshaller
 
 import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
@@ -60,13 +61,19 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @property
     def is_connected(self) -> bool:
+        was_successful = FastMarshaller
         try:
             urlopen(self.uri)
-            return True
+            was_successful = True
         except HTTPError as err:
-            return err.code == 404  # Task failed successfully
+            was_successful = err.code == 404  # Task failed successfully
         except Exception:
-            return False
+            was_successful = False
+
+        if was_successful and self.client is None:
+            self.client = StarknetClient(self.uri, chain=self.chain_id)
+
+        return was_successful
 
     @property
     def starknet_client(self) -> StarknetClient:
@@ -320,8 +327,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
-    def get_code_and_abi(self, address: Union[str, AddressType]):
-        address_int = parse_address(address)
+    def get_code_and_abi(self, address: Union[str, AddressType, int]):
+        address_int = address if isinstance(address, int) else parse_address(address)
         return self.starknet_client.get_code_sync(address_int)
 
     @handle_client_errors

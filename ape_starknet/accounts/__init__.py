@@ -212,6 +212,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         private_key: Union[int, str],
         passphrase: Optional[str] = None,
     ):
+        address = self.starknet.decode_address(contract_address)
         if isinstance(private_key, str) and private_key.startswith("0x"):
             private_key = pad_hex_str(private_key.strip("'\""))
             private_key = int(private_key, 16)
@@ -220,7 +221,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         network_name = _clean_network_name(network_name)
         key_pair = KeyPair.from_private_key(private_key)
-        deployments = [{"network_name": network_name, "contract_address": contract_address}]
+        deployments = [{"network_name": network_name, "contract_address": address}]
 
         if network_name == LOCAL_NETWORK_NAME:
             account_data = {
@@ -237,14 +238,12 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
                 passphrase=passphrase, private_key=private_key, deployments=deployments
             )
 
-        # Add account contract to cache
-        address = self.starknet.decode_address(contract_address)
-        if self.network_manager.active_provider and self.provider.network.explorer:
-            # Skip errors when unable to store contract type.
-            with contextlib.suppress(ProviderError, BadRequest):
-                contract_type = self.provider.network.explorer.get_contract_type(address)
-                if contract_type:
-                    self.chain_manager.contracts[address] = contract_type
+        # Ensure contract gets cached
+        if not self.provider.is_connected:
+            with self.starknet.get_network(network_name).use_provider() as provider:
+                _ = self.chain_manager.contracts[address]
+        else:
+            _ = self.chain_manager.contracts[address]
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
