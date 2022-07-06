@@ -1,16 +1,13 @@
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
-from eth_utils import remove_0x_prefix
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
-from ape_starknet.utils import get_random_private_key, is_hex_address, to_checksum_address
+from ape_starknet.utils import is_hex_address
 
 
 def test_public_keys(existing_key_file_account, public_key):
     actual = existing_key_file_account.public_key
-    assert actual != public_key, "Result is not checksummed"
-    assert remove_0x_prefix(actual.lower()) == public_key
-    assert is_hex_address(actual)
+    assert actual == public_key
 
 
 def test_sign_message_using_key_file_account(existing_key_file_account, password):
@@ -58,17 +55,13 @@ def test_balance(account):
     assert account.balance > 0
 
 
-def test_import_with_passphrase(account_container):
+def test_import_with_passphrase(account_container, account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
-    private_key = int(get_random_private_key(), 16)
-    address = hex(private_key)
-
     account_container.import_account(
-        alias, LOCAL_NETWORK_NAME, address, private_key, passphrase="p@55W0rd"
+        alias, LOCAL_NETWORK_NAME, account.address, account._get_key(), passphrase="p@55W0rd"
     )
-
-    account = account_container.load(alias)
-    assert account.address == to_checksum_address(address)
+    new_account = account_container.load(alias)
+    assert new_account.address == account.address
 
 
 def test_transfer(account, second_account):

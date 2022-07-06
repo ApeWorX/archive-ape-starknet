@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
 from ape.types import AddressType, RawAddress
+from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
 from hexbytes import HexBytes
@@ -51,16 +52,19 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 def to_checksum_address(address: RawAddress) -> AddressType:
     address_int = parse_address(address)
     address_str = pad_hex_str(HexBytes(address_int).hex().lower())
-    chars = [c for c in remove_0x_prefix(address_str)]
+    chars = [c for c in remove_0x_prefix(HexStr(address_str))]
     hashed = [b for b in HexBytes(pedersen_hash(0, address_int))]
 
     for i in range(0, len(chars), 2):
-        if hashed[i >> 1] >> 4 >= 8:
-            chars[i] = chars[i].upper()
-        if (hashed[i >> 1] & 0x0F) >= 8:
-            chars[i + 1] = chars[i + 1].upper()
+        try:
+            if hashed[i >> 1] >> 4 >= 8:
+                chars[i] = chars[i].upper()
+            if (hashed[i >> 1] & 0x0F) >= 8:
+                chars[i + 1] = chars[i + 1].upper()
+        except IndexError:
+            continue
 
-    return add_0x_prefix("".join(chars))
+    return AddressType(HexAddress(add_0x_prefix(HexStr("".join(chars)))))
 
 
 def is_hex_address(value: Any) -> bool:

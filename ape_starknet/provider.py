@@ -248,7 +248,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
-        print("ASDFASDF")
         txn_info = self._send_transaction(txn, token=token)
         invoking = txn.type == TransactionType.INVOKE_FUNCTION
 
