@@ -234,11 +234,14 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
                 passphrase=passphrase, private_key=private_key, deployments=deployments
             )
 
-        # Cache contract type
-        account = self[address]
+        # Ensure contract gets cached
         network = self.starknet.get_network(network_name)
         with network.use_provider(network.default_provider or "starknet"):
-            self.chain_manager.contracts[address] = account.get_contract_type()
+            contract_type = self.starknet_explorer.get_contract_type(address)
+            if not contract_type:
+                raise ValueError(f"Failed to get contract type for account '{address}'.")
+
+            self.chain_manager.contracts[address] = contract_type
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
