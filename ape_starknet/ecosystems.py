@@ -386,7 +386,6 @@ class Starknet(EcosystemAPI, StarknetBase):
         proxy_type: Optional[ProxyType] = None
         target: Optional[int] = None
         instance = self.create_contract(address, contract_type)
-
         # Legacy proxy check
         if "implementation" in contract_type.view_methods:
             target = instance.implementation()  # type: ignore

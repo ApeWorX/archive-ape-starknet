@@ -29,11 +29,41 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         return f"{base_uri}/txns/{transaction_hash}" if base_uri else ""
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
-        if address not in self.cached_code:
-            self.cached_code[address] = self.provider.get_code_and_abi(address)
+        def _get_contract_type(address: AddressType) -> ContractType:
+            if address not in self.cached_code:
+                self.cached_code[address] = self.provider.get_code_and_abi(address)
 
-        code = self.cached_code[address]
-        contract_type = ContractType.parse_obj(code)
+            code = self.cached_code[address]
+            return ContractType.parse_obj(code)
+
+        original_address = address
+        depth = 16
+        index = 0
+        final_contract_found = False
+        checked_addresses = []
+
+        while index < depth and not final_contract_found:
+            contract_type = _get_contract_type(address)
+
+            # Temporarily cache contract type at address so we can properly make contract calls
+            self.chain_manager.contracts._local_contracts[address] = contract_type
+            proxy_info = self.starknet._get_proxy_info(address, contract_type)
+
+            if not proxy_info:
+                final_contract_found = True
+                break
+            else:
+                del self.chain_manager.contracts._local_contracts[address]
+                checked_addresses.append(address)
+                address = proxy_info.target
+                if address in checked_addresses:
+                    raise ValueError("Proxy cycical reference detected.")
+
+                index += 1
+                if index == 16:
+                    raise ValueError(f"Too deep of search to find non-proxy contract type ({index}).")
+
+        self.chain_manager.contracts[original_address] = contract_type
         return contract_type
 
     def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:

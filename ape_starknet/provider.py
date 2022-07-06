@@ -329,9 +329,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]):
         address_int = parse_address(address)
+
         # Assume it's an instance
         try:
-            self.starknet_client.get_code_sync(address_int)
+            return self.starknet_client.get_code_sync(address_int)
         except Exception:
             pass
 
