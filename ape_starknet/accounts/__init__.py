@@ -234,13 +234,11 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
                 passphrase=passphrase, private_key=private_key, deployments=deployments
             )
 
-        # Ensure contract gets cached
-        if not self.provider.is_connected:
-            network = self.starknet.get_network(network_name)
-            with network.use_provider(network.default_provider or "starknet"):
-                _ = self.chain_manager.contracts[address]
-        else:
-            _ = self.chain_manager.contracts[address]
+        # Cache contract type
+        account = self[address]
+        network = self.starknet.get_network(network_name)
+        with network.use_provider(network.default_provider or "starknet"):
+            self.chain_manager.contracts[address] = account.get_contract_type()
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None

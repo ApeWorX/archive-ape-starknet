@@ -4,6 +4,8 @@ from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
 from ape_starknet.utils import is_hex_address
 
+from ..conftest import PASSWORD
+
 
 def test_public_keys(existing_key_file_account, public_key):
     actual = existing_key_file_account.public_key
@@ -55,13 +57,17 @@ def test_balance(account):
     assert account.balance > 0
 
 
-def test_import_with_passphrase(account_container, account):
+def test_import_with_passphrase(account_container, existing_key_file_account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     account_container.import_account(
-        alias, LOCAL_NETWORK_NAME, account.address, account._get_key(), passphrase="p@55W0rd"
+        alias,
+        LOCAL_NETWORK_NAME,
+        existing_key_file_account.address,
+        existing_key_file_account._get_key(PASSWORD),
+        passphrase="p@55W0rd",
     )
     new_account = account_container.load(alias)
-    assert new_account.address == account.address
+    assert new_account.address == existing_key_file_account.address
 
 
 def test_transfer(account, second_account):
