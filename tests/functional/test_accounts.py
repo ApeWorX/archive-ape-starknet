@@ -74,3 +74,20 @@ def test_transfer(account, second_account):
     initial_balance = second_account.balance
     account.transfer(second_account, 10)
     assert second_account.balance == initial_balance + 10
+
+
+def test_use_unlocked_keyfile_account(account, account_container, contract):
+    # Copy normal dev account as a keyfile account
+    account_container.import_account(
+        "__DEV_AS_KEYFILE_ACCOUNT__",
+        "testnet",
+        account.address,
+        private_key=account.private_key,
+        passphrase="123",
+    )
+    new_account = account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
+    new_account.unlock("123")
+    new_account.set_autosign(True)
+
+    # Should not prompt!
+    assert contract.get_array(sender=new_account)
