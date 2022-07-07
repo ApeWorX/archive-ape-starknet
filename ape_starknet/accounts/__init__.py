@@ -543,6 +543,7 @@ class StarknetEphemeralAccount(StarknetDevelopmentAccount):
 class StarknetKeyfileAccount(BaseStarknetAccount):
     key_file_path: Path
     locked: bool = True
+    __autosign: bool = False
     __cached_key: Optional[int] = None
 
     @property
@@ -642,6 +643,21 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             deployments=deployments,
         )
 
+    def unlock(self, passphrase: Optional[str] = None):
+        passphrase = passphrase or self._get_passphrase_from_prompt(
+            f"Enter passphrase to permanently unlock '{self.alias}'"
+        )
+        self._get_key(passphrase=passphrase)
+        self.locked = False
+
+    def set_autosign(self, enabled: bool, passphrase: Optional[str] = None):
+        self.unlock(passphrase=passphrase)
+
+        if enabled:
+            logger.warning("Danger! This account will now sign any transaction its given.")
+
+        self.__autosign = enabled
+
     def _get_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:
             if not self.locked:
@@ -663,9 +679,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         return key
 
-    def _get_passphrase_from_prompt(self) -> str:
+    def _get_passphrase_from_prompt(self, message: Optional[str] = None) -> str:
+        message = message or f"Enter passphrase to unlock '{self.alias}'"
         return click.prompt(
-            f"Enter passphrase to unlock '{self.alias}'",
+            message,
             hide_input=True,
             default="",  # Just in case there's no passphrase
         )

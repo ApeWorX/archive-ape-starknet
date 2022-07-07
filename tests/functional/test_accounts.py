@@ -1,10 +1,28 @@
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
+from click.testing import CliRunner
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
 from ape_starknet.utils import is_hex_address
 
 from ..conftest import PASSWORD
+
+
+@pytest.fixture
+def isolation():
+    return CliRunner().isolation
+
+
+@pytest.fixture
+def devnet_keyfile_account(account_container, account):
+    account_container.import_account(
+        "__DEV_AS_KEYFILE_ACCOUNT__",
+        "testnet",
+        account.address,
+        private_key=account.private_key,
+        passphrase="123",
+    )
+    return account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
 
 
 def test_public_keys(existing_key_file_account, public_key):
@@ -76,18 +94,37 @@ def test_transfer(account, second_account):
     assert second_account.balance == initial_balance + 10
 
 
-def test_use_unlocked_keyfile_account(account, account_container, contract):
-    # Copy normal dev account as a keyfile account
-    account_container.import_account(
-        "__DEV_AS_KEYFILE_ACCOUNT__",
-        "testnet",
-        account.address,
-        private_key=account.private_key,
-        passphrase="123",
-    )
-    new_account = account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
-    new_account.unlock("123")
-    new_account.set_autosign(True)
+def test_unlock_with_passphrase_and_sign_message(isolation, devnet_keyfile_account):
+    devnet_keyfile_account.unlock(passphrase="123")
 
-    # Should not prompt!
-    assert contract.get_array(sender=new_account)
+    with isolation(input="y\n"):
+        devnet_keyfile_account.sign_message([1, 2, 3])
+
+
+def test_unlock_from_prompt_and_sign_message(isolation, devnet_keyfile_account):
+    with isolation(input="123\n"):
+        devnet_keyfile_account.unlock()
+
+    with isolation(input="y\n"):
+        devnet_keyfile_account.sign_message([1, 2, 3])
+
+
+def test_unlock_with_passphrase_and_sign_transaction(isolation, devnet_keyfile_account, contract):
+    devnet_keyfile_account.unlock(passphrase="123")
+
+    with isolation(input="y\n"):
+        contract.increase_balance(100, sender=devnet_keyfile_account)
+
+
+def test_unlock_from_prompt_and_sign_transaction(isolation, devnet_keyfile_account, contract):
+    with isolation(input="123\n"):
+        devnet_keyfile_account.unlock()
+
+    with isolation(input="y\n"):
+        contract.increase_balance(100, sender=devnet_keyfile_account)
+
+
+def test_use_autosign(devnet_keyfile_account, contract):
+    # No prompts should occur!
+    devnet_keyfile_account.set_autosign(True, passphrase="123")
+    contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
