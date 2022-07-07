@@ -53,6 +53,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     client: Optional[StarknetClient] = None
     token_manager: TokenManager = TokenManager()
     default_gas_cost: int = 0
+    cached_code: Dict[int, Dict] = {}
 
     @property
     def process_name(self) -> str:
@@ -329,7 +330,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]):
         address_int = parse_address(address)
-        return self.starknet_client.get_code_sync(address_int)
+
+        # Cache code for faster look-up
+        if address_int not in self.cached_code:
+            self.cached_code[address_int] = self.starknet_client.get_code_sync(address_int)
+
+        return self.cached_code[address_int]
 
     @handle_client_errors
     def declare(self, contract_type: ContractType) -> ContractDeclaration:

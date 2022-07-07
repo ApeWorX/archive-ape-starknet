@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, Optional
+from typing import Iterator, Optional
 
 from ape.api import ExplorerAPI, ReceiptAPI
 from ape.types import AddressType
@@ -12,8 +12,6 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         "testnet": "https://goerli.voyager.online",
         "mainnet": "https://voyager.online",
     }
-
-    cached_code: Dict[AddressType, Dict] = {}
 
     @property
     def base_uri(self) -> str:
@@ -36,11 +34,7 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
             starknet_account = self.account_contracts[address]
             return starknet_account.get_contract_type()  # type: ignore
 
-        # Cache code for faster look-up
-        if address not in self.cached_code:
-            self.cached_code[address] = self.provider.get_code_and_abi(address)
-
-        code = self.cached_code[address]
+        code = self.provider.get_code_and_abi(address)
         return ContractType.parse_obj(code)
 
     def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:
