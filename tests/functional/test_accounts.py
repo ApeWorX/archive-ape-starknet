@@ -113,7 +113,7 @@ def test_unlock_with_passphrase_and_sign_transaction(isolation, devnet_keyfile_a
     devnet_keyfile_account.unlock(passphrase="123")
 
     with isolation(input="y\n"):
-        contract.increase_balance(100, sender=devnet_keyfile_account)
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
 
 def test_unlock_from_prompt_and_sign_transaction(isolation, devnet_keyfile_account, contract):
@@ -121,10 +121,41 @@ def test_unlock_from_prompt_and_sign_transaction(isolation, devnet_keyfile_accou
         devnet_keyfile_account.unlock()
 
     with isolation(input="y\n"):
-        contract.increase_balance(100, sender=devnet_keyfile_account)
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
 
-def test_use_autosign(devnet_keyfile_account, contract):
-    # No prompts should occur!
+def test_use_autosign(isolation, devnet_keyfile_account, contract):
+    with isolation(input="123\n"):
+        devnet_keyfile_account.set_autosign(True)
+
+    with isolation(input="123\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+    # Disable and verify we have to sign again
+    devnet_keyfile_account.set_autosign(False)
+    with isolation(input="123\ny\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+
+def test_use_autosign_and_provide_passphrase(isolation, devnet_keyfile_account, contract):
     devnet_keyfile_account.set_autosign(True, passphrase="123")
+
+    with isolation(input="123\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+    # Disable and verify we have to sign again
+    devnet_keyfile_account.set_autosign(False)
+    with isolation(input="123\ny\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+
+def test_use_autosign_on_unlocked_account(isolation, devnet_keyfile_account, contract):
+    devnet_keyfile_account.unlock(passphrase="123")
+    devnet_keyfile_account.set_autosign(True)
     contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+    # Turn off autosign
+    devnet_keyfile_account.set_autosign(False)
+
+    with isolation(input="y\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)

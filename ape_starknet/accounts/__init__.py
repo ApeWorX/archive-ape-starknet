@@ -651,12 +651,20 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         self.locked = False
 
     def set_autosign(self, enabled: bool, passphrase: Optional[str] = None):
-        self.unlock(passphrase=passphrase)
+        locked_at_start = self.locked
 
-        if enabled:
-            logger.warning("Danger! This account will now sign any transaction its given.")
+        try:
+            if locked_at_start:
+                self.unlock(passphrase=passphrase)
 
-        self.__autosign = enabled
+            if enabled:
+                logger.warning("Danger! This account will now sign any transaction its given.")
+
+            self.__autosign = enabled
+        finally:
+            self.locked = locked_at_start
+            if locked_at_start:
+                self.__cached_key = None
 
     def _get_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:
