@@ -53,6 +53,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     client: Optional[StarknetClient] = None
     token_manager: TokenManager = TokenManager()
     default_gas_cost: int = 0
+    cached_code: Dict[int, Dict] = {}
 
     @property
     def process_name(self) -> str:
@@ -60,13 +61,19 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @property
     def is_connected(self) -> bool:
+        was_successful = False
         try:
             urlopen(self.uri)
-            return True
+            was_successful = True
         except HTTPError as err:
-            return err.code == 404  # Task failed successfully
+            was_successful = err.code == 404  # Task failed successfully
         except Exception:
-            return False
+            was_successful = False
+
+        if was_successful and self.client is None:
+            self.client = StarknetClient(self.uri, chain=self.chain_id)
+
+        return was_successful
 
     @property
     def starknet_client(self) -> StarknetClient:
@@ -129,7 +136,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_code(self, address: str) -> bytes:
-        return self.get_code_and_abi(address)["bytecode"]
+        # NOTE: Always return truthy value for code so that ape core works properly
+        return self.get_code_and_abi(address).get("bytecode", b"PROXY")
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
@@ -325,9 +333,14 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
 
-    def get_code_and_abi(self, address: Union[str, AddressType]):
+    def get_code_and_abi(self, address: Union[str, AddressType, int]):
         address_int = parse_address(address)
-        return self.starknet_client.get_code_sync(address_int)
+
+        # Cache code for faster look-up
+        if address_int not in self.cached_code:
+            self.cached_code[address_int] = self.starknet_client.get_code_sync(address_int)
+
+        return self.cached_code[address_int]
 
     @handle_client_errors
     def declare(self, contract_type: ContractType) -> ContractDeclaration:

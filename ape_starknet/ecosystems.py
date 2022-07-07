@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
 from ape.api.networks import ProxyInfoAPI
-from ape.contracts import ContractContainer, ContractInstance
+from ape.contracts import ContractContainer
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
@@ -64,6 +64,8 @@ class Starknet(EcosystemAPI, StarknetBase):
     """
     The Starknet ``EcosystemAPI`` implementation.
     """
+
+    proxy_info_cache: Dict[AddressType, Optional[StarknetProxy]] = {}
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}>"
@@ -259,7 +261,10 @@ class Starknet(EcosystemAPI, StarknetBase):
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
         # NOTE: This method only works for invoke-transactions
-        contract_type = self.chain_manager.contracts[address]
+        contract_type = self.starknet_explorer.get_contract_type(address)
+        if not contract_type:
+            raise ValueError(f"No contract found at address '{address}'.")
+
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
 
         return InvokeFunctionTransaction(
@@ -367,22 +372,23 @@ class Starknet(EcosystemAPI, StarknetBase):
             )
 
     def get_proxy_info(self, address: AddressType) -> Optional[StarknetProxy]:
-        contract = self.chain_manager.contracts.instance_at(address)
-        if not isinstance(contract, ContractInstance):
-            return None
+        # Proxies are handled elsewhere in Starknet due to ecosystem differences
+        # (namely, contract classes function different than proxy contracts in Ethereum).
+        return None
 
+    def _get_proxy_info(
+        self, address: AddressType, contract_type: ContractType
+    ) -> Optional[StarknetProxy]:
         proxy_type: Optional[ProxyType] = None
         target: Optional[int] = None
-
+        instance = self.create_contract(address, contract_type)
         # Legacy proxy check
-        if "implementation" in contract.contract_type.view_methods:
-            instance = self.chain_manager.contracts.instance_at(address)
+        if "implementation" in contract_type.view_methods:
             target = instance.implementation()  # type: ignore
             proxy_type = ProxyType.LEGACY
 
         # Argent-X proxy check
-        elif "get_implementation" in contract.contract_type.view_methods:
-            instance = self.chain_manager.contracts.instance_at(address)
+        elif "get_implementation" in contract_type.view_methods:
             target = instance.get_implementation()  # type: ignore
             proxy_type = ProxyType.ARGENT_X
 

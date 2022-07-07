@@ -27,13 +27,12 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         return f"{base_uri}/txns/{transaction_hash}" if base_uri else ""
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
-        if isinstance(address, int):
-            address = self.network.ecosystem.decode_address(address)
+        if self.tokens.is_token(address):
+            return self.tokens.contract_type
 
-        is_proxy = self.starknet.get_proxy_info(address)
-        if is_proxy:
-            # Handled in ape-core
-            return None
+        elif address in self.account_contracts:
+            starknet_account = self.account_contracts[address]
+            return starknet_account.get_contract_type()  # type: ignore
 
         code = self.provider.get_code_and_abi(address)
         return ContractType.parse_obj(code)

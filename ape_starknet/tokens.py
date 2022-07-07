@@ -1,13 +1,14 @@
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from ape.api import Address
 from ape.contracts import ContractInstance
 from ape.exceptions import ContractError
 from ape.types import AddressType
+from eth_typing import HexAddress, HexStr
+from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
 
-from ape_starknet.ecosystems import StarknetProxy
-from ape_starknet.utils import convert_contract_class_to_contract_type, from_uint
+from ape_starknet.utils import from_uint
 from ape_starknet.utils.basemodel import StarknetBase
 
 if TYPE_CHECKING:
@@ -18,19 +19,156 @@ def missing_contract_error(token: str, contract_address: AddressType) -> Contrac
     return ContractError(f"Incorrect '{token}' contract address '{contract_address}'.")
 
 
+ERC20 = ContractType(
+    **{
+        "contractName": "ERC20",
+        "abi": [
+            {
+                "type": "struct",
+                "name": "Uint256",
+                "members": [
+                    {"name": "low", "type": "felt", "offset": 0},
+                    {"name": "high", "type": "felt", "offset": 1},
+                ],
+                "size": 2,
+            },
+            {
+                "type": "event",
+                "name": "Transfer",
+                "inputs": [
+                    {"name": "from_", "type": "felt", "indexed": False},
+                    {"name": "to", "type": "felt", "indexed": False},
+                    {"name": "value", "type": "Uint256", "indexed": False},
+                ],
+                "anonymous": False,
+            },
+            {
+                "type": "event",
+                "name": "Approval",
+                "inputs": [
+                    {"name": "owner", "type": "felt", "indexed": False},
+                    {"name": "spender", "type": "felt", "indexed": False},
+                    {"name": "value", "type": "Uint256", "indexed": False},
+                ],
+                "anonymous": False,
+            },
+            {
+                "type": "constructor",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "name", "type": "felt"},
+                    {"name": "symbol", "type": "felt"},
+                    {"name": "decimals", "type": "felt"},
+                    {"name": "initial_supply", "type": "Uint256"},
+                    {"name": "recipient", "type": "felt"},
+                ],
+            },
+            {
+                "type": "function",
+                "name": "name",
+                "stateMutability": "view",
+                "inputs": [],
+                "outputs": [{"name": "name", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "symbol",
+                "stateMutability": "view",
+                "inputs": [],
+                "outputs": [{"name": "symbol", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "totalSupply",
+                "stateMutability": "view",
+                "inputs": [],
+                "outputs": [{"name": "totalSupply", "type": "Uint256"}],
+            },
+            {
+                "type": "function",
+                "name": "decimals",
+                "stateMutability": "view",
+                "inputs": [],
+                "outputs": [{"name": "decimals", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "balanceOf",
+                "stateMutability": "view",
+                "inputs": [{"name": "account", "type": "felt"}],
+                "outputs": [{"name": "balance", "type": "Uint256"}],
+            },
+            {
+                "type": "function",
+                "name": "allowance",
+                "stateMutability": "view",
+                "inputs": [{"name": "owner", "type": "felt"}, {"name": "spender", "type": "felt"}],
+                "outputs": [{"name": "remaining", "type": "Uint256"}],
+            },
+            {
+                "type": "function",
+                "name": "transfer",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "recipient", "type": "felt"},
+                    {"name": "amount", "type": "Uint256"},
+                ],
+                "outputs": [{"name": "success", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "transferFrom",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "sender", "type": "felt"},
+                    {"name": "recipient", "type": "felt"},
+                    {"name": "amount", "type": "Uint256"},
+                ],
+                "outputs": [{"name": "success", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "approve",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "spender", "type": "felt"},
+                    {"name": "amount", "type": "Uint256"},
+                ],
+                "outputs": [{"name": "success", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "increaseAllowance",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "spender", "type": "felt"},
+                    {"name": "added_value", "type": "Uint256"},
+                ],
+                "outputs": [{"name": "success", "type": "felt"}],
+            },
+            {
+                "type": "function",
+                "name": "decreaseAllowance",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "spender", "type": "felt"},
+                    {"name": "subtracted_value", "type": "Uint256"},
+                ],
+                "outputs": [{"name": "success", "type": "felt"}],
+            },
+        ],
+    }
+)
+
+
 class TokenManager(StarknetBase):
     # The 'test_token' refers to the token that comes with Argent-X
     additional_tokens: Dict = {}
-
-    # NOTE: Can be deleted once ape can correctly cache local proxy deploys
-    token_proxy_infos: Dict[AddressType, Optional[StarknetProxy]] = {}
+    contract_type = ERC20
 
     @property
     def token_address_map(self) -> Dict:
         local_eth = self.starknet.decode_address(FeeToken.ADDRESS)
-        local_contract_type = convert_contract_class_to_contract_type(FeeToken.get_contract_class())
-        self.chain_manager.contracts[local_eth] = local_contract_type
-
         mainnet_eth = self.starknet.decode_address(
             "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
         )
@@ -50,6 +188,25 @@ class TokenManager(StarknetBase):
             **self.additional_tokens,
         }
 
+    def __getitem__(self, token: str) -> ContractInstance:
+        network = self.provider.network.name
+        contract_address = AddressType(
+            HexAddress(HexStr(self.token_address_map[token.lower()].get(network)))
+        )
+        if not contract_address:
+            raise IndexError(f"No token '{token}'.")
+
+        return ContractInstance(contract_address, ERC20)
+
+    def is_token(self, address: AddressType) -> bool:
+        network_name = self.provider.network.name
+        for token in self.token_address_map:
+            network_tokens = self.token_address_map.get(token, {}).get(network_name, {})
+            if address in network_tokens:
+                return True
+
+        return False
+
     def add_token(self, name: str, network: str, address: AddressType):
         if name not in self.additional_tokens:
             self.additional_tokens[name] = {}
@@ -60,12 +217,7 @@ class TokenManager(StarknetBase):
         if hasattr(account, "address"):
             account = account.address  # type: ignore
 
-        contract_address = self._get_contract_address(token=token)
-        if not contract_address:
-            return 0
-
-        contract = self._get_contract(contract_address)
-        return from_uint(contract.balanceOf(account))
+        return from_uint(self[token].balanceOf(account))
 
     def transfer(
         self,
@@ -74,10 +226,6 @@ class TokenManager(StarknetBase):
         amount: int,
         token: str = "eth",
     ):
-        contract_address = self._get_contract_address(token=token)
-        if not contract_address:
-            return
-
         if isinstance(receiver, int):
             receiver_address = receiver
         elif hasattr(receiver, "address_int"):
@@ -89,35 +237,7 @@ class TokenManager(StarknetBase):
                 f"Unhandled type for receiver '{receiver}'. Expects int, str, or account."
             )
 
-        contract = self._get_contract(contract_address)
-
-        if isinstance(sender, (int, str)):
-            sender_account = self.account_contracts[sender]
-        else:
-            sender_account = sender
-
-        return contract.transfer(receiver_address, amount, sender=sender_account)
-
-    def _get_contract_address(self, token: str = "eth") -> Optional[AddressType]:
-        network = self.provider.network.name
-        return AddressType(self.token_address_map[token.lower()].get(network))  # type: ignore
-
-    def _get_contract(self, address: AddressType) -> ContractInstance:
-        # TODO: can remove proxy check once bug in ape regarding cached local
-        #  proxies is resolved
-        if address in self.token_proxy_infos:
-            proxy_info = self.token_proxy_infos[address]
-        else:
-            proxy_info = self.starknet.get_proxy_info(address)
-            self.token_proxy_infos[address] = proxy_info
-
-        if proxy_info:
-            contract_type = self.chain_manager.contracts[proxy_info.target]
-            return ContractInstance(proxy_info.target, contract_type)
-
-        else:
-            contract = self.chain_manager.contracts.instance_at(address)
-            if not isinstance(contract, ContractInstance):
-                raise ValueError(f"Contract not found at address '{address}'.")
-
-            return contract
+        sender_account = (
+            self.account_contracts[sender] if isinstance(sender, (int, str)) else sender
+        )
+        return self[token].transfer(receiver_address, amount, sender=sender_account)

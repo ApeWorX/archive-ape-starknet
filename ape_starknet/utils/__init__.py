@@ -5,20 +5,14 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
-from eth_utils import (
-    add_0x_prefix,
-    encode_hex,
-    hexstr_if_str,
-    is_text,
-    keccak,
-    remove_0x_prefix,
-    to_hex,
-)
+from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
 from hexbytes import HexBytes
 from starknet_py.net.client import BadRequest
 from starknet_py.net.models import TransactionType
+from starknet_py.net.models.address import parse_address
 from starknet_py.transaction_exceptions import TransactionRejectedError
+from starkware.crypto.signature.fast_pedersen_hash import pedersen_hash
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.services.api.contract_class import ContractClass
@@ -56,26 +50,24 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 
 
 def to_checksum_address(address: RawAddress) -> AddressType:
-    try:
-        hex_address = hexstr_if_str(to_hex, address)
-    except AttributeError as exc:
-        msg = f"Value must be any string, int, or bytes, instead got type {type(address)}"
-        raise ValueError(msg) from exc
+    if isinstance(address, bytes):
+        address = HexBytes(address).hex()
 
-    cleaned_address = remove_0x_prefix(HexStr(hex_address))
-    address_hash = encode_hex(keccak(text=cleaned_address))
+    address_int = parse_address(address)
+    address_str = pad_hex_str(HexBytes(address_int).hex().lower())
+    chars = [c for c in remove_0x_prefix(HexStr(address_str))]
+    hashed = [b for b in HexBytes(pedersen_hash(0, address_int))]
 
-    checksum_address = add_0x_prefix(
-        HexStr(
-            "".join(
-                (hex_address[i].upper() if int(address_hash[i], 16) > 7 else hex_address[i])
-                for i in range(2, len(hex_address))
-            )
-        )
-    )
+    for i in range(0, len(chars), 2):
+        try:
+            if hashed[i >> 1] >> 4 >= 8:
+                chars[i] = chars[i].upper()
+            if (hashed[i >> 1] & 0x0F) >= 8:
+                chars[i + 1] = chars[i + 1].upper()
+        except IndexError:
+            continue
 
-    hex_address = HexAddress(checksum_address)
-    return AddressType(hex_address)
+    return AddressType(HexAddress(add_0x_prefix(HexStr("".join(chars)))))
 
 
 def is_hex_address(value: Any) -> bool:

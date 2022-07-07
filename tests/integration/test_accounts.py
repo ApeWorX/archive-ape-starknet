@@ -137,10 +137,23 @@ def test_import_argent_x_key_file(accounts_runner, argent_x_backup, account_cont
         alias,
         "--keyfile",
         str(argent_x_backup),
+        "--network",
+        "starknet:testnet",
         input=PASSWORD,
     )
     assert "SUCCESS" in output
     account_path.unlink()
+
+
+def test_import_when_local(accounts_runner):
+    output = accounts_runner.invoke(
+        "import",
+        "FAILS",
+        "--address",
+        "0x0098580e36aB1485C66f0DC95C2c923e734B7Af44D04dD2B5b9d0809Aa672033",
+        ensure_successful=False,
+    )
+    assert "ERROR: Must use --network option to specify non-local network." in output
 
 
 def test_list(accounts_runner, existing_key_file_account):
