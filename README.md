@@ -93,6 +93,25 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 **NOTE**: You don't have to specify the network if your account is only deployed to a single network.
 
+#### Auto-Sign Message
+
+While generally bad practice, sometimes it is necessary to have unlocked keyfile accounts auto-signing messages.
+An example would be during testnet automated deployments.
+To achieve this, use the ``set_autosign()`` method available on the keyfile accounts:
+
+```python
+import keyring
+from ape import accounts
+
+# Use keyring package to store secrets
+password = keyring.get_password("starknet-testnet-automations", "ci-shared-account")
+testnet_account = accounts.load("starknet-testnet-account")
+testnet_account.set_autosign(True, passphrase=password)
+
+# Won't prompt for signing or unlocking
+testnet_account.sign_message([123])
+```
+
 ### Declare and Deploy Contracts
 
 In Starknet, you can declare contract types by publishing them to the chain.
