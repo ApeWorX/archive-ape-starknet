@@ -109,7 +109,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             elif (
                 abi_output_cur.type == "felt"
                 and abi_output_next
-                and abi_output_next.type.endswith("*")
+                and str(abi_output_next.type).endswith("*")
             ):
                 # Array - strip off leading length
                 array_len = next(iter_data)
@@ -118,15 +118,19 @@ class Starknet(EcosystemAPI, StarknetBase):
                 elif abi_output_next.type == "Uint256*":
                     # Unint256 are stored using 2 slots
                     array_len = array_len // 2
-                    decoded.append([(next(iter_data), next(iter_data)) for _ in range(array_len)])  # type: ignore
-            elif abi_output_cur.type.endswith("*"):
+                    decoded.append(
+                        [(next(iter_data), next(iter_data)) for _ in range(array_len)]
+                    )  # type: ignore
+            elif str(abi_output_cur.type).endswith("*"):
                 # The array was handled by the previous condition at the previous iteration
                 continue
             else:
                 decoded.append(next(iter_data))
 
         # Keep only the expected data instead of a 1-item array
-        if len(abi.outputs) == 1 or (len(abi.outputs) == 2 and abi.outputs[1].type.endswith("*")):
+        if len(abi.outputs) == 1 or (
+            len(abi.outputs) == 2 and str(abi.outputs[1].type).endswith("*")
+        ):
             decoded = decoded[0]
 
         return decoded
