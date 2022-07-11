@@ -122,7 +122,7 @@ def test_decode_logs(ecosystem, event_abi, raw_logs):
                     EventABIType(name="amounts", type="Uint256*"),
                 ],
             ),
-            [2, 123, 0],
+            [1, 123, 0],
             [(123, 0)],
         ),
         # An array of Uint256
@@ -133,7 +133,7 @@ def test_decode_logs(ecosystem, event_abi, raw_logs):
                     EventABIType(name="amounts", type="Uint256*"),
                 ]
             ),
-            [6, 123, 0, 0, 123, 123, 123],
+            [3, 123, 0, 0, 123, 123, 123],
             [(123, 0), (0, 123), (123, 123)],
         ),
         # Mix: more than 2 arguments, several arrays, and Uint256
