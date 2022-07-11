@@ -159,6 +159,18 @@ func get_uint256s{
 end
 
 @external
+func get_uint256s_array{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (amounts_len: felt, amounts: Uint256*):
+    alloc_locals
+    let (local amounts : Uint256*) = alloc()
+    assert amounts[0] = Uint256(123, 0)
+    assert amounts[1] = Uint256(0, 123)
+    assert amounts[2] = Uint256(132, 123)
+    return (amounts_len=3, amounts=amounts)
+end
+
+@external
 func get_caller{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -196,6 +208,18 @@ func get_last_sum{
         range_check_ptr}() -> (res : felt):
     let (res) = last_sum.read()
     return (res)
+end
+
+@view
+func view_uint256s_array{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (amounts_len: felt, amounts: Uint256*):
+    alloc_locals
+    let (local amounts : Uint256*) = alloc()
+    assert amounts[0] = Uint256(123, 0)
+    assert amounts[1] = Uint256(0, 123)
+    assert amounts[2] = Uint256(132, 123)
+    return (amounts_len=3, amounts=amounts)
 end
 
 # Increases the balance of the given user by the given amount.

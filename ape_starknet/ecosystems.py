@@ -117,7 +117,6 @@ class Starknet(EcosystemAPI, StarknetBase):
                     decoded.append([next(iter_data) for _ in range(array_len)])
                 elif abi_output_next.type == "Uint256*":
                     # Unint256 are stored using 2 slots
-                    array_len = array_len // 2
                     decoded.append([(next(iter_data), next(iter_data)) for _ in range(array_len)])
             elif str(abi_output_cur.type).endswith("*"):
                 # The array was handled by the previous condition at the previous iteration

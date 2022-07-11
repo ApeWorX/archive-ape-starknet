@@ -168,6 +168,12 @@ def test_external_call_uint256s_outputs_from_account(contract, account):
     assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
 
 
+def test_external_call_uint256s_array_outputs_from_account(contract, account):
+    receipt = contract.get_uint256s_array(sender=account)
+    assert receipt.returndata == ["0x7", "0x3", "0x7b", "0x0", "0x0", "0x7b", "0x84", "0x7b"]
+    assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
+
+
 def test_external_call_mixed_outputs_from_account(contract, account):
     receipt = contract.get_mix(sender=account)
     assert receipt.returndata == [
@@ -192,6 +198,11 @@ def test_external_call_mixed_outputs_from_account(contract, account):
 def test_view_call_array_outputs(contract, account):
     array = contract.view_array()
     assert array == [1, 2, 3]
+
+
+def test_view_call_uint256s_array_outputs(contract):
+    array = contract.view_uint256s_array()
+    assert array == [(123, 0), (0, 123), (132, 123)]
 
 
 def test_unable_to_afford_transaction(contract, account, provider):
