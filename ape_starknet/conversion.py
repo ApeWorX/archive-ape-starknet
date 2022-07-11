@@ -13,8 +13,10 @@ class StarknetAddressConverter(ConverterAPI):
     """
 
     def is_convertible(self, value: Any) -> bool:
+        provider = self.network_manager.active_provider
         return (
-            self.provider.network.ecosystem.name == PLUGIN_NAME
+            provider is not None
+            and provider.network.ecosystem.name == PLUGIN_NAME
             and isinstance(value, str)
             and is_hex_address(value)
             and not is_checksum_address(value)
