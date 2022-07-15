@@ -51,7 +51,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     # Gets set when 'connect()' is called.
     client: Optional[StarknetClient] = None
-    fee_overhead: float = 1.1
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, Dict] = {}
 
@@ -312,25 +311,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     ) -> Iterator[ContractLog]:
         raise NotImplementedError("TODO")
 
-    @handle_client_errors
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        # TODO: may need to revisit TX type condition after Cairo 0.10.0
-        if txn.type == TransactionType.INVOKE_FUNCTION and not txn.max_fee:
-            # if not txn.signature:
-            #     sender = txn.sender
-            #     sender_account = (
-            #         self.account_contracts[sender] if isinstance(sender, (int, str)) else sender
-            #     )
-            #     txn.signature = sender_account.sign_transaction(txn)
-            #     txn.sender = None
-
-            # Estimated fee are not enough to set max_fee.
-            # We need to bump the value to cover most of usages, in the same way it's done there:
-            # - https://github.com/software-mansion/starknet.py/blob/bd2e51e/starknet_py/contract.py#L221 (x1.5)  # noqa
-            # - https://github.com/0xs34n/starknet.js/blob/41eea22/src/utils/stark.ts#L53 (x1.1)
-            estimate_fee = self.estimate_gas_cost(txn)
-            txn.max_fee = int(estimate_fee * self.fee_overhead)
-
         return txn
 
     def set_timestamp(self, new_timestamp: int):

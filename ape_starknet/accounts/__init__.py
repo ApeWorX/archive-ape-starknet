@@ -397,6 +397,15 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn.original_method_abi = txn.method_abi
         txn.method_abi = execute_abi
         txn.signature = self.sign_transaction(txn)
+
+        if not txn.max_fee:
+            # Estimated fee are not enough to set max_fee.
+            # We need to bump the value to cover most of usages, in the same way it's done there:
+            # - https://github.com/software-mansion/starknet.py/blob/bd2e51e/starknet_py/contract.py#L221 (x1.5)  # noqa
+            # - https://github.com/0xs34n/starknet.js/blob/41eea22/src/utils/stark.ts#L53 (x1.1)
+            estimate_fee = self.provider.estimate_gas_cost(txn)
+            txn.max_fee = int(estimate_fee * 1.1)
+
         return txn
 
     def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
