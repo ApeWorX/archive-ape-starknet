@@ -208,3 +208,17 @@ def test_view_call_uint256s_array_outputs(contract):
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)
+
+
+def test_method_gas_estimate(contract, account):
+    """
+    Note: a better API would be:
+        >>> fee = contract.increase_balance.estimate_fee(account.address, 1, sender=account)
+    """
+    fee1 = contract.increase_balance.as_transaction(account.address, 1).max_fee
+    fee2 = contract.increase_balance.as_transaction(account.address, 1, sender=account).max_fee
+    assert fee1 == 292_500_000_000_000
+    assert fee2 == 292_500_000_000_000  # Not good, it should be > fee1
+
+    receipt = contract.increase_balance(account.address, 1, sender=account)
+    assert fee1 < receipt.actual_fee < fee2
