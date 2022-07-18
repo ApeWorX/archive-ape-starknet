@@ -684,7 +684,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
     def unlock(self, passphrase: Optional[str] = None):
         passphrase = passphrase or self._get_passphrase_from_prompt(
-            f"Enter passphrase to unlock '{self.alias}' for the rest of the session"
+            f"Enter passphrase to unlock '{self.alias}'"
         )
         self._get_key(passphrase=passphrase)
         self.locked = False
