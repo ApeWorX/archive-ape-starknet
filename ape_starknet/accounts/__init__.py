@@ -10,7 +10,7 @@ from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, SignatureError
-from ape.logging import logger
+from ape.logging import LogLevel, logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
 from ape.utils import abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json
@@ -574,9 +574,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         if not txn.max_fee:
             if self.locked:
                 # Unlock to prevent multiple prompts for signing transaction.
-                self.unlock()
+                original_level = logger.level
+                logger.set_level(LogLevel.ERROR)
                 self.set_autosign(True)
-                do_relock = True
+                logger.set_level(original_level)
 
             txn.signature = self.sign_transaction(txn)
             txn.max_fee = self.get_fee_estimate(txn)
