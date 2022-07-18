@@ -215,8 +215,12 @@ def test_method_gas_estimate(contract, account):
     Note: a better API would be:
         >>> fee = contract.increase_balance.estimate_fee(account.address, 1, sender=account)
     """
-    fee = contract.increase_balance.as_transaction(account.address, 1, sender=account).max_fee
+    fee = contract.increase_balance.as_transaction(account.address, 1).max_fee
+    fee_signed = contract.increase_balance.as_transaction(
+        account.address, 1, sender=account
+    ).max_fee
     assert fee == 292_500_000_000_000
+    assert fee_signed == 292_500_000_000_000  # should not?
 
     receipt = contract.increase_balance(account.address, 1, sender=account)
-    assert receipt.actual_fee < fee
+    assert fee < receipt.actual_fee < fee_signed
