@@ -86,3 +86,9 @@ def test_set_timestamp(provider, account, contract):
     contract.increase_balance(account.address, 123, sender=account)
     curr_time = time.time()
     assert pytest.approx(curr_time + 8600) == provider.get_block("latest").timestamp
+
+
+def test_estimate_gas_cost(contract, account, provider):
+    txn = contract.increase_balance.as_transaction(account.address, 1, sender=account)
+    estimated_fee = provider.estimate_gas_cost(txn)
+    assert estimated_fee == 292_500_000_000_000

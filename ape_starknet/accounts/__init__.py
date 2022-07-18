@@ -371,6 +371,24 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return self.provider.send_transaction(txn)
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        self._prepare_transaction(txn)
+        if txn.max_fee is None:
+            # NOTE: Signature cannot be None when estimating fees.
+            txn.signature = self.sign_transaction(txn)
+            txn.max_fee = self.get_fee_estimate(txn)
+
+        txn.signature = self.sign_transaction(txn)
+        return txn
+
+    def get_fee_estimate(self, txn: TransactionAPI):
+        # Estimated fee are not enough to set max_fee.
+        # We need to bump the value to cover most of usages, in the same way it's done there:
+        # - https://github.com/software-mansion/starknet.py/blob/bd2e51e/starknet_py/contract.py#L221 (x1.5)  # noqa
+        # - https://github.com/0xs34n/starknet.js/blob/41eea22/src/utils/stark.ts#L53 (x1.1)
+        estimate_fee = self.provider.estimate_gas_cost(txn)
+        return int(estimate_fee * 1.1)
+
+    def _prepare_transaction(self, txn: TransactionAPI):
         execute_abi = self.execute_abi
         if not execute_abi:
             raise AccountsError(
@@ -396,17 +414,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn.sender = None
         txn.original_method_abi = txn.method_abi
         txn.method_abi = execute_abi
-        txn.signature = self.sign_transaction(txn)
-
-        if not txn.max_fee:
-            # Estimated fee are not enough to set max_fee.
-            # We need to bump the value to cover most of usages, in the same way it's done there:
-            # - https://github.com/software-mansion/starknet.py/blob/bd2e51e/starknet_py/contract.py#L221 (x1.5)  # noqa
-            # - https://github.com/0xs34n/starknet.js/blob/41eea22/src/utils/stark.ts#L53 (x1.1)
-            estimate_fee = self.provider.estimate_gas_cost(txn)
-            txn.max_fee = int(estimate_fee * 1.1)
-
-        return txn
 
     def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
         if not isinstance(txn, InvokeFunctionTransaction):
@@ -558,6 +565,27 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     @property
     def alias(self) -> Optional[str]:
         return self.key_file_path.stem
+
+    def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        self._prepare_transaction(txn)
+        do_relock = False
+        if not txn.max_fee:
+            if self.locked:
+                # Unlock to prevent multiple prompts for signing transaction.
+                self.unlock()
+                self.set_autosign(True)
+                do_relock = True
+
+            txn.signature = self.sign_transaction(txn)
+            txn.max_fee = self.get_fee_estimate(txn)
+
+        txn.signature = self.sign_transaction(txn)
+
+        if do_relock:
+            self.locked = True
+            self.set_autosign(False)
+
+        return txn
 
     def get_contract_type(self) -> ContractType:
         return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
