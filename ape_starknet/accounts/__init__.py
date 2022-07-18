@@ -85,7 +85,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     @property
     def _key_file_paths(self) -> Iterator[Path]:
-        return self.data_folder.glob("*.json")
+        for path in self.data_folder.glob("*.json"):
+            if path.stem not in ("deployments_map",):
+                yield path
 
     @property
     def aliases(self) -> Iterator[str]:
