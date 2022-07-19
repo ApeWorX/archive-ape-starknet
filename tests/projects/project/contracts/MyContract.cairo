@@ -10,6 +10,12 @@ from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import get_caller_address
 
+struct ComplexStruct:
+    member timestamp : felt
+    member value0 : Uint256
+    member value1 : Uint256
+end
+
 @storage_var
 func balance(user : felt) -> (res : felt):
 end
@@ -171,6 +177,14 @@ func get_uint256s_array{
 end
 
 @external
+func complex_struct() -> (res : ComplexStruct):
+    let value0 = Uint256(123, 456)
+    let value1 = Uint256(789, 100)
+    let res = ComplexStruct(987654321, value0, value1)
+    return (res=res)
+end
+
+@external
 func get_caller{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -220,6 +234,14 @@ func view_uint256s_array{
     assert amounts[1] = Uint256(0, 123)
     assert amounts[2] = Uint256(132, 123)
     return (amounts_len=3, amounts=amounts)
+end
+
+@view
+func view_complex_struct() -> (res : ComplexStruct):
+    let value0 = Uint256(10, 0)
+    let value1 = Uint256(10, 10)
+    let res = ComplexStruct(123456789, value0, value1)
+    return (res=res)
 end
 
 # Increases the balance of the given user by the given amount.

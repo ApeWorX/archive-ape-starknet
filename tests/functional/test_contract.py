@@ -205,6 +205,17 @@ def test_view_call_uint256s_array_outputs(contract):
     assert array == [(123, 0), (0, 123), (132, 123)]
 
 
+def test_view_call_complex_struct_outputs(contract):
+    struct = contract.view_complex_struct()
+    assert struct == [123456789, (10, 0), (10, 10)]
+
+
+def test_external_call_complex_struct_outputs(contract, account):
+    receipt = contract.complex_struct(sender=account)
+    assert receipt.returndata == ["0x5", "0x3ade68b1", "0x7b", "0x1c8", "0x315", "0x64"]
+    assert receipt.return_value == [987654321, (123, 456), (789, 100)]
+
+
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)
