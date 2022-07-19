@@ -294,6 +294,11 @@ class StarknetAccountDeployment:
 class BaseStarknetAccount(AccountAPI, StarknetBase):
     token_manager: TokenManager = TokenManager()
 
+    @property
+    def total_transfer_value(self) -> int:
+        max_fee = self.max_fee or 0
+        return self.value + max_fee
+
     @abstractmethod
     def _get_key(self) -> int:
         ...
