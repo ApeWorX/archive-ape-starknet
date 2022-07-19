@@ -96,3 +96,9 @@ def test_estimate_gas_cost_external_method(contract, account, provider):
     receipt = contract.increase_balance(account.address, 1, sender=account)
     # actual_fee is actually way higher than what was estimated
     assert receipt.actual_fee == 637_700_000_000_000
+
+
+def test_estimate_gas_cost_view_method(contract, account, provider):
+    txn = contract.get_balance.as_transaction(account.address, 1, sender=account)
+    estimated_fee = provider.estimate_gas_cost(txn)
+    assert estimated_fee == 292_500_000_000_000
