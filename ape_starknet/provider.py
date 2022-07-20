@@ -277,7 +277,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
                 abi = txn.original_method_abi
                 returndata = returndata[1:]
 
-            return_value = self.starknet.decode_returndata(abi, returndata)
+            return_value = self.starknet.decode_returndata(abi, returndata, [])
             receipt.return_value = return_value
 
         return receipt

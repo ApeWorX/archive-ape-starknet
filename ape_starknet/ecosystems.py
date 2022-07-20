@@ -8,7 +8,7 @@ from ape.contracts import ContractContainer
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
-from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
+from ethpm_types.abi import ABI, ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
 from starknet_py.net.models.address import parse_address
@@ -94,7 +94,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> Any:  # type: ignore
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int], full_abi: List[ABI]) -> Any:  # type: ignore
         if not raw_data:
             return raw_data
 
@@ -118,6 +118,9 @@ class Starknet(EcosystemAPI, StarknetBase):
                 elif abi_output_next.type == "Uint256*":
                     # Unint256 are stored using 2 slots
                     decoded.append([(next(iter_data), next(iter_data)) for _ in range(array_len)])
+                else:
+                    print(f"{full_abi=}")
+                    assert 0, f"custom struct: {abi_output_next.type}"
             elif str(abi_output_cur.type).endswith("*"):
                 # The array was handled by the previous condition at the previous iteration
                 continue
