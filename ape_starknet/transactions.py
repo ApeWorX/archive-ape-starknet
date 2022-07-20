@@ -50,6 +50,11 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     class Config:
         use_enum_values = True
 
+    @property
+    def total_transfer_value(self) -> int:
+        max_fee = self.max_fee or 0
+        return self.value + max_fee
+
     def serialize_transaction(self) -> dict:  # type: ignore
         return self.dict()
 
