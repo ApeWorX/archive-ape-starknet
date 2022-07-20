@@ -244,6 +244,26 @@ func view_complex_struct() -> (res : ComplexStruct):
     return (res=res)
 end
 
+@view
+func view_complex_struct_array{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
+        range_check_ptr}() -> (complex_structs_len : felt, complex_structs : ComplexStruct*):
+    let value0 = Uint256(123, 0)
+    let value1 = Uint256(0, 123)
+    let zero = Uint256(0, 0)
+    let my_struct0 = ComplexStruct(123456789, value0, value1)
+    let my_struct1 = ComplexStruct(987654321, value1, value0)
+    let my_struct2 = ComplexStruct(0, zero, zero)
+
+    alloc_locals
+    let (local complex_structs : ComplexStruct*) = alloc()
+    assert complex_structs[0] = my_struct0
+    assert complex_structs[1] = my_struct1
+    assert complex_structs[2] = my_struct2
+    return (complex_structs_len=3, complex_structs=complex_structs)
+end
+
+
 # Increases the balance of the given user by the given amount.
 @external
 func increase_balance_signed{
