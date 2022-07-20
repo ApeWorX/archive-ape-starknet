@@ -201,6 +201,33 @@ def test_external_call_complex_struct_outputs(contract, account):
     assert receipt.return_value == [987654321, (123, 456), (789, 100)]
 
 
+def test_external_call_complex_struct_array_outputs(contract, account):
+    receipt = contract.complex_struct_array(sender=account)
+    assert receipt.returndata == [
+        "0x3",
+        "0x75bcd15",
+        "0x7b",
+        "0x0",
+        "0x0",
+        "0x7b",
+        "0x3ade68b1",
+        "0x0",
+        "0x7b",
+        "0x7b",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+    ]
+    assert receipt.return_value == [
+        [123456789, (123, 0), (0, 123)],
+        [987654321, (0, 123), (123, 0)],
+        [0, (0, 0), (0, 0)],
+    ]
+
+
 def test_view_call_array_outputs(contract, account):
     array = contract.view_array()
     assert array == [1, 2, 3]
@@ -217,8 +244,7 @@ def test_view_call_complex_struct_outputs(contract):
 
 
 def test_view_call_complex_struct_array_outputs(contract):
-    struct = contract.view_complex_struct_array()
-    assert struct == [
+    assert contract.view_complex_struct_array() == [
         [123456789, (123, 0), (0, 123)],
         [987654321, (0, 123), (123, 0)],
         [0, (0, 0), (0, 0)],
