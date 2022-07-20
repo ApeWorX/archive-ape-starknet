@@ -251,7 +251,6 @@ def test_external_and_view_method_outputs(
     assert return_value == return_value_expected
 
     # Check the external method
-    # FIXME: it will fail until we have full ABI access for account-calls
     receipt = getattr(contract, f"{method}_external")(sender=account)
     assert receipt.returndata == returndata_expected
     assert receipt.return_value == return_value
