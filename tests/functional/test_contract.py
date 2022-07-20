@@ -128,129 +128,130 @@ def test_revert_no_message(contract, account):
     contract.initialize()
 
 
-def test_array_inputs(contract, account):
+def test_unable_to_afford_transaction(contract, account, provider):
+    with pytest.raises(OutOfGasError):
+        contract.increase_balance(account.address, 1, sender=account, max_fee=1)
+
+
+def test_array_inputs(contract):
     # This test makes sure we can pass python lists as arguments
     # to Cairo methods that accept arrays.
     # NOTE: Due to a limitation in ape, we have to include the array length argument.
     contract.store_sum(3, [1, 2, 3])
-    actual = contract.get_last_sum()
-    expected = 6
-    assert actual == expected
+    assert contract.get_last_sum() == 6
 
 
-def test_external_call_array_outputs(contract, account):
-    receipt = contract.get_array()
-    assert receipt.returndata == ["0x3", "0x1", "0x2", "0x3"]
-    assert receipt.return_value == [1, 2, 3]
+#
+# Test external, and view, methods
+#
 
 
-def test_external_call_felt_outputs_from_account(contract, account):
-    receipt = contract.get_felt(sender=account)
-    assert receipt.returndata == ["0x1", "0x2"]
-    assert receipt.return_value == 2
+@pytest.mark.parametrize(
+    "method, returndata_expected, return_value_expected",
+    [
+        ("array", ["0x4", "0x3", "0x1", "0x2", "0x3"], [1, 2, 3]),
+        (
+            "array_complex_struct",
+            [
+                "0x10",
+                "0x3",
+                "0x0",
+                "0x7b",
+                "0x0",
+                "0x0",
+                "0x7b",
+                "0x1",
+                "0x0",
+                "0x7b",
+                "0x7b",
+                "0x0",
+                "0x2",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+            ],
+            [
+                {
+                    "timestamp": 0,
+                    "value0": 123,
+                    "value1": 41854731131275431005995076714107490009088,
+                },
+                {
+                    "timestamp": 1,
+                    "value0": 41854731131275431005995076714107490009088,
+                    "value1": 123,
+                },
+                {"timestamp": 2, "value0": 0, "value1": 0},
+            ],
+        ),
+        (
+            "array_uint256",
+            ["0x7", "0x3", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
+            [
+                123,
+                41854731131275431005995076714107490009088,
+                0,
+            ],
+        ),
+        (
+            "complex_struct",
+            ["0x5", "0x4d2", "0x7b", "0x0", "0x0", "0x7b"],
+            {
+                "timestamp": 1234,
+                "value0": 123,
+                "value1": 41854731131275431005995076714107490009088,
+            },
+        ),
+        ("felt", ["0x1", "0x2"], 2),
+        (
+            "mix",
+            [
+                "0xd",
+                "0x1",
+                "0x2",
+                "0x3",
+                "0x4",
+                "0x7b",
+                "0x0",
+                "0x3",
+                "0x8",
+                "0x9",
+                "0xa",
+                "0xb",
+                "0x0",
+                "0x7b",
+            ],
+            (
+                1,
+                [3, 4],
+                123,
+                [8, 9, 10],
+                11,
+                41854731131275431005995076714107490009088,
+            ),
+        ),
+        ("uint256", ["0x2", "0x1", "0x0"], 1),
+        (
+            "uint256s",
+            ["0x6", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
+            (
+                123,
+                41854731131275431005995076714107490009088,
+                0,
+            ),
+        ),
+    ],
+)
+def test_external_and_view_method_outputs(
+    method, returndata_expected, return_value_expected, contract, account
+):
+    # Check the view method
+    return_value = getattr(contract, f"{method}_view")()
+    assert return_value == return_value_expected
 
-
-def test_external_call_array_outputs_from_account(contract, account):
-    receipt = contract.get_array(sender=account)
-    assert receipt.returndata == ["0x4", "0x3", "0x1", "0x2", "0x3"]
-    assert receipt.return_value == [1, 2, 3]
-
-
-def test_external_call_uint256_outputs_from_account(contract, account):
-    receipt = contract.get_uint256(sender=account)
-    assert receipt.returndata == ["0x2", "0x1", "0x0"]
-    assert receipt.return_value == (1, 0)
-
-
-def test_external_call_uint256s_outputs_from_account(contract, account):
-    receipt = contract.get_uint256s(sender=account)
-    assert receipt.returndata == ["0x6", "0x7b", "0x0", "0x0", "0x7b", "0x84", "0x7b"]
-    assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
-
-
-def test_external_call_uint256s_array_outputs_from_account(contract, account):
-    receipt = contract.get_uint256s_array(sender=account)
-    assert receipt.returndata == ["0x7", "0x3", "0x7b", "0x0", "0x0", "0x7b", "0x84", "0x7b"]
-    assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
-
-
-def test_external_call_mixed_outputs_from_account(contract, account):
-    receipt = contract.get_mix(sender=account)
-    assert receipt.returndata == [
-        "0xd",
-        "0x1",
-        "0x2",
-        "0x3",
-        "0x4",
-        "0x5",
-        "0x6",
-        "0x3",
-        "0x8",
-        "0x9",
-        "0xa",
-        "0xb",
-        "0xc",
-        "0xd",
-    ]
-    assert receipt.return_value == [1, [3, 4], (5, 6), [8, 9, 10], 11, (12, 13)]
-
-
-def test_external_call_complex_struct_outputs(contract, account):
-    receipt = contract.complex_struct(sender=account)
-    assert receipt.returndata == ["0x5", "0x3ade68b1", "0x7b", "0x1c8", "0x315", "0x64"]
-    assert receipt.return_value == [987654321, (123, 456), (789, 100)]
-
-
-def test_external_call_complex_struct_array_outputs(contract, account):
-    receipt = contract.complex_struct_array(sender=account)
-    assert receipt.returndata == [
-        "0x3",
-        "0x75bcd15",
-        "0x7b",
-        "0x0",
-        "0x0",
-        "0x7b",
-        "0x3ade68b1",
-        "0x0",
-        "0x7b",
-        "0x7b",
-        "0x0",
-        "0x0",
-        "0x0",
-        "0x0",
-        "0x0",
-        "0x0",
-    ]
-    assert receipt.return_value == [
-        [123456789, (123, 0), (0, 123)],
-        [987654321, (0, 123), (123, 0)],
-        [0, (0, 0), (0, 0)],
-    ]
-
-
-def test_view_call_array_outputs(contract, account):
-    array = contract.view_array()
-    assert array == [1, 2, 3]
-
-
-def test_view_call_uint256s_array_outputs(contract):
-    array = contract.view_uint256s_array()
-    assert array == [(123, 0), (0, 123), (132, 123)]
-
-
-def test_view_call_complex_struct_outputs(contract):
-    struct = contract.view_complex_struct()
-    assert struct == [123456789, (10, 0), (10, 10)]
-
-
-def test_view_call_complex_struct_array_outputs(contract):
-    assert contract.view_complex_struct_array() == [
-        [123456789, (123, 0), (0, 123)],
-        [987654321, (0, 123), (123, 0)],
-        [0, (0, 0), (0, 0)],
-    ]
-
-
-def test_unable_to_afford_transaction(contract, account, provider):
-    with pytest.raises(OutOfGasError):
-        contract.increase_balance(account.address, 1, sender=account, max_fee=1)
+    # Check the external method
+    # FIXME: it will fail until we have full ABI access for account-calls
+    receipt = getattr(contract, f"{method}_external")(sender=account)
+    assert receipt.returndata == returndata_expected
+    assert receipt.return_value == return_value

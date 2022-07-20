@@ -98,42 +98,20 @@ class Starknet(EcosystemAPI, StarknetBase):
         if not raw_data:
             return raw_data
 
-        raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        iter_data = iter(raw_data)
-        decoded: List[Any] = []
+        full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
+        id_manager = identifier_manager_from_abi(full_abi)
+        transformer = DataTransformer(abi.dict(), id_manager)
 
-        for abi_output_cur, abi_output_next in zip_longest(abi.outputs, abi.outputs[1:]):
-            if abi_output_cur.type == "Uint256":
-                # Unint256 are stored using 2 slots
-                decoded.append((next(iter_data), next(iter_data)))
-            elif (
-                abi_output_cur.type == "felt"
-                and abi_output_next
-                and str(abi_output_next.type).endswith("*")
-            ):
-                # Array - strip off leading length
-                array_len = next(iter_data)
-                if abi_output_next.type == "felt*":
-                    decoded.append([next(iter_data) for _ in range(array_len)])
-                elif abi_output_next.type == "Uint256*":
-                    # Unint256 are stored using 2 slots
-                    decoded.append([(next(iter_data), next(iter_data)) for _ in range(array_len)])
-                else:
-                    print(f"{full_abi=}")
-                    assert 0, f"custom struct: {abi_output_next.type}"
-            elif str(abi_output_cur.type).endswith("*"):
-                # The array was handled by the previous condition at the previous iteration
-                continue
-            else:
-                decoded.append(next(iter_data))
+        raw_data = [self.encode_primitive_value(v) for v in raw_data]
+        return_value = transformer.to_python(raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
             len(abi.outputs) == 2 and str(abi.outputs[1].type).endswith("*")
         ):
-            decoded = decoded[0]
+            return_value = return_value[0]
 
-        return decoded
+        return return_value
 
     def encode_calldata(
         self,
