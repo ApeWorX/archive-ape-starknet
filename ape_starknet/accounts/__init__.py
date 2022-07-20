@@ -1,8 +1,9 @@
+import functools
 import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
@@ -23,7 +24,7 @@ from starknet_devnet.account import Account
 from starknet_py.net import KeyPair
 from starknet_py.net.account.compiled_account_contract import COMPILED_ACCOUNT_CONTRACT
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
-from starknet_py.utils.crypto.facade import ECSignature, sign_calldata
+from starknet_py.utils.crypto.facade import ECSignature, message_signature, pedersen_hash
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
 from starkware.crypto.signature.signature import private_to_stark_key
 from starkware.starknet.core.os.contract_address.contract_address import (
@@ -55,6 +56,23 @@ def _get_oz_account_contract_type() -> ContractType:
 
 
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = _get_oz_account_contract_type()
+
+
+def sign_calldata(calldata: Iterable[int], priv_key: int):
+    """
+    Helper function that signs hash:
+
+        hash = pedersen_hash(calldata[0], 0)
+        hash = pedersen_hash(calldata[1], hash)
+        hash = pedersen_hash(calldata[2], hash)
+        ...
+
+    :param calldata: iterable of ints
+    :param priv_key: private key
+    :return: signed calldata's hash
+    """
+    hashed_calldata = functools.reduce(lambda x, y: pedersen_hash(y, x), calldata, 0)
+    return message_signature(hashed_calldata, priv_key)
 
 
 class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
@@ -494,7 +512,9 @@ class StarknetDevnetAccount(StarknetDevelopmentAccount):
     @cached_property
     def address(self) -> AddressType:
         address_int = calculate_contract_address_from_hash(
-            salt=Account.SALT,
+            # Salt is hardcoded since devnet 0.2.6:
+            # https://github.com/Shard-Labs/starknet-devnet/blob/v0.2.6/starknet_devnet/account.py#L36
+            salt=20,
             class_hash=Account.HASH,
             constructor_calldata=[self.public_key_int],
             deployer_address=0,

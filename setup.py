@@ -57,14 +57,14 @@ setup(
     url="https://github.com/ApeWorX/ape-starknet",
     include_package_data=True,
     install_requires=[
-        "cairo-lang>=0.9,<0.10",
+        "cairo-lang>=0.9.1,<0.10",
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
         "eth-ape>=0.3.5,<0.4.0",
         "ethpm-types",  # Use same as `eth-ape`.
-        "starknet.py>=0.3.2a0,<0.4",
-        "starknet-devnet>=0.2.3,<0.3",
+        "starknet.py>=0.4.1a0,<0.5",
+        "starknet-devnet>=0.2.6,<0.3",
         "importlib-metadata ; python_version<'3.8'",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},

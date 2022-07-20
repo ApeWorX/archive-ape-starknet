@@ -9,7 +9,7 @@ from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.constants import TxStatus
+from starknet_py.net.client_models import TransactionStatus
 from starknet_py.net.models.transaction import (
     Declare,
     Deploy,
@@ -39,7 +39,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TxStatus.NOT_RECEIVED.value
+    status: int = TransactionStatus.UNKNOWN
     version: int = 0
 
     """Ignored"""
@@ -55,7 +55,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
 
     @validator("status", pre=True, allow_reuse=True)
     def validate_status(cls, value):
-        if isinstance(value, TxStatus):
+        if isinstance(value, TransactionStatus):
             return value.value
 
         elif isinstance(value, str):
@@ -220,7 +220,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     An object represented a confirmed transaction in Starknet.
     """
 
-    status: TxStatus
+    status: TransactionStatus
     type: TransactionType
 
     # NOTE: Might be a backend bug causing this to be None
@@ -234,7 +234,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     sender: str = Field("", exclude=True)
 
     """Aliased"""
-    txn_hash: str = Field(alias="transaction_hash")
+    txn_hash: str = Field(alias="hash")
 
     @validator("nonce", pre=True, allow_reuse=True)
     def validate(cls, value):
@@ -266,7 +266,7 @@ class DeployReceipt(StarknetReceipt):
     receiver: Optional[str] = None  # type: ignore
 
     # Only get a receipt if deploy was accepted
-    status: TxStatus = TxStatus.ACCEPTED_ON_L2
+    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
 
     @validator("contract_address", pre=True, allow_reuse=True)
     def validate_contract_address(cls, value):
@@ -343,7 +343,7 @@ class ContractDeclaration(StarknetReceipt):
     receiver: Optional[str] = None  # type: ignore
 
     # Only get a receipt if deploy was accepted
-    status: TxStatus = TxStatus.ACCEPTED_ON_L2
+    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
 
     type: TransactionType = TransactionType.DECLARE
 

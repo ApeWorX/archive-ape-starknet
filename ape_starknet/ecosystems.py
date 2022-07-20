@@ -13,7 +13,7 @@ from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
-from starknet_py.utils.data_transformer import DataTransformer
+from starknet_py.utils.data_transformer import FunctionCallSerializer
 from starkware.starknet.definitions.fields import ContractAddressSalt
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name
@@ -28,6 +28,7 @@ from ape_starknet.transactions import (
     DeployTransaction,
     InvocationReceipt,
     InvokeFunctionTransaction,
+    StarknetReceipt,
     StarknetTransaction,
 )
 from ape_starknet.utils import to_checksum_address
@@ -140,7 +141,7 @@ class Starknet(EcosystemAPI, StarknetBase):
     ) -> List:
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
         id_manager = identifier_manager_from_abi(full_abi)
-        transformer = DataTransformer(method_abi.dict(), id_manager)
+        transformer = FunctionCallSerializer(method_abi.dict(), id_manager)
         pre_encoded_args: List[Any] = []
         index = 0
         last_index = min(len(method_abi.inputs), len(call_args)) - 1
@@ -220,7 +221,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = TransactionType(data["type"])
-        receipt_cls: Union[Type[ContractDeclaration], Type[DeployReceipt], Type[InvocationReceipt]]
+        receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvocationReceipt
         elif txn_type == TransactionType.DEPLOY:
