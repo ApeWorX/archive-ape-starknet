@@ -71,6 +71,11 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
         framework.
         """
 
+    @property
+    def total_transfer_value(self) -> int:
+        max_fee = self.max_fee or 0
+        return self.value + max_fee
+
 
 class DeclareTransaction(StarknetTransaction):
     sender: AddressType = to_checksum_address(DECLARE_SENDER_ADDRESS)
