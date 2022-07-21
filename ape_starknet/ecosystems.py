@@ -97,7 +97,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         self,
         abi: MethodABI,
         raw_data: List[int],
-        full_abi: List[ABI],
+        full_abi: Optional[List[ABI]] = None,
     ) -> Any:  # type: ignore
         if not raw_data:
             return raw_data
