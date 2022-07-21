@@ -351,6 +351,9 @@ class Starknet(EcosystemAPI, StarknetBase):
         event_key = get_selector_from_name(abi.name)
         matching_logs = [log for log in raw_logs if event_key in log["keys"]]
 
+        def from_uint(low: int, high: int) -> int:
+            return low + (high << 128)
+
         def decode_items(
             abi_types: List[EventABIType], data: List[int]
         ) -> List[Union[int, Tuple[int, int]]]:
@@ -359,7 +362,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             for abi_type in abi_types:
                 if abi_type.type == "Uint256":
                     # Uint256 are stored using 2 slots
-                    decoded.append((next(iter_data), next(iter_data)))
+                    decoded.append(from_uint(next(iter_data), next(iter_data)))
                 else:
                     decoded.append(next(iter_data))
             return decoded
