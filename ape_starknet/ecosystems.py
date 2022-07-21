@@ -1,5 +1,4 @@
 from enum import Enum
-from itertools import zip_longest
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
@@ -94,7 +93,12 @@ class Starknet(EcosystemAPI, StarknetBase):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: List[int], full_abi: List[ABI]) -> Any:  # type: ignore
+    def decode_returndata(
+        self,
+        abi: MethodABI,
+        raw_data: List[int],
+        full_abi: List[ABI],
+    ) -> Any:  # type: ignore
         if not raw_data:
             return raw_data
 

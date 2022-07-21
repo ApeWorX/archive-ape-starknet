@@ -2,7 +2,7 @@ import pytest
 from ape._compat import Literal
 from ape.types import AddressType
 from eth_typing import HexAddress, HexStr
-from ethpm_types.abi import EventABIType, MethodABI
+from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
 from starkware.starknet.public.abi import get_selector_from_name
 

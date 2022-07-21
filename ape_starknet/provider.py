@@ -267,6 +267,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             returndata = txn_info.get("result", [])
             receipt.returndata = returndata.copy()
             abi = txn.method_abi
+            full_abi = txn.contract_type.abi
 
             if txn.original_method_abi:
                 # When that special attribute is set means the transation came from an
@@ -275,9 +276,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
                 # and that the return data is always prefixed with the number of items.
                 # We need to restore the former, and remove the later.
                 abi = txn.original_method_abi
+                full_abi = txn.original_full_abi  # type: ignore
                 returndata = returndata[1:]
 
-            return_value = self.starknet.decode_returndata(abi, returndata, txn.contract_type.abi)
+            return_value = self.starknet.decode_returndata(abi, returndata, full_abi)
             receipt.return_value = return_value
 
         return receipt

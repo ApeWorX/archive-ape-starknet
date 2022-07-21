@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
