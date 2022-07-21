@@ -107,15 +107,15 @@ class Starknet(EcosystemAPI, StarknetBase):
         transformer = DataTransformer(abi.dict(), id_manager)
 
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        return_value = transformer.to_python(raw_data)
+        decoded = transformer.to_python(raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
             len(abi.outputs) == 2 and str(abi.outputs[1].type).endswith("*")
         ):
-            return_value = return_value[0]
+            decoded = decoded[0]
 
-        return return_value
+        return decoded
 
     def encode_calldata(
         self,
