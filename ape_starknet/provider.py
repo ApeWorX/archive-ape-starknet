@@ -270,8 +270,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             full_abi = txn.contract_type.abi
 
             if txn.original_method_abi and txn.original_full_abi:
-                # When those special attributes are set means the transation came from an
-                # account-specific call: it implies original method ABIs were replaced
+                # When those special attributes are set means the transaction came from an
+                # account-specific call: it implies original ABIs were replaced
                 # with account-specific ABIs in BaseStarknetAccount.prepare_transaction(),
                 # and that the return data is always prefixed with the number of items.
                 # We need to restore the former, and remove the later.
