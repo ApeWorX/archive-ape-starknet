@@ -332,6 +332,9 @@ class Starknet(EcosystemAPI, StarknetBase):
         def from_uint(low: int, high: int) -> int:
             return low + (high << 128)
 
+        def from_uint(low: int, high: int) -> int:
+            return low + (high << 128)
+
         def decode_items(
             abi_types: List[EventABIType], data: List[int]
         ) -> List[Union[int, Tuple[int, int]]]:
