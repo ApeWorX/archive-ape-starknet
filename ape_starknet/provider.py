@@ -253,7 +253,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise TransactionError(message="Transaction not received.")
 
         receipt = self.get_transaction(txn_info.hash)
-        print(f"{receipt = }")
 
         if isinstance(txn, InvokeFunctionTransaction):
             returndata = txn_info.get("result", [])
