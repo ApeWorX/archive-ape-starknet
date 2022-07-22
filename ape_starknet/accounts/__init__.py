@@ -498,7 +498,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
         if not isinstance(msg, (list, tuple)):
             msg = [msg]
 
-        return sign_calldata(msg, self._get_key())
+        return sign_calldata(msg, self._get_key())  # type: ignore
 
 
 class StarknetDevnetAccount(StarknetDevelopmentAccount):
@@ -645,7 +645,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             msg = [msg]
 
         private_key = self._get_key(passphrase=passphrase)
-        return sign_calldata(msg, private_key)
+        return sign_calldata(msg, private_key)  # type: ignore
 
     def change_password(self):
         self.locked = True  # force entering passphrase to get key

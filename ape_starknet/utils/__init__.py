@@ -9,13 +9,13 @@ from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
 from hexbytes import HexBytes
+from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     DeclareTransaction,
     DeployTransaction,
     InvokeTransaction,
     Transaction,
 )
-from starknet_py.net.client_errors import ClientError
 from starknet_py.net.models import TransactionType
 from starknet_py.net.models.address import parse_address
 from starknet_py.transaction_exceptions import TransactionRejectedError
