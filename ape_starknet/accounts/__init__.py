@@ -140,6 +140,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             yield StarknetEphemeralAccount(raw_account_data=account_data, account_key=alias)
 
         for key_file_path in self._key_file_paths:
+            if key_file_path.stem == "deployments_map":
+                continue
+
             if key_file_path.stem in self.cached_accounts:
                 yield self.cached_accounts[key_file_path.stem]
             else:
@@ -339,7 +342,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @property
     def public_key(self) -> str:
-        address = self.get_account_data()["address"]
+        account_data = self.get_account_data()
+        if "address" not in account_data:
+            raise ValueError(f"Account data corrupted, missing 'address' key: {account_data}.")
+
+        address = account_data["address"]
         if isinstance(address, int):
             address = HexBytes(address).hex()
 

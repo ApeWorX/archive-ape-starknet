@@ -3,7 +3,7 @@ from typing import Any
 from ape.api import ConverterAPI
 from ape.types import AddressType
 
-from ape_starknet.utils import PLUGIN_NAME, is_checksum_address, is_hex_address, to_checksum_address
+from ape_starknet.utils import PLUGIN_NAME, is_hex_address, to_checksum_address
 
 
 # NOTE: This utility converter ensures that all bytes args can accept hex too
@@ -19,7 +19,6 @@ class StarknetAddressConverter(ConverterAPI):
             and provider.network.ecosystem.name == PLUGIN_NAME
             and isinstance(value, str)
             and is_hex_address(value)
-            and not is_checksum_address(value)
         )
 
     def convert(self, value: str) -> AddressType:
