@@ -149,6 +149,13 @@ class DeployTransaction(StarknetTransaction):
 class InvokeFunctionTransaction(StarknetTransaction):
     max_fee: int = 0
     method_abi: MethodABI
+
+    original_contract_type: Optional[ContractType] = None
+    """
+    The original contract type containing ``original_method_abi``
+    and all the other ABIs from that contract.
+    """
+
     sender: Optional[AddressType] = None
     type: TransactionType = TransactionType.INVOKE_FUNCTION
 

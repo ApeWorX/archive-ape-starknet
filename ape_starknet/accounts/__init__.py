@@ -395,6 +395,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn.receiver = self.address
         txn.sender = None
         txn.original_method_abi = txn.method_abi
+        txn.original_contract_type = contract_type
         txn.method_abi = execute_abi
         txn.signature = self.sign_transaction(txn)
         return txn
