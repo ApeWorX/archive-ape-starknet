@@ -7,7 +7,7 @@ from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
 from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
-from ethpm_types.abi import EventABI, MethodABI
+from ethpm_types.abi import ABI, EventABI, MethodABI
 from pydantic import Field, validator
 from starknet_py.constants import TxStatus
 from starknet_py.net.models.transaction import (
@@ -164,6 +164,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
     Only set when invoked from an account `__execute__`
     special method to help decoding return data
     """
+    original_full_abi: Optional[List[ABI]] = None
 
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore

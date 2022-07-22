@@ -1,5 +1,4 @@
 from enum import Enum
-from itertools import zip_longest
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
@@ -94,24 +93,31 @@ class Starknet(EcosystemAPI, StarknetBase):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: List[int], full_abi: List[ABI]) -> Any:  # type: ignore
+    def decode_returndata(
+        self,
+        abi: MethodABI,
+        raw_data: List[int],
+        full_abi: Optional[List[ABI]] = None,
+    ) -> Any:  # type: ignore
         if not raw_data:
             return raw_data
 
-        full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
+        full_abi = (
+            [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi] if full_abi else [abi]
+        )
         id_manager = identifier_manager_from_abi(full_abi)
         transformer = DataTransformer(abi.dict(), id_manager)
 
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        return_value = transformer.to_python(raw_data)
+        decoded = transformer.to_python(raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
             len(abi.outputs) == 2 and str(abi.outputs[1].type).endswith("*")
         ):
-            return_value = return_value[0]
+            decoded = decoded[0]
 
-        return return_value
+        return decoded
 
     def encode_calldata(
         self,
