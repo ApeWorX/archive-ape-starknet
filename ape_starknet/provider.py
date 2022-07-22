@@ -138,7 +138,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     @handle_client_errors
     def get_code(self, address: str) -> List[int]:
         # NOTE: Always return truthy value for code so that Ape core works properly
-        return self.get_code_and_abi(address).bytecode or [int(c) for c in "PROXY"]
+        return self.get_code_and_abi(address).bytecode or [ord(c) for c in "PROXY"]
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:

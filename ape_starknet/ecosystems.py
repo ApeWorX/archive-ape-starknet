@@ -13,7 +13,7 @@ from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
-from starknet_py.utils.data_transformer import FunctionCallSerializer
+from starknet_py.utils.data_transformer.data_transformer import CairoSerializer
 from starkware.starknet.definitions.fields import ContractAddressSalt
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name
@@ -140,8 +140,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         call_args: Union[List, Tuple],
     ) -> List:
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
-        id_manager = identifier_manager_from_abi(full_abi)
-        transformer = FunctionCallSerializer(method_abi.dict(), id_manager)
+        transformer = CairoSerializer(identifier_manager_from_abi(full_abi))
         pre_encoded_args: List[Any] = []
         index = 0
         last_index = min(len(method_abi.inputs), len(call_args)) - 1
@@ -177,8 +176,8 @@ class Starknet(EcosystemAPI, StarknetBase):
 
             index += 1
 
-        encoded_calldata, _ = transformer.from_python(*pre_encoded_args)
-        return encoded_calldata
+        calldata, _ = transformer.from_python(method_abi.dict()["inputs"], *pre_encoded_args)
+        return calldata
 
     def _pre_encode_value(self, value: Any) -> Any:
         if isinstance(value, dict):
