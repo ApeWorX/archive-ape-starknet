@@ -268,11 +268,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             receipt.returndata = returndata.copy()
 
             if txn.original_method_abi:
-                # When those special attributes are set means the transaction came from an
-                # account-specific call: it implies original ABIs were replaced
-                # with account-specific ABIs in BaseStarknetAccount.prepare_transaction(),
-                # and that the return data is always prefixed with the number of items.
-                # We need to restore the former, and remove the later.
+                # Use ABI before going through account contract
                 abi = txn.original_method_abi
                 return_data = returndata[1:]
             else:
