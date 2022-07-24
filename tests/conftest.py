@@ -8,6 +8,7 @@ import ape
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
 
+from ape_starknet import tokens as _tokens
 from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
 from ape_starknet.utils import PLUGIN_NAME
 
@@ -53,6 +54,37 @@ def convert():
 @pytest.fixture(scope="session")
 def chain():
     return ape.chain
+
+
+@pytest.fixture(scope="session")
+def token_contract(config, account, token_initial_supply, project):
+    project_path = projects_directory / "token"
+
+    with config.using_project(project_path):
+        return project.get_contract("TestToken").deploy(
+            123123, 321321, token_initial_supply, account.address
+        )
+
+
+@pytest.fixture(scope="session")
+def proxy_token_contract(config, account, token_initial_supply, token_contract, project):
+    project_path = projects_directory / "proxy"
+
+    with config.using_project(project_path):
+        contract = project.get_contract("Proxy").deploy(token_contract.address)
+        _tokens.add_token("proxy_token", LOCAL_NETWORK_NAME, contract.address)
+        return _tokens["proxy_token"]
+
+
+@pytest.fixture(scope="session")
+def tokens(token_contract, proxy_token_contract, provider, account):
+    _tokens.add_token("test_token", LOCAL_NETWORK_NAME, token_contract.address)
+    return _tokens
+
+
+@pytest.fixture(scope="session")
+def explorer(provider):
+    return provider.starknet_explorer
 
 
 @pytest.fixture(scope="session")
@@ -211,7 +243,7 @@ def ephemeral_account_data():
 
 
 @pytest.fixture
-def existing_key_file_account(config, key_file_account_data):
+def key_file_account(config, key_file_account_data):
     temp_accounts_dir = Path(config.DATA_FOLDER) / "starknet"
     temp_accounts_dir.mkdir(exist_ok=True, parents=True)
     test_key_file_path = temp_accounts_dir / f"{EXISTING_KEY_FILE_ALIAS}.json"

@@ -20,7 +20,6 @@ from eth_utils import add_0x_prefix, text_if_str, to_bytes
 from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
-from starknet_devnet.account import Account
 from starknet_py.net import KeyPair
 from starknet_py.net.account.compiled_account_contract import COMPILED_ACCOUNT_CONTRACT
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
@@ -48,14 +47,8 @@ The key-file stanza containing custom properties
 specific to the ape-starknet plugin.
 """
 APP_KEY_FILE_VERSION = "0.1.0"
-
-
-def _get_oz_account_contract_type() -> ContractType:
-    contract_class = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
-    return convert_contract_class_to_contract_type(contract_class)
-
-
-OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = _get_oz_account_contract_type()
+OZ_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
+OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
 
 
 def sign_calldata(calldata: Iterable[int], priv_key: int):
@@ -522,7 +515,7 @@ class StarknetDevnetAccount(StarknetDevelopmentAccount):
             # Salt is hardcoded since devnet 0.2.6:
             # https://github.com/Shard-Labs/starknet-devnet/blob/v0.2.6/starknet_devnet/account.py#L36
             salt=20,
-            class_hash=Account.HASH,
+            class_hash=1803505466663265559571280894381905521939782500874858933595227108099796801620,
             constructor_calldata=[self.public_key_int],
             deployer_address=0,
         )

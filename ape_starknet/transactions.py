@@ -293,6 +293,8 @@ class InvocationReceipt(StarknetReceipt):
         if isinstance(value, str):
             return int(value, 16)
 
+        return value
+
     @validator("entry_point_selector", pre=True, allow_reuse=True)
     def validate_entry_point_selector(cls, value):
         if isinstance(value, str):

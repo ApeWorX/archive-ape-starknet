@@ -40,7 +40,7 @@ def test_create(accounts_runner):
     assert "Account successfully deployed to" in output
 
 
-def test_delete(accounts_runner, existing_key_file_account):
+def test_delete(accounts_runner, key_file_account):
     """
     This integration test deletes a single deployment of an account and then
     re-import it. The account never completely goes away because it is deployed on
@@ -95,10 +95,10 @@ def test_delete(accounts_runner, existing_key_file_account):
         267944034277627769235577208827196223019601239705086925741947749358138777128,
     ),
 )
-def test_import(accounts_runner, existing_key_file_account, account_container, private_key):
+def test_import(accounts_runner, key_file_account, account_container, private_key):
     network = "starknet:testnet"  # NOTE: Does not actually connect
     account_path = account_container.data_folder / f"{EXISTING_KEY_FILE_ALIAS}.json"
-    address = existing_key_file_account.address
+    address = key_file_account.address
 
     if account_path.is_file():
         # Corrupted from previous test
@@ -156,16 +156,16 @@ def test_import_when_local(accounts_runner):
     assert "ERROR: Must use --network option to specify non-local network." in output
 
 
-def test_list(accounts_runner, existing_key_file_account):
+def test_list(accounts_runner, key_file_account):
     assert EXISTING_KEY_FILE_ALIAS in accounts_runner.invoke("list")
 
 
-def test_core_accounts_list_all(root_accounts_runner, existing_key_file_account):
+def test_core_accounts_list_all(root_accounts_runner, key_file_account):
     # This is making sure the normal `ape accounts list --all` command works.
     assert EXISTING_KEY_FILE_ALIAS in root_accounts_runner.invoke("list", "--all")
 
 
-def test_change_password(accounts_runner, existing_key_file_account):
+def test_change_password(accounts_runner, key_file_account):
     new_password = "321"
     assert "SUCCESS" in accounts_runner.invoke(
         "change-password", EXISTING_KEY_FILE_ALIAS, input=[PASSWORD, new_password, new_password]

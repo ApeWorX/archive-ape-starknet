@@ -248,11 +248,11 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
-        txn_info: SentTransactionResponse = self._send_transaction(txn, token=token)
-        if txn_info.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
+        response: SentTransactionResponse = self._send_transaction(txn, token=token)
+        if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        receipt = self.get_transaction(txn_info.hash)
+        receipt = self.get_transaction(response.hash)
 
         if isinstance(txn, InvokeFunctionTransaction):
             returndata = txn_info.get("result", [])
