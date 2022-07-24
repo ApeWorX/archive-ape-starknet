@@ -266,7 +266,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         if invoking and isinstance(txn, InvokeFunctionTransaction):
             returndata = txn_info.get("result", [])
             receipt.returndata = returndata.copy()
-            abi = txn.method_abi
 
             if txn.original_method_abi:
                 # When those special attributes are set means the transaction came from an
