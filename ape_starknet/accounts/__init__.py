@@ -406,13 +406,13 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             "data_offset": 0,
             "data_len": len(stark_tx.calldata),
         }
+        txn.original_call = txn.as_starknet_object()
         contract_type = self.chain_manager.contracts[self.address]
         txn.data = self.starknet.encode_calldata(
             contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
         )
         txn.receiver = self.address
         txn.sender = None
-        txn.original_method_abi = txn.method_abi
         txn.method_abi = execute_abi
         txn.signature = self.sign_transaction(txn)
         return txn

@@ -3,6 +3,8 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
+import asyncio
+from dataclasses import asdict
 
 import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
@@ -13,8 +15,8 @@ from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
-from starknet_py.net.client_models import ContractCode, SentTransactionResponse, Transaction
-from starknet_py.net.gateway_client import GatewayClient as StarknetClient
+from starknet_py.net.client_models import ContractCode, SentTransactionResponse, Transaction, InvokeFunction
+from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.services.api.feeder_gateway.response_objects import (
@@ -51,7 +53,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     """
 
     # Gets set when 'connect()' is called.
-    client: Optional[StarknetClient] = None
+    client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     default_gas_cost: int = 0
     cached_code: Dict[int, Dict] = {}
@@ -72,12 +74,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             was_successful = False
 
         if was_successful and self.client is None:
-            self.client = StarknetClient(self.uri, chain=self.chain_id)
+            self.client = GatewayClient(self.uri, chain=self.chain_id)
 
         return was_successful
 
     @property
-    def starknet_client(self) -> StarknetClient:
+    def starknet_client(self) -> GatewayClient:
         if not self.is_connected:
             raise StarknetProviderError("Provider is not connected to Starknet.")
 
@@ -117,7 +119,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
             self.start()
 
-        self.client = StarknetClient(self.uri, chain=self.chain_id)
+        self.client = GatewayClient(self.uri, chain=self.chain_id)
 
     def disconnect(self):
         self.client = None
@@ -207,7 +209,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
 
         block = self.starknet_client.get_block_sync(**{kwarg: block_id})
-        return self.starknet.decode_block(block.dump())
+        return self.starknet.decode_block(asdict(block))
 
     def _get_block(self, block_id: BlockID) -> StarknetBlock:
         kwarg = (
@@ -233,7 +235,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
-        self.starknet_client.wait_for_tx_sync(txn_hash)
+        result = self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info: Transaction = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_info.hash)
         receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
@@ -248,26 +250,27 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
-        response: SentTransactionResponse = self._send_transaction(txn, token=token)
-        if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
+        response = self._send_transaction(txn, token=token)
+        if response["code"] != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        receipt = self.get_transaction(response.hash)
-
+        returndata = None
         if isinstance(txn, InvokeFunctionTransaction):
-            returndata = txn_info.get("result", [])
-            receipt.returndata = returndata.copy()
-            abi = txn.method_abi
-
-            if txn.original_method_abi:
+            returndata = [1,2]
+            if txn.original_call.method_abi:
                 # When that special attribute is set means the transation came from an
                 # account-specific call: it implies the original method ABI was replaced
                 # with the specific execute ABI in BaseStarknetAccount.prepare_transaction(),
                 # and that the return data is always prefixed with the number of items.
                 # We need to restore the former, and remove the later.
-                abi = txn.original_method_abi
+                abi = txn.original_call.method_abi
                 returndata = returndata[1:]
+            else:
+                abi = txn.method_abi
 
+        receipt = self.get_transaction(response["hash"])
+        if returndata:
+            receipt.returndata = returndata.copy()
             return_value = self.starknet.decode_returndata(abi, returndata)
             receipt.return_value = return_value
 
@@ -276,7 +279,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     @handle_client_errors
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
-    ) -> Union[DeclareSpecificInfo, DeploySpecificInfo, InvokeSpecificInfo]:
+    ) -> Dict:
         txn = self.prepare_transaction(txn)
         if not token and hasattr(txn, "token") and txn.token:  # type: ignore
             token = txn.token  # type: ignore
@@ -289,7 +292,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             )
 
         starknet_txn = txn.as_starknet_object()
-        return self.starknet_client.send_transaction_sync(starknet_txn)  # , token=token)
+        response = self.starknet_client.send_transaction_sync(starknet_txn, token=token)
+
+        return asdict(response)
 
     @handle_client_errors
     def get_contract_logs(
