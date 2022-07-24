@@ -7,7 +7,7 @@ from ape.contracts import ContractContainer
 from ape.types import AddressType, ContractLog, RawAddress
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
-from ethpm_types.abi import ABI, ConstructorABI, EventABI, EventABIType, MethodABI
+from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
 from starknet_py.net.models.address import parse_address
@@ -93,18 +93,13 @@ class Starknet(EcosystemAPI, StarknetBase):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(
-        self,
-        abi: MethodABI,
-        raw_data: List[int],
-        full_abi: Optional[List[ABI]] = None,
-    ) -> Any:  # type: ignore
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> Any:  # type: ignore
         if not raw_data:
             return raw_data
 
-        full_abi = (
-            [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi] if full_abi else [abi]
-        )
+        full_abi = [
+            a.dict() for a in (abi.contract_type.abi if abi.contract_type is not None else [abi])
+        ]
         id_manager = identifier_manager_from_abi(full_abi)
         transformer = DataTransformer(abi.dict(), id_manager)
 
