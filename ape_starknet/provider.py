@@ -50,7 +50,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     default_gas_cost: int = 0
-    cached_code: Dict[int, Dict] = {}
+    cached_code: Dict[int, ContractCode] = {}
 
     @property
     def process_name(self) -> str:
@@ -234,7 +234,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         receipt: TransactionReceipt = self.starknet_client.get_transaction_receipt_sync(
             tx_hash=txn_info.hash
         )
-        print(f"{receipt = }")
         receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
