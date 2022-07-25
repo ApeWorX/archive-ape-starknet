@@ -149,14 +149,15 @@ class DeployTransaction(StarknetTransaction):
 class InvokeFunctionTransaction(StarknetTransaction):
     max_fee: int = 0
     method_abi: MethodABI
+
     sender: Optional[AddressType] = None
     type: TransactionType = TransactionType.INVOKE_FUNCTION
 
+    original_method_abi: Optional[MethodABI] = None
     """
     Only set when invoked from an account `__execute__`
     special method to help decoding return data
     """
-    original_method_abi: Optional[MethodABI] = None
 
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore

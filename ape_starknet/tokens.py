@@ -8,7 +8,6 @@ from eth_typing import HexAddress, HexStr
 from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
 
-from ape_starknet.utils import from_uint
 from ape_starknet.utils.basemodel import StarknetBase
 
 if TYPE_CHECKING:
@@ -217,7 +216,7 @@ class TokenManager(StarknetBase):
         if hasattr(account, "address"):
             account = account.address  # type: ignore
 
-        return from_uint(self[token].balanceOf(account))
+        return self[token].balanceOf(account)
 
     def transfer(
         self,
