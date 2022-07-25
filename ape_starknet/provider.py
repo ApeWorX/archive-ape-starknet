@@ -228,15 +228,15 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return self.client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
-    def get_traces(self, block_number: int) -> List[BlockSingleTransactionTrace]:
+    def _get_traces(self, block_number: int) -> List[BlockSingleTransactionTrace]:
         block_traces = self.starknet_client.get_block_traces_sync(block_number=block_number)
         return block_traces.traces
 
     @handle_client_errors
-    def get_single_trace(
+    def _get_single_trace(
         self, block_number: int, txn_hash: int
     ) -> Optional[BlockSingleTransactionTrace]:
-        traces = self.get_traces(block_number)
+        traces = self._get_traces(block_number)
         return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
 
     @handle_client_errors
@@ -245,7 +245,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        trace = self.get_single_trace(receipt.block_number, receipt.hash)
+        trace = self._get_single_trace(receipt.block_number, receipt.hash)
 
         receipt_dict: Dict[str, Any] = {
             "provider": self,
