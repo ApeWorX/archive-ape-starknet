@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
@@ -9,7 +10,7 @@ from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.net.client_models import TransactionStatus
+from starknet_py.net.client_models import Event, TransactionStatus
 from starknet_py.net.models.transaction import (
     Declare,
     Deploy,
@@ -223,7 +224,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """
 
     status: TransactionStatus
-    type: TransactionType
+    type: TransactionType = Field(alias="call_type")
 
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None
@@ -251,6 +252,16 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     def validate_transaction_hash(cls, value):
         if isinstance(value, int):
             return HexBytes(value).hex()
+
+    @validator("type", pre=True, allow_reuse=True)
+    def validate_type(cls, value):
+        if isinstance(value, str):
+            if value == "CALL":
+                value = TransactionType.INVOKE_FUNCTION
+            elif value == "DECLARE":
+                value = TransactionType.DECLARE
+            elif value == "DEPLOY":
+                value = TransactionType.DEPLOY
 
         return value
 
@@ -280,11 +291,11 @@ class DeployReceipt(StarknetReceipt):
 
 class InvocationReceipt(StarknetReceipt):
     actual_fee: int
-    entry_point_selector: Optional[int] = None  # Either has this or method_abi
+    entry_point_selector: Optional[int] = Field(alias="selector")  # Either has this or method_abi
     max_fee: int
     method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
-    returndata: List[Any] = []
+    returndata: List[Any] = Field(default_factory=list, alias="result")
     return_value: List[int] = []
 
     """Aliased"""
@@ -301,6 +312,13 @@ class InvocationReceipt(StarknetReceipt):
     def validate_entry_point_selector(cls, value):
         if isinstance(value, str):
             return int(value, 16)
+
+        return value
+
+    @validator("logs", pre=True, allow_reuse=True)
+    def validate_logs(cls, value):
+        if value and isinstance(value[0], Event):
+            value = [asdict(event) for event in value]
 
         return value
 

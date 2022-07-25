@@ -14,7 +14,7 @@ from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
-from starknet_py.net.client_models import ContractCode, Transaction, TransactionReceipt
+from starknet_py.net.client_models import BlockSingleTransactionTrace, ContractCode
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
 from starkware.starknet.definitions.transaction_type import TransactionType
@@ -228,13 +228,30 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return self.client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
+    def get_traces(self, block_number: int) -> List[BlockSingleTransactionTrace]:
+        block_traces = self.starknet_client.get_block_traces_sync(block_number=block_number)
+        return block_traces.traces
+
+    @handle_client_errors
+    def get_single_trace(
+        self, block_number: int, txn_hash: int
+    ) -> Optional[BlockSingleTransactionTrace]:
+        traces = self.get_traces(block_number)
+        return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
+
+    @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
-        txn_info: Transaction = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
-        receipt: TransactionReceipt = self.starknet_client.get_transaction_receipt_sync(
-            tx_hash=txn_info.hash
-        )
-        receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
+
+        txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
+        receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
+        trace = self.get_single_trace(receipt.block_number, receipt.hash)
+
+        receipt_dict: Dict[str, Any] = {
+            "provider": self,
+            **trace.function_invocation,
+            **vars(receipt),
+        }
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
 
@@ -253,8 +270,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         receipt = self.get_transaction(response["hash"])
 
         if isinstance(txn, InvokeFunctionTransaction):
-            returndata = response.get("result") or []
-            receipt.returndata = returndata.copy()
+            returndata = receipt.returndata
 
             if txn.original_method_abi:
                 # Use ABI before going through account contract
