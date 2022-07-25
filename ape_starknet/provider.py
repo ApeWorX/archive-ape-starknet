@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
-import asyncio
 from dataclasses import asdict
 
 import requests
@@ -15,16 +14,11 @@ from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
-from starknet_py.net.client_models import ContractCode, SentTransactionResponse, Transaction, InvokeFunction
+from starknet_py.net.client_models import ContractCode, Transaction, TransactionReceipt
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
 from starkware.starknet.definitions.transaction_type import TransactionType
-from starkware.starknet.services.api.feeder_gateway.response_objects import (
-    DeclareSpecificInfo,
-    DeploySpecificInfo,
-    InvokeSpecificInfo,
-    StarknetBlock,
-)
+from starkware.starknet.services.api.feeder_gateway.response_objects import StarknetBlock
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
@@ -235,9 +229,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
-        result = self.starknet_client.wait_for_tx_sync(txn_hash)
+        self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info: Transaction = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
-        receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_info.hash)
+        receipt: TransactionReceipt = self.starknet_client.get_transaction_receipt_sync(
+            tx_hash=txn_info.hash
+        )
+        print(f"{receipt = }")
         receipt_dict: Dict[str, Any] = {"provider": self, **vars(receipt)}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
@@ -254,32 +251,25 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         if response["code"] != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        returndata = None
-        if isinstance(txn, InvokeFunctionTransaction):
-            returndata = [1,2]
-            if txn.original_call.method_abi:
-                # When that special attribute is set means the transation came from an
-                # account-specific call: it implies the original method ABI was replaced
-                # with the specific execute ABI in BaseStarknetAccount.prepare_transaction(),
-                # and that the return data is always prefixed with the number of items.
-                # We need to restore the former, and remove the later.
-                abi = txn.original_call.method_abi
-                returndata = returndata[1:]
-            else:
-                abi = txn.method_abi
-
         receipt = self.get_transaction(response["hash"])
-        if returndata:
+
+        if isinstance(txn, InvokeFunctionTransaction):
+            returndata = response.get("result") or []
             receipt.returndata = returndata.copy()
+            abi = txn.method_abi
+
+            if txn.original_method_abi:
+                # Use ABI before going through account contract
+                abi = txn.original_method_abi
+                returndata = returndata[1:]
+
             return_value = self.starknet.decode_returndata(abi, returndata)
             receipt.return_value = return_value
 
         return receipt
 
     @handle_client_errors
-    def _send_transaction(
-        self, txn: TransactionAPI, token: Optional[str] = None
-    ) -> Dict:
+    def _send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> Dict:
         txn = self.prepare_transaction(txn)
         if not token and hasattr(txn, "token") and txn.token:  # type: ignore
             token = txn.token  # type: ignore
