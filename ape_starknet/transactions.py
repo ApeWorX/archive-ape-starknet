@@ -291,7 +291,9 @@ class DeployReceipt(StarknetReceipt):
 
 class InvocationReceipt(StarknetReceipt):
     actual_fee: int
-    entry_point_selector: Optional[int] = Field(default=None, alias="selector")  # Either has this or method_abi
+    entry_point_selector: Optional[int] = Field(
+        default=None, alias="selector"
+    )  # Either has this or method_abi
     max_fee: int
     method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
