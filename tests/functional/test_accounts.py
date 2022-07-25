@@ -81,6 +81,11 @@ def test_balance(account):
     assert account.balance > 0
 
 
+def test_can_access_devnet_accounts(account, second_account, chain):
+    assert chain.contracts[account.address] == account.get_contract_type()
+    assert chain.contracts[second_account.address] == second_account.get_contract_type()
+
+
 def test_import_with_passphrase(account_container, key_file_account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     account_container.import_account(

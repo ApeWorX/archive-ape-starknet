@@ -9,7 +9,7 @@ extras_require = {
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-cairo",  # For compiling contracts in tests
+        "ape-cairo==0.3.0a1",  # For compiling contracts in tests
     ],
     "lint": [
         "black>=22.3.0,<23.0",  # auto-formatter and linter
@@ -62,7 +62,7 @@ setup(
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
         "eth-ape>=0.3.5,<0.4.0",
-        "ethpm-types",  # Use same as `eth-ape`.
+        "ethpm-types>=0.3.3,<0.4",
         "starknet.py>=0.4.2a0,<0.5",
         "starknet-devnet>=0.2.6,<0.3",
         "importlib-metadata ; python_version<'3.8'",

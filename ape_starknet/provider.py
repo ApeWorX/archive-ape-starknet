@@ -255,14 +255,16 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         if isinstance(txn, InvokeFunctionTransaction):
             returndata = response.get("result") or []
             receipt.returndata = returndata.copy()
-            abi = txn.method_abi
 
             if txn.original_method_abi:
                 # Use ABI before going through account contract
                 abi = txn.original_method_abi
-                returndata = returndata[1:]
+                return_data = returndata[1:]
+            else:
+                abi = txn.method_abi
+                return_data = returndata
 
-            return_value = self.starknet.decode_returndata(abi, returndata)
+            return_value = self.starknet.decode_returndata(abi, return_data)
             receipt.return_value = return_value
 
         return receipt
