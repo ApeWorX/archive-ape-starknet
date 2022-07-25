@@ -513,7 +513,7 @@ class StarknetDevnetAccount(StarknetDevelopmentAccount):
     @cached_property
     def address(self) -> AddressType:
         address_int = calculate_contract_address_from_hash(
-            # Salt is hardcoded since devnet 0.2.6:
+            # Hardcoded values since devnet 0.2.6:
             # https://github.com/Shard-Labs/starknet-devnet/blob/v0.2.6/starknet_devnet/account.py#L36
             salt=20,
             class_hash=1803505466663265559571280894381905521939782500874858933595227108099796801620,
