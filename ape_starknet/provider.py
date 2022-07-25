@@ -1,4 +1,5 @@
 import os
+from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
