@@ -101,11 +101,10 @@ class Starknet(EcosystemAPI, StarknetBase):
         full_abi = [
             a.dict() for a in (abi.contract_type.abi if abi.contract_type is not None else [abi])
         ]
-        id_manager = identifier_manager_from_abi(full_abi)
-        transformer = DataTransformer(abi.dict(), id_manager)
+        transformer = CairoSerializer(identifier_manager_from_abi(full_abi))
 
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        decoded = transformer.to_python(raw_data)
+        decoded = transformer.to_python(abi.dict()["outputs"], raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
