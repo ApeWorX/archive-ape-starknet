@@ -16,6 +16,7 @@ from ethpm_types.abi import EventABI
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     ContractCode,
+    InvokeTransaction,
     SentTransactionResponse,
     StarknetBlock,
 )
@@ -247,8 +248,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        trace = self._get_single_trace(receipt.block_number, receipt.hash)
-        trace_data = trace.function_invocation if trace else {}
+
+        if isinstance(txn_info, InvokeTransaction):
+            trace = self._get_single_trace(receipt.block_number, receipt.hash)
+            trace_data = trace.function_invocation if trace else {}
+        else:
+            trace_data = {}
+
         receipt_dict: Dict[str, Any] = {"provider": self, **trace_data, **vars(receipt)}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
