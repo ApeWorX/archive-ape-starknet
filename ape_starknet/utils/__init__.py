@@ -1,9 +1,9 @@
 import re
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ContractLogicError, OutOfGasError, VirtualMachineError
+from ape.exceptions import ApeException, ContractLogicError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
@@ -96,58 +96,29 @@ def handle_client_errors(f):
 
             return result
 
-        except TransactionRejectedError as err:
-            raise ContractLogicError(revert_message=err.message) from err
-
-        except ContractNotFoundError as err:
-            raise ContractLogicError(revert_message=err.identifier) from err
-
-        except ClientError as err:
-            vm_error = get_virtual_machine_error(err)
-            if vm_error:
-                raise vm_error from err
-
-            msg = err.text if hasattr(err, "text") else str(err)
-            raise StarknetProviderError(msg) from err
+        except Exception as err:
+            raise get_virtual_machine_error(err) from err
 
     return func
 
 
-def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
-    print(f"type: {type(err)}")
-    print(f"vars: {vars(err)}")
-    assert 0
+def get_virtual_machine_error(err: Exception) -> Exception:
+    if isinstance(err, TransactionRejectedError):
+        # FIXME: https://github.com/Shard-Labs/starknet-devnet/issues/195
+        # if "actual fee exceeded max fee" in err.message.lower():
+        #     return OutOfGasError()  # type: ignore
+        return ContractLogicError(revert_message=err.message)
+    elif isinstance(err, ContractNotFoundError):
+        return ContractLogicError(revert_message=err.identifier)
+    elif isinstance(err, ClientError):
+        return StarknetProviderError(err.message)
+    elif isinstance(err, ApeException):
+        return err
+    elif isinstance(err, ValueError):
+        # TODO: review all exceptions raised in ape-starknet to actually use Starknet*Error
+        return StarknetProviderError(*err.args)
 
-    err_msg = str(err)
-
-    if "An ASSERT_EQ instruction failed" in err_msg and '"message": ' in err_msg:
-        # Handle revert messages from live network
-        parts = err_msg.split('"message":')
-        message = parts[-1].split("\\n")[0].strip(" \"'")
-        if "Error message: " in message:
-            return ContractLogicError(message.split("Error message: ")[-1])
-
-        return VirtualMachineError(message=message)
-
-    if "rejected" not in err_msg:
-        return None
-
-    elif "actual fee exceeded max fee" in err_msg.lower():
-        return OutOfGasError()  # type: ignore
-
-    if "Error message: " in err_msg:
-        err_msg = err_msg.split("Error message: ")[-1]
-        if "Error at pc=" in err_msg:
-            err_msg = err_msg.split("Error at pc=")[0]
-    elif "error_message=" in err_msg:
-        err_msg = err_msg.split("error_message=")[-1].strip("'")
-
-    # Fix escaping newline issue with error message.
-    err_msg = err_msg.replace("\\n", "").strip()
-    err_msg = err_msg.replace(
-        "Transaction was rejected with following starknet error: ", ""
-    ).strip()
-    return ContractLogicError(revert_message=err_msg)
+    return VirtualMachineError(base_err=err)
 
 
 def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:

@@ -9,7 +9,7 @@ import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
-from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualMachineError
+from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
@@ -327,8 +327,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         if "timestamp_increased_by" not in response_data:
             raise StarknetProviderError(response_data)
 
-    def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
-        return get_virtual_machine_error(exception) or VirtualMachineError(base_err=exception)
+    def get_virtual_machine_error(self, exception: Exception):
+        return get_virtual_machine_error(exception)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         address_int = parse_address(address)

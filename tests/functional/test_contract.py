@@ -109,6 +109,7 @@ def test_decode_logs(contract, account, ecosystem):
     assert log_sender_address == contract.address
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_revert_message(contract):
     with pytest.raises(ContractLogicError) as err:
         # Already initialized from fixture
@@ -128,6 +129,7 @@ def test_revert_no_message(contract, account):
     contract.initialize()
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)
