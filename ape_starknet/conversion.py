@@ -2,6 +2,7 @@ from typing import Any
 
 from ape.api import ConverterAPI
 from ape.types import AddressType
+from eth_typing import HexAddress, HexStr
 
 from ape_starknet.utils import PLUGIN_NAME, is_checksum_address, is_hex_address, to_checksum_address
 
@@ -33,6 +34,6 @@ class StarknetAddressConverter(ConverterAPI):
         """
 
         if is_checksum_address(value):
-            return value
+            return AddressType(HexAddress(HexStr(value)))
 
         return to_checksum_address(value)
