@@ -246,11 +246,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
         trace = self._get_single_trace(receipt.block_number, receipt.hash)
         trace_data = trace.function_invocation if trace else {}
-        receipt_dict: Dict[str, Any] = {
-            "provider": self,
-            **trace_data,
-            **vars(receipt),
-        }
+        receipt_dict: Dict[str, Any] = {"provider": self, **trace_data, **vars(receipt)}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
 
