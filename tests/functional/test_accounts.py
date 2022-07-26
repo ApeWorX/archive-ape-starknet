@@ -25,13 +25,13 @@ def devnet_keyfile_account(account_container, account):
     return account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
 
 
-def test_public_keys(existing_key_file_account, public_key):
-    actual = existing_key_file_account.public_key
+def test_public_keys(key_file_account, public_key):
+    actual = key_file_account.public_key
     assert actual == public_key
 
 
-def test_sign_message_using_key_file_account(existing_key_file_account, password):
-    assert existing_key_file_account.sign_message(5, passphrase=password)
+def test_sign_message_using_key_file_account(key_file_account, password):
+    assert key_file_account.sign_message(5, passphrase=password)
 
 
 def test_address(account):
@@ -52,6 +52,12 @@ def test_sign_message_and_check_signature_using_deployed_account(ephemeral_accou
     data_hash = pedersen_hash(data, 0)
     result = ephemeral_account.check_signature(data_hash, signature)
     assert result, "Failed to validate signature"
+
+
+def test_account_container_contains(account, second_account, key_file_account, account_container):
+    assert account.address in account_container
+    assert second_account.address in account_container
+    assert key_file_account.address in account_container
 
 
 @pytest.mark.parametrize(
@@ -75,17 +81,22 @@ def test_balance(account):
     assert account.balance > 0
 
 
-def test_import_with_passphrase(account_container, existing_key_file_account):
+def test_can_access_devnet_accounts(account, second_account, chain):
+    assert chain.contracts[account.address] == account.get_contract_type()
+    assert chain.contracts[second_account.address] == second_account.get_contract_type()
+
+
+def test_import_with_passphrase(account_container, key_file_account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     account_container.import_account(
         alias,
         LOCAL_NETWORK_NAME,
-        existing_key_file_account.address,
-        existing_key_file_account._get_key(PASSWORD),
+        key_file_account.address,
+        key_file_account._get_key(PASSWORD),
         passphrase="p@55W0rd",
     )
     new_account = account_container.load(alias)
-    assert new_account.address == existing_key_file_account.address
+    assert new_account.address == key_file_account.address
 
 
 def test_transfer(account, second_account):

@@ -9,6 +9,10 @@ def connection(provider):
     yield
 
 
+def test_is_token(contract, tokens):
+    assert not tokens.is_token(contract.address)
+
+
 def test_deploy(project):
     assert project.MyContract, "Unable to access contract when needing to compile"
 
@@ -19,6 +23,7 @@ def test_deploy(project):
     assert deployment
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/194")
 def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
     # Declare contract type. The result should contain a 'class_hash'.
     declaration = provider.declare(project.MyContract)
@@ -109,6 +114,7 @@ def test_decode_logs(contract, account, ecosystem):
     assert log_sender_address == contract.address
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_revert_message(contract):
     with pytest.raises(ContractLogicError) as err:
         # Already initialized from fixture
@@ -122,99 +128,136 @@ def test_revert_no_message(contract, account):
     with pytest.raises(ContractLogicError) as err:
         contract.increase_balance(account.address, 123)
 
-    assert "An ASSERT_EQ instruction failed" in str(err.value)
+    assert str(err.value) == "Unknown starknet error"
 
     # Re-initialize (re-store state)
     contract.initialize()
 
 
-def test_array_inputs(contract, account):
-    # This test makes sure we can pass python lists as arguments
-    # to Cairo methods that accept arrays.
-    # NOTE: Due to a limitation in ape, we have to include the array length argument.
-    contract.store_sum(3, [1, 2, 3])
-    actual = contract.get_last_sum()
-    expected = 6
-    assert actual == expected
-
-
-def test_external_call_array_outputs(contract, account):
-    receipt = contract.get_array()
-    assert receipt.returndata == ["0x3", "0x1", "0x2", "0x3"]
-    assert receipt.return_value == [1, 2, 3]
-
-
-def test_external_call_felt_outputs_from_account(contract, account):
-    receipt = contract.get_felt(sender=account)
-    assert receipt.returndata == ["0x1", "0x2"]
-    assert receipt.return_value == 2
-
-
-def test_external_call_array_outputs_from_account(contract, account):
-    receipt = contract.get_array(sender=account)
-    assert receipt.returndata == ["0x4", "0x3", "0x1", "0x2", "0x3"]
-    assert receipt.return_value == [1, 2, 3]
-
-
-def test_external_call_uint256_outputs_from_account(contract, account):
-    receipt = contract.get_uint256(sender=account)
-    assert receipt.returndata == ["0x2", "0x1", "0x0"]
-    assert receipt.return_value == (1, 0)
-
-
-def test_external_call_uint256s_outputs_from_account(contract, account):
-    receipt = contract.get_uint256s(sender=account)
-    assert receipt.returndata == ["0x6", "0x7b", "0x0", "0x0", "0x7b", "0x84", "0x7b"]
-    assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
-
-
-def test_external_call_uint256s_array_outputs_from_account(contract, account):
-    receipt = contract.get_uint256s_array(sender=account)
-    assert receipt.returndata == ["0x7", "0x3", "0x7b", "0x0", "0x0", "0x7b", "0x84", "0x7b"]
-    assert receipt.return_value == [(123, 0), (0, 123), (132, 123)]
-
-
-def test_external_call_mixed_outputs_from_account(contract, account):
-    receipt = contract.get_mix(sender=account)
-    assert receipt.returndata == [
-        "0xd",
-        "0x1",
-        "0x2",
-        "0x3",
-        "0x4",
-        "0x5",
-        "0x6",
-        "0x3",
-        "0x8",
-        "0x9",
-        "0xa",
-        "0xb",
-        "0xc",
-        "0xd",
-    ]
-    assert receipt.return_value == [1, [3, 4], (5, 6), [8, 9, 10], 11, (12, 13)]
-
-
-def test_view_call_array_outputs(contract, account):
-    array = contract.view_array()
-    assert array == [1, 2, 3]
-
-
-def test_view_call_uint256s_array_outputs(contract):
-    array = contract.view_uint256s_array()
-    assert array == [(123, 0), (0, 123), (132, 123)]
-
-
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)
 
 
-def test_invocation_when_paying_fees(contract, account):
-    receipt = contract.get_uint256s(sender=account)
-    assert receipt.actual_fee > 0
+def test_array_inputs(contract):
+    # This test makes sure we can pass python lists as arguments
+    # to Cairo methods that accept arrays.
+    # NOTE: Due to a limitation in ape, we have to include the array length argument.
+    contract.store_sum(3, [1, 2, 3])
+    assert contract.get_last_sum() == 6
 
 
-def test_invocation_when_not_paying_fees(contract, account):
-    receipt = contract.get_uint256s(sender=account, max_fee=0)
-    assert receipt.actual_fee == 0
+#
+# Test external, and view, methods
+#
+
+
+@pytest.mark.parametrize(
+    "method, returndata_expected, return_value_expected",
+    [
+        ("array", ["0x4", "0x3", "0x1", "0x2", "0x3"], [1, 2, 3]),
+        (
+            "array_complex_struct",
+            [
+                "0x10",
+                "0x3",
+                "0x0",
+                "0x7b",
+                "0x0",
+                "0x0",
+                "0x7b",
+                "0x1",
+                "0x0",
+                "0x7b",
+                "0x7b",
+                "0x0",
+                "0x2",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+            ],
+            [
+                {
+                    "timestamp": 0,
+                    "value0": 123,
+                    "value1": 41854731131275431005995076714107490009088,
+                },
+                {
+                    "timestamp": 1,
+                    "value0": 41854731131275431005995076714107490009088,
+                    "value1": 123,
+                },
+                {"timestamp": 2, "value0": 0, "value1": 0},
+            ],
+        ),
+        (
+            "array_uint256",
+            ["0x7", "0x3", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
+            [
+                123,
+                41854731131275431005995076714107490009088,
+                0,
+            ],
+        ),
+        (
+            "complex_struct",
+            ["0x5", "0x4d2", "0x7b", "0x0", "0x0", "0x7b"],
+            {
+                "timestamp": 1234,
+                "value0": 123,
+                "value1": 41854731131275431005995076714107490009088,
+            },
+        ),
+        ("felt", ["0x1", "0x2"], 2),
+        (
+            "mix",
+            [
+                "0xd",
+                "0x1",
+                "0x2",
+                "0x3",
+                "0x4",
+                "0x7b",
+                "0x0",
+                "0x3",
+                "0x8",
+                "0x9",
+                "0xa",
+                "0xb",
+                "0x0",
+                "0x7b",
+            ],
+            (
+                1,
+                [3, 4],
+                123,
+                [8, 9, 10],
+                11,
+                41854731131275431005995076714107490009088,
+            ),
+        ),
+        ("uint256", ["0x2", "0x1", "0x0"], 1),
+        (
+            "uint256s",
+            ["0x6", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
+            (
+                123,
+                41854731131275431005995076714107490009088,
+                0,
+            ),
+        ),
+    ],
+)
+def test_external_and_view_method_outputs(
+    method, returndata_expected, return_value_expected, contract, account
+):
+    # Check the view method
+    return_value = getattr(contract, f"{method}_view")()
+    assert return_value == return_value_expected
+
+    # Check the external method
+    receipt = getattr(contract, f"{method}_external")(sender=account)
+    assert receipt.returndata == returndata_expected
+    assert receipt.return_value == return_value

@@ -30,7 +30,7 @@ func create_my_contract{
 }():
     let (cls_hash) = class_hash.read()
     let (ptr) = alloc()
-    let (contract_addr) = deploy(cls_hash, 123, 0, ptr)
+    let (contract_addr) = deploy(cls_hash, 123, 0, ptr, 1)
     contract_deployed.emit(contract_address=contract_addr)
     return ()
 end

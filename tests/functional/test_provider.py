@@ -3,6 +3,7 @@ import time
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
+from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.utils import is_checksum_address
 
 
@@ -38,7 +39,7 @@ def test_get_block_negative_number_resulting_less_than_zero(provider, contract):
     _ = contract  # Contract fixture used to increase blocks (since deploys happen)
     latest_block_number = provider.get_block("latest").number
     value = -1000000000000000
-    with pytest.raises(ValueError) as err:
+    with pytest.raises(StarknetProviderError) as err:
         provider.get_block(value)
 
     expected_block_number = latest_block_number + value + 1
