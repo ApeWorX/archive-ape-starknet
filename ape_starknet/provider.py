@@ -242,14 +242,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     @handle_client_errors
     def get_transaction(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
-
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
         trace = self._get_single_trace(receipt.block_number, receipt.hash)
-
+        trace_data = trace.function_invocation if trace else {}
         receipt_dict: Dict[str, Any] = {
             "provider": self,
-            **trace.function_invocation,
+            **trace_data,
             **vars(receipt),
         }
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
@@ -285,7 +284,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
         return receipt
 
-    @handle_client_errors
     def _send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> Dict:
         txn = self.prepare_transaction(txn)
         if not token and hasattr(txn, "token") and txn.token:  # type: ignore

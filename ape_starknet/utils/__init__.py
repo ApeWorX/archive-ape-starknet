@@ -97,8 +97,15 @@ def handle_client_errors(f):
             return result
 
         except ClientError as err:
+            if "ASSERT_EQ instruction failed" in str(err):
+                # Seek contract logic error
+                vm_error = get_virtual_machine_error(err)
+                if vm_error:
+                    raise vm_error from err
+
             msg = err.text if hasattr(err, "text") else str(err)
             raise StarknetProviderError(msg) from err
+
         except ApeException:
             # Don't catch ApeExceptions, let them raise as they would.
             raise
@@ -115,6 +122,15 @@ def handle_client_errors(f):
 
 def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
     err_msg = str(err)
+
+    if "An ASSERT_EQ instruction failed" in err_msg and '"message": ' in err_msg:
+        # Handle revert messages from live network
+        parts = err_msg.split('"message":')
+        message = parts[-1].split("\\n")[0].strip(" \"'")
+        if "Error message: " in message:
+            return ContractLogicError(message.split("Error message: ")[-1])
+
+        return VirtualMachineError(message=message)
 
     if "rejected" not in err_msg:
         return None

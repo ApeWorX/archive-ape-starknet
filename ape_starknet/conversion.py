@@ -19,7 +19,6 @@ class StarknetAddressConverter(ConverterAPI):
             and provider.network.ecosystem.name == PLUGIN_NAME
             and isinstance(value, str)
             and is_hex_address(value)
-            and not is_checksum_address(value)
         )
 
     def convert(self, value: str) -> AddressType:
@@ -32,5 +31,8 @@ class StarknetAddressConverter(ConverterAPI):
         Returns:
             ``AddressType``
         """
+
+        if is_checksum_address(value):
+            return value
 
         return to_checksum_address(value)
