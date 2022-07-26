@@ -9,6 +9,10 @@ def connection(provider):
     yield
 
 
+def test_is_token(contract, tokens):
+    assert not tokens.is_token(contract.address)
+
+
 def test_deploy(project):
     assert project.MyContract, "Unable to access contract when needing to compile"
 
