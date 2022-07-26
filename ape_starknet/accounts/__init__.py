@@ -1,8 +1,9 @@
+import functools
 import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
@@ -19,11 +20,10 @@ from eth_utils import add_0x_prefix, text_if_str, to_bytes
 from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
-from starknet_devnet.account import Account
 from starknet_py.net import KeyPair
 from starknet_py.net.account.compiled_account_contract import COMPILED_ACCOUNT_CONTRACT
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
-from starknet_py.utils.crypto.facade import ECSignature, sign_calldata
+from starknet_py.utils.crypto.facade import ECSignature, message_signature, pedersen_hash
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
 from starkware.crypto.signature.signature import private_to_stark_key
 from starkware.starknet.core.os.contract_address.contract_address import (
@@ -47,14 +47,25 @@ The key-file stanza containing custom properties
 specific to the ape-starknet plugin.
 """
 APP_KEY_FILE_VERSION = "0.1.0"
+OZ_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
+OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
 
 
-def _get_oz_account_contract_type() -> ContractType:
-    contract_class = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
-    return convert_contract_class_to_contract_type(contract_class)
+def sign_calldata(calldata: Iterable[int], priv_key: int):
+    """
+    Helper function that signs hash:
 
+        hash = pedersen_hash(calldata[0], 0)
+        hash = pedersen_hash(calldata[1], hash)
+        hash = pedersen_hash(calldata[2], hash)
+        ...
 
-OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = _get_oz_account_contract_type()
+    :param calldata: iterable of ints
+    :param priv_key: private key
+    :return: signed calldata's hash
+    """
+    hashed_calldata = functools.reduce(lambda x, y: pedersen_hash(y, x), calldata, 0)
+    return message_signature(hashed_calldata, priv_key)
 
 
 class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
@@ -122,6 +133,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             yield StarknetEphemeralAccount(raw_account_data=account_data, account_key=alias)
 
         for key_file_path in self._key_file_paths:
+            if key_file_path.stem == "deployments_map":
+                continue
+
             if key_file_path.stem in self.cached_accounts:
                 yield self.cached_accounts[key_file_path.stem]
             else:
@@ -321,7 +335,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @property
     def public_key(self) -> str:
-        address = self.get_account_data()["address"]
+        account_data = self.get_account_data()
+        if "address" not in account_data:
+            raise ValueError(f"Account data corrupted, missing 'address' key: {account_data}.")
+
+        address = account_data["address"]
         if isinstance(address, int):
             address = HexBytes(address).hex()
 
@@ -473,7 +491,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
         if not isinstance(msg, (list, tuple)):
             msg = [msg]
 
-        return sign_calldata(msg, self._get_key())
+        return sign_calldata(msg, self._get_key())  # type: ignore
 
 
 class StarknetDevnetAccount(StarknetDevelopmentAccount):
@@ -494,8 +512,10 @@ class StarknetDevnetAccount(StarknetDevelopmentAccount):
     @cached_property
     def address(self) -> AddressType:
         address_int = calculate_contract_address_from_hash(
-            salt=Account.SALT,
-            class_hash=Account.HASH,
+            # Hardcoded values since devnet 0.2.6:
+            # https://github.com/Shard-Labs/starknet-devnet/blob/v0.2.6/starknet_devnet/account.py#L36
+            salt=20,
+            class_hash=1803505466663265559571280894381905521939782500874858933595227108099796801620,
             constructor_calldata=[self.public_key_int],
             deployer_address=0,
         )
@@ -618,7 +638,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             msg = [msg]
 
         private_key = self._get_key(passphrase=passphrase)
-        return sign_calldata(msg, private_key)
+        return sign_calldata(msg, private_key)  # type: ignore
 
     def change_password(self):
         self.locked = True  # force entering passphrase to get key

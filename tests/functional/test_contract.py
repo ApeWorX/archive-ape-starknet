@@ -9,6 +9,10 @@ def connection(provider):
     yield
 
 
+def test_is_token(contract, tokens):
+    assert not tokens.is_token(contract.address)
+
+
 def test_deploy(project):
     assert project.MyContract, "Unable to access contract when needing to compile"
 
@@ -19,6 +23,7 @@ def test_deploy(project):
     assert deployment
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/194")
 def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
     # Declare contract type. The result should contain a 'class_hash'.
     declaration = provider.declare(project.MyContract)
@@ -109,6 +114,7 @@ def test_decode_logs(contract, account, ecosystem):
     assert log_sender_address == contract.address
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_revert_message(contract):
     with pytest.raises(ContractLogicError) as err:
         # Already initialized from fixture
@@ -122,12 +128,13 @@ def test_revert_no_message(contract, account):
     with pytest.raises(ContractLogicError) as err:
         contract.increase_balance(account.address, 123)
 
-    assert "An ASSERT_EQ instruction failed" in str(err.value)
+    assert str(err.value) == "Unknown starknet error"
 
     # Re-initialize (re-store state)
     contract.initialize()
 
 
+@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)

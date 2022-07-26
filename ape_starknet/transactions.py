@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
@@ -9,7 +10,7 @@ from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.constants import TxStatus
+from starknet_py.net.client_models import Event, TransactionStatus
 from starknet_py.net.models.transaction import (
     Declare,
     Deploy,
@@ -39,7 +40,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TxStatus.NOT_RECEIVED.value
+    status: int = TransactionStatus.UNKNOWN
     version: int = 0
 
     """Ignored"""
@@ -55,7 +56,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
 
     @validator("status", pre=True, allow_reuse=True)
     def validate_status(cls, value):
-        if isinstance(value, TxStatus):
+        if isinstance(value, TransactionStatus):
             return value.value
 
         elif isinstance(value, str):
@@ -221,7 +222,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     An object represented a confirmed transaction in Starknet.
     """
 
-    status: TxStatus
+    status: TransactionStatus
     type: TransactionType
 
     # NOTE: Might be a backend bug causing this to be None
@@ -235,7 +236,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     sender: str = Field("", exclude=True)
 
     """Aliased"""
-    txn_hash: str = Field(alias="transaction_hash")
+    txn_hash: str = Field(alias="hash")
 
     @validator("nonce", pre=True, allow_reuse=True)
     def validate(cls, value):
@@ -251,8 +252,6 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
         if isinstance(value, int):
             return HexBytes(value).hex()
 
-        return value
-
     @property
     def ran_out_of_gas(self) -> bool:
         return False  # Overidden by Invoke receipts
@@ -267,7 +266,7 @@ class DeployReceipt(StarknetReceipt):
     receiver: Optional[str] = None  # type: ignore
 
     # Only get a receipt if deploy was accepted
-    status: TxStatus = TxStatus.ACCEPTED_ON_L2
+    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
 
     @validator("contract_address", pre=True, allow_reuse=True)
     def validate_contract_address(cls, value):
@@ -279,11 +278,13 @@ class DeployReceipt(StarknetReceipt):
 
 class InvocationReceipt(StarknetReceipt):
     actual_fee: int
-    entry_point_selector: Optional[int] = None  # Either has this or method_abi
+    entry_point_selector: Optional[int] = Field(
+        default=None, alias="selector"
+    )  # Either has this or method_abi
     max_fee: int
     method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
-    returndata: List[Any] = []
+    returndata: List[Any] = Field(default_factory=list, alias="result")
     return_value: List[int] = []
 
     """Aliased"""
@@ -294,10 +295,19 @@ class InvocationReceipt(StarknetReceipt):
         if isinstance(value, str):
             return int(value, 16)
 
+        return value
+
     @validator("entry_point_selector", pre=True, allow_reuse=True)
     def validate_entry_point_selector(cls, value):
         if isinstance(value, str):
             return int(value, 16)
+
+        return value
+
+    @validator("logs", pre=True, allow_reuse=True)
+    def validate_logs(cls, value):
+        if value and isinstance(value[0], Event):
+            value = [asdict(event) for event in value]
 
         return value
 
@@ -344,7 +354,7 @@ class ContractDeclaration(StarknetReceipt):
     receiver: Optional[str] = None  # type: ignore
 
     # Only get a receipt if deploy was accepted
-    status: TxStatus = TxStatus.ACCEPTED_ON_L2
+    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
 
     type: TransactionType = TransactionType.DECLARE
 

@@ -10,9 +10,10 @@ from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
+from starknet_py.net.client_models import StarknetBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
-from starknet_py.utils.data_transformer import DataTransformer
+from starknet_py.utils.data_transformer.data_transformer import CairoSerializer
 from starkware.starknet.definitions.fields import ContractAddressSalt
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name
@@ -27,6 +28,7 @@ from ape_starknet.transactions import (
     DeployTransaction,
     InvocationReceipt,
     InvokeFunctionTransaction,
+    StarknetReceipt,
     StarknetTransaction,
 )
 from ape_starknet.utils import to_checksum_address
@@ -37,12 +39,6 @@ NETWORKS = {
     "mainnet": (StarknetChainId.MAINNET.value, StarknetChainId.MAINNET.value),
     "testnet": (StarknetChainId.TESTNET.value, StarknetChainId.TESTNET.value),
 }
-
-
-class StarknetBlock(BlockAPI):
-    """
-    A block in Starknet.
-    """
 
 
 class ProxyType(Enum):
@@ -100,11 +96,10 @@ class Starknet(EcosystemAPI, StarknetBase):
         full_abi = [
             a.dict() for a in (abi.contract_type.abi if abi.contract_type is not None else [abi])
         ]
-        id_manager = identifier_manager_from_abi(full_abi)
-        transformer = DataTransformer(abi.dict(), id_manager)
+        transformer = CairoSerializer(identifier_manager_from_abi(full_abi))
 
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        decoded = transformer.to_python(raw_data)
+        decoded = transformer.to_python(abi.dict()["outputs"], raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
@@ -121,8 +116,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         call_args: Union[List, Tuple],
     ) -> List:
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
-        id_manager = identifier_manager_from_abi(full_abi)
-        transformer = DataTransformer(method_abi.dict(), id_manager)
+        transformer = CairoSerializer(identifier_manager_from_abi(full_abi))
         pre_encoded_args: List[Any] = []
         index = 0
         last_index = min(len(method_abi.inputs), len(call_args)) - 1
@@ -158,8 +152,8 @@ class Starknet(EcosystemAPI, StarknetBase):
 
             index += 1
 
-        encoded_calldata, _ = transformer.from_python(*pre_encoded_args)
-        return encoded_calldata
+        calldata, _ = transformer.from_python(method_abi.dict()["inputs"], *pre_encoded_args)
+        return calldata
 
     def _pre_encode_value(self, value: Any) -> Any:
         if isinstance(value, dict):
@@ -202,7 +196,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = TransactionType(data["type"])
-        receipt_cls: Union[Type[ContractDeclaration], Type[DeployReceipt], Type[InvocationReceipt]]
+        receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvocationReceipt
         elif txn_type == TransactionType.DEPLOY:
@@ -219,13 +213,13 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         return receipt
 
-    def decode_block(self, data: dict) -> BlockAPI:
-        return StarknetBlock(
-            hash=HexBytes(data["block_hash"]),
-            number=data["block_number"],
-            parentHash=HexBytes(data["parent_block_hash"]),
-            size=len(data["transactions"]),  # TODO: Figure out size
-            timestamp=data["timestamp"],
+    def decode_block(self, block: StarknetBlock) -> BlockAPI:
+        return BlockAPI(
+            hash=HexBytes(block.block_hash),
+            number=block.block_number,
+            parentHash=HexBytes(block.parent_block_hash),
+            size=len(block.transactions),  # TODO: Figure out size
+            timestamp=block.timestamp,
         )
 
     def encode_deployment(

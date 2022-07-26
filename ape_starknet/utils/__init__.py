@@ -1,14 +1,21 @@
 import re
-from typing import Any, Dict, Optional, Union
+from dataclasses import asdict
+from typing import Any, Dict, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
+from ape.exceptions import ApeException, ContractLogicError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
 from hexbytes import HexBytes
-from starknet_py.net.client import BadRequest
+from starknet_py.net.client_errors import ClientError, ContractNotFoundError
+from starknet_py.net.client_models import (
+    DeclareTransaction,
+    DeployTransaction,
+    InvokeTransaction,
+    Transaction,
+)
 from starknet_py.net.models import TransactionType
 from starknet_py.net.models.address import parse_address
 from starknet_py.transaction_exceptions import TransactionRejectedError
@@ -16,11 +23,6 @@ from starkware.crypto.signature.fast_pedersen_hash import pedersen_hash
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.services.api.contract_class import ContractClass
-from starkware.starknet.services.api.feeder_gateway.response_objects import (
-    DeclareSpecificInfo,
-    DeploySpecificInfo,
-    InvokeSpecificInfo,
-)
 
 from ape_starknet.exceptions import StarknetProviderError
 
@@ -33,7 +35,7 @@ NETWORKS = {
 _HEX_ADDRESS_REG_EXP = re.compile("(0x)?[0-9a-f]*", re.IGNORECASE | re.ASCII)
 """Same as from eth-utils except not limited length."""
 ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
-DEFAULT_ACCOUNT_SEED = 13333337
+DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
 
 
 def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
@@ -94,71 +96,43 @@ def handle_client_errors(f):
 
             return result
 
-        except BadRequest as err:
-            msg = err.text if hasattr(err, "text") else str(err)
-            raise StarknetProviderError(msg) from err
-        except ApeException:
-            # Don't catch ApeExceptions, let them raise as they would.
-            raise
-
-        except TransactionRejectedError as err:
-            vm_error = get_virtual_machine_error(err)
-            if vm_error:
-                raise vm_error from err
-
-            raise  # Original exception
+        except Exception as err:
+            raise get_virtual_machine_error(err) from err
 
     return func
 
 
-def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
-    err_msg = str(err)
+def get_virtual_machine_error(err: Exception) -> Exception:
+    if isinstance(err, TransactionRejectedError):
+        # FIXME: https://github.com/Shard-Labs/starknet-devnet/issues/195
+        # if "actual fee exceeded max fee" in err.message.lower():
+        #     return OutOfGasError()  # type: ignore
+        return ContractLogicError(revert_message=err.message)
+    elif isinstance(err, ContractNotFoundError):
+        return ContractLogicError(revert_message=err.identifier)
+    elif isinstance(err, ClientError):
+        return StarknetProviderError(err.message)
+    elif isinstance(err, ApeException):
+        return err
+    elif isinstance(err, ValueError):
+        # TODO: review all exceptions raised in ape-starknet to actually use Starknet*Error
+        return StarknetProviderError(*err.args)
 
-    if "rejected" not in err_msg:
-        return None
-
-    elif "actual fee exceeded max fee" in err_msg.lower():
-        return OutOfGasError()  # type: ignore
-
-    if "Error message: " in err_msg:
-        err_msg = err_msg.split("Error message: ")[-1]
-        if "Error at pc=" in err_msg:
-            err_msg = err_msg.split("Error at pc=")[0]
-    elif "error_message=" in err_msg:
-        err_msg = err_msg.split("error_message=")[-1].strip("'")
-
-    # Fix escaping newline issue with error message.
-    err_msg = err_msg.replace("\\n", "").strip()
-    err_msg = err_msg.replace(
-        "Transaction was rejected with following starknet error: ", ""
-    ).strip()
-    return ContractLogicError(revert_message=err_msg)
+    return VirtualMachineError(base_err=err)
 
 
-def get_dict_from_tx_info(
-    txn_info: Union[DeploySpecificInfo, InvokeSpecificInfo], **extra_kwargs
-) -> Dict:
-    txn_dict = {**txn_info.dump(), **extra_kwargs}
-    if isinstance(txn_info, DeploySpecificInfo):
+def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
+    txn_dict = {**asdict(txn_info), **extra_kwargs}
+
+    if isinstance(txn_info, DeployTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
         txn_dict["max_fee"] = 0
         txn_dict["type"] = TransactionType.DEPLOY
-    elif isinstance(txn_info, InvokeSpecificInfo):
+    elif isinstance(txn_info, InvokeTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
-
-        if "events" in txn_dict:
-            txn_dict["events"] = [vars(e) for e in txn_dict["events"]]
-
-        txn_dict["max_fee"] = txn_dict["max_fee"]
-
-        if "method_abi" in txn_dict:
-            txn_dict["method_abi"] = txn_dict.get("method_abi")
-
-        if "entry_point_selector" in txn_dict:
-            txn_dict["entry_point_selector"] = txn_dict["entry_point_selector"]
-
+        txn_dict["events"] = [vars(e) for e in txn_dict.get("events", [])]
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
-    elif isinstance(txn_info, DeclareSpecificInfo):
+    elif isinstance(txn_info, DeclareTransaction):
         txn_dict["sender"] = to_checksum_address(txn_info.sender_address)
         txn_dict["type"] = TransactionType.DECLARE
 
