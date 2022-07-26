@@ -159,7 +159,6 @@ class InvokeFunctionTransaction(StarknetTransaction):
     Only set when invoked from an account `__execute__`
     special method to help decoding return data
     """
-    original_call: Optional[InvokeFunction] = None
 
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore
