@@ -200,16 +200,16 @@ class Starknet(EcosystemAPI, StarknetBase):
         return value
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
-        txn_type = data["call_type"]
+        txn_type = TransactionType(data["type"])
         receipt_cls: Type[StarknetReceipt]
-        if txn_type == "CALL":
+        if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvocationReceipt
-        elif txn_type == "DEPLOY":
+        elif txn_type == TransactionType.DEPLOY:
             receipt_cls = DeployReceipt
-        elif txn_type == "DECLARE":
+        elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
         else:
-            raise ValueError(f"Unable to handle contract type {txn_type!r}.")
+            raise ValueError(f"Unable to handle contract type '{txn_type.value}'.")
 
         receipt = receipt_cls.parse_obj(data)
 

@@ -223,7 +223,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """
 
     status: TransactionStatus
-    type: TransactionType = Field(alias="call_type")
+    type: TransactionType
 
     # NOTE: Might be a backend bug causing this to be None
     block_hash: Optional[str] = None
@@ -251,18 +251,6 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     def validate_transaction_hash(cls, value):
         if isinstance(value, int):
             return HexBytes(value).hex()
-
-    @validator("type", pre=True, allow_reuse=True)
-    def validate_type(cls, value):
-        if isinstance(value, str):
-            if value == "CALL":
-                value = TransactionType.INVOKE_FUNCTION
-            elif value == "DECLARE":
-                value = TransactionType.DECLARE
-            elif value == "DEPLOY":
-                value = TransactionType.DEPLOY
-
-        return value
 
     @property
     def ran_out_of_gas(self) -> bool:
