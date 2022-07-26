@@ -121,6 +121,13 @@ def handle_client_errors(f):
 
 
 def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
+    if isinstance(err, TransactionRejectedError):
+        raise ContractLogicError(revert_message=err.message) from err
+
+    print(f"type: {type(err)}")
+    print(f"vars: {vars(err)}")
+    assert 0
+
     err_msg = str(err)
 
     if "An ASSERT_EQ instruction failed" in err_msg and '"message": ' in err_msg:

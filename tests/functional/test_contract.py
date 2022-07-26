@@ -122,7 +122,7 @@ def test_revert_no_message(contract, account):
     with pytest.raises(ContractLogicError) as err:
         contract.increase_balance(account.address, 123)
 
-    assert "An ASSERT_EQ instruction failed" in str(err.value)
+    assert str(err.value) == "Unknown starknet error"
 
     # Re-initialize (re-store state)
     contract.initialize()
