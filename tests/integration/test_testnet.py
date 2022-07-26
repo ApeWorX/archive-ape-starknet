@@ -3,9 +3,14 @@ from ape.exceptions import ContractLogicError
 
 
 @pytest.fixture(scope="module")
-def eth_contract(networks):
+def testnet_provider(networks):
     with networks.parse_network_choice("starknet:testnet") as provider:
-        yield provider.tokens["eth"]
+        yield provider
+
+
+@pytest.fixture(scope="module")
+def eth_contract(testnet_provider):
+    return testnet_provider.tokens["eth"]
 
 
 def test_can_connect_to_testnet(eth_contract):
