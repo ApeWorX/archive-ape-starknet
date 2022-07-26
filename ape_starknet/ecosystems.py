@@ -10,6 +10,7 @@ from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
+from starknet_py.net.client_models import StarknetBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
 from starknet_py.utils.data_transformer.data_transformer import CairoSerializer
@@ -38,12 +39,6 @@ NETWORKS = {
     "mainnet": (StarknetChainId.MAINNET.value, StarknetChainId.MAINNET.value),
     "testnet": (StarknetChainId.TESTNET.value, StarknetChainId.TESTNET.value),
 }
-
-
-class StarknetBlock(BlockAPI):
-    """
-    A block in Starknet.
-    """
 
 
 class ProxyType(Enum):
@@ -218,13 +213,13 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         return receipt
 
-    def decode_block(self, data: dict) -> BlockAPI:
-        return StarknetBlock(
-            hash=HexBytes(data["block_hash"]),
-            number=data["block_number"],
-            parentHash=HexBytes(data["parent_block_hash"]),
-            size=len(data["transactions"]),  # TODO: Figure out size
-            timestamp=data["timestamp"],
+    def decode_block(self, block: StarknetBlock) -> BlockAPI:
+        return BlockAPI(
+            hash=HexBytes(block.block_hash),
+            number=block.block_number,
+            parentHash=HexBytes(block.parent_block_hash),
+            size=len(block.transactions),  # TODO: Figure out size
+            timestamp=block.timestamp,
         )
 
     def encode_deployment(

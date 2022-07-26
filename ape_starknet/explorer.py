@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from typing import Iterator, Optional
 
 from ape.api import ExplorerAPI, ReceiptAPI
@@ -35,8 +34,8 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
             starknet_account = self.account_contracts[address]
             return starknet_account.get_contract_type()  # type: ignore
 
-        code_and_abi = asdict(self.provider.get_code_and_abi(address))
-        contract_type_dict = {"abi": code_and_abi["abi"]}
+        code_and_abi = self.provider.get_code_and_abi(address)
+        contract_type_dict = {"abi": code_and_abi.abi}
         return ContractType.parse_obj(contract_type_dict)
 
     def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:

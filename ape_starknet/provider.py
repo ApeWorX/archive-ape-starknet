@@ -1,5 +1,4 @@
 import os
-from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -14,11 +13,15 @@ from ape.types import AddressType, BlockID, ContractLog
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
-from starknet_py.net.client_models import BlockSingleTransactionTrace, ContractCode
+from starknet_py.net.client_models import (
+    BlockSingleTransactionTrace,
+    ContractCode,
+    SentTransactionResponse,
+    StarknetBlock,
+)
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
 from starkware.starknet.definitions.transaction_type import TransactionType
-from starkware.starknet.services.api.feeder_gateway.response_objects import StarknetBlock
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
@@ -203,7 +206,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
 
         block = self.starknet_client.get_block_sync(**{kwarg: block_id})
-        return self.starknet.decode_block(asdict(block))
+        return self.starknet.decode_block(block)
 
     def _get_block(self, block_id: BlockID) -> StarknetBlock:
         kwarg = (
@@ -259,10 +262,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     @handle_client_errors
     def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
         response = self._send_transaction(txn, token=token)
-        if response["code"] != StarkErrorCode.TRANSACTION_RECEIVED.name:
+        if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        receipt = self.get_transaction(response["hash"])
+        receipt = self.get_transaction(response.hash)
 
         if isinstance(txn, InvokeFunctionTransaction):
             returndata = receipt.returndata
@@ -280,7 +283,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
         return receipt
 
-    def _send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> Dict:
+    def _send_transaction(
+        self, txn: TransactionAPI, token: Optional[str] = None
+    ) -> SentTransactionResponse:
         txn = self.prepare_transaction(txn)
         if not token and hasattr(txn, "token") and txn.token:  # type: ignore
             token = txn.token  # type: ignore
@@ -293,9 +298,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             )
 
         starknet_txn = txn.as_starknet_object()
-        response = self.starknet_client.send_transaction_sync(starknet_txn, token=token)
-
-        return asdict(response)
+        return self.starknet_client.send_transaction_sync(starknet_txn, token=token)
 
     @handle_client_errors
     def get_contract_logs(
