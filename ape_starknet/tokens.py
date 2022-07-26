@@ -198,13 +198,8 @@ class TokenManager(StarknetBase):
         return ContractInstance(contract_address, ERC20)
 
     def is_token(self, address: AddressType) -> bool:
-        network_name = self.provider.network.name
-        for token in self.token_address_map:
-            network_tokens = self.token_address_map.get(token, {}).get(network_name, {})
-            if address in network_tokens:
-                return True
-
-        return False
+        network = self.provider.network.name
+        return any(address == networks.get(network) for networks in self.token_address_map.values())
 
     def add_token(self, name: str, network: str, address: AddressType):
         if name not in self.additional_tokens:
