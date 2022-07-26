@@ -3,7 +3,7 @@ from dataclasses import asdict
 from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ApeException, ContractLogicError, OutOfGasError, VirtualMachineError
+from ape.exceptions import ContractLogicError, OutOfGasError, VirtualMachineError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
@@ -95,10 +95,6 @@ def handle_client_errors(f):
                 raise StarknetProviderError(message)
 
             return result
-
-        except ApeException:
-            # Don't catch ApeExceptions, let them raise as they would.
-            raise
 
         except TransactionRejectedError as err:
             raise ContractLogicError(revert_message=err.message) from err
