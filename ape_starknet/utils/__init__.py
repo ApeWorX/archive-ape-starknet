@@ -9,7 +9,7 @@ from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
 from hexbytes import HexBytes
-from starknet_py.net.client_errors import ClientError
+from starknet_py.net.client_errors import ClientError, ContractNotFoundError
 from starknet_py.net.client_models import (
     DeclareTransaction,
     DeployTransaction,
@@ -96,34 +96,28 @@ def handle_client_errors(f):
 
             return result
 
-        except ClientError as err:
-            if "ASSERT_EQ instruction failed" in str(err):
-                # Seek contract logic error
-                vm_error = get_virtual_machine_error(err)
-                if vm_error:
-                    raise vm_error from err
-
-            msg = err.text if hasattr(err, "text") else str(err)
-            raise StarknetProviderError(msg) from err
-
         except ApeException:
             # Don't catch ApeExceptions, let them raise as they would.
             raise
 
         except TransactionRejectedError as err:
+            raise ContractLogicError(revert_message=err.message) from err
+
+        except ContractNotFoundError as err:
+            raise ContractLogicError(revert_message=err.identifier) from err
+
+        except ClientError as err:
             vm_error = get_virtual_machine_error(err)
             if vm_error:
                 raise vm_error from err
 
-            raise  # Original exception
+            msg = err.text if hasattr(err, "text") else str(err)
+            raise StarknetProviderError(msg) from err
 
     return func
 
 
 def get_virtual_machine_error(err: Exception) -> Optional[VirtualMachineError]:
-    if isinstance(err, TransactionRejectedError):
-        raise ContractLogicError(revert_message=err.message) from err
-
     print(f"type: {type(err)}")
     print(f"vars: {vars(err)}")
     assert 0
