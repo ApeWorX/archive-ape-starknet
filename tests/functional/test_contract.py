@@ -23,7 +23,6 @@ def test_deploy(project):
     assert deployment
 
 
-@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/194")
 def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
     # Declare contract type. The result should contain a 'class_hash'.
     declaration = provider.declare(project.MyContract)
