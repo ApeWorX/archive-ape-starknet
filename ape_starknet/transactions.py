@@ -368,7 +368,7 @@ class InvocationReceipt(StarknetReceipt):
 
                 for event_key in log.get("keys", []):
                     event_abi = selectors[contract_address][event_key]
-                    yield from self.provider.network.ecosystem.decode_logs([log], event_abi)
+                    yield from self.starknet.decode_logs([log], event_abi)
 
 
 class ContractDeclaration(StarknetReceipt):
