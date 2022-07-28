@@ -21,7 +21,6 @@ from starknet_py.net.client_models import (
 )
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
-from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
@@ -174,7 +173,8 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise ProviderNotConnectedError()
 
         starknet_object = txn.as_starknet_object()
-        return self.client.estimate_fee_sync(starknet_object)
+        estimated_fee = self.client.estimate_fee_sync(starknet_object)
+        return estimated_fee.overall_fee
 
     @property
     def gas_price(self) -> int:
