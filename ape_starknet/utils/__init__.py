@@ -46,7 +46,7 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
         return StarknetChainId.TESTNET  # Use TESTNET chain ID for local network
 
     elif network_id not in NETWORKS:
-        raise ValueError(f"Unknown network '{network_id}'.")
+        raise StarknetProviderError(f"Unknown network '{network_id}'.")
 
     return StarknetChainId(NETWORKS[network_id][0])
 
@@ -114,9 +114,6 @@ def get_virtual_machine_error(err: Exception) -> Exception:
         return StarknetProviderError(err.message)
     elif isinstance(err, ApeException):
         return err
-    elif isinstance(err, ValueError):
-        # TODO: review all exceptions raised in ape-starknet to actually use Starknet*Error
-        return StarknetProviderError(*err.args)
 
     return VirtualMachineError(base_err=err)
 

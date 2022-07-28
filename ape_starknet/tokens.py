@@ -8,6 +8,7 @@ from eth_typing import HexAddress, HexStr
 from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
 
+from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.utils.basemodel import StarknetBase
 
 if TYPE_CHECKING:
@@ -227,7 +228,7 @@ class TokenManager(StarknetBase):
         elif isinstance(receiver, str):
             receiver_address = self.starknet.encode_address(receiver)
         else:
-            raise TypeError(
+            raise StarknetProviderError(
                 f"Unhandled type for receiver '{receiver}'. Expects int, str, or account."
             )
 
