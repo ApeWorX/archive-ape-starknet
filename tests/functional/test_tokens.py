@@ -37,24 +37,3 @@ def test_large_transfer(tokens, account, second_account):
     actual = tokens.get_balance(second_account.address, token="test_token")
     expected = initial_balance + balance_to_transfer
     assert actual == expected
-
-
-def test_event_log_arguments(token_contract, account, second_account):
-    amount0 = 10
-    amount1 = 2**128 + 42
-    receipt = token_contract.fire_events(second_account.address, amount0, amount1, sender=account)
-
-    transfer_logs = list(receipt.decode_logs(token_contract.Transfer))
-    assert len(transfer_logs) == 1
-    log = transfer_logs[0]
-    assert log.from_ == int(account.address, 16)
-    assert log.to == int(second_account.address, 16)
-    assert log.value == amount0
-
-    mint_logs = list(receipt.decode_logs(token_contract.Mint))
-    assert len(mint_logs) == 1
-    log = mint_logs[0]
-    assert log.sender == int(account.address, 16)
-    assert log.amount0 == amount0
-    assert log.amount1 == amount1
-    assert log.to == int(second_account.address, 16)

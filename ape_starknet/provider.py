@@ -9,10 +9,9 @@ from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, Trans
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
 from ape.exceptions import ProviderNotConnectedError, TransactionError
-from ape.types import AddressType, BlockID, ContractLog
-from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property
+from ape.types import AddressType, BlockID, ContractLog, LogFilter
+from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
 from ethpm_types import ContractType
-from ethpm_types.abi import EventABI
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     ContractCode,
@@ -166,7 +165,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             return self.default_gas_cost
 
         if not isinstance(txn, StarknetTransaction):
-            raise StarknetEcosystemError(
+            raise StarknetProviderError(
                 "Unable to estimate the gas cost for a non-Starknet transaction "
                 "using Starknet provider."
             )
@@ -197,14 +196,12 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
                 latest_block_number = self.get_block("latest").number
                 block_id_int = latest_block_number + block_id + 1
                 if block_id_int < 0:
-                    raise ValueError(
-                        f"Negative block number '{block_id_int}' results in non-existent block."
-                    )
+                    raise StarknetProviderError(f"Block with number '{block_id_int}' not found.")
 
                 block_id = block_id_int
 
         else:
-            raise ValueError(f"Unsupported BlockID type '{type(block_id)}'.")
+            raise StarknetProviderError(f"Unsupported BlockID type '{type(block_id)}'.")
 
         block = self.starknet_client.get_block_sync(**{kwarg: block_id})
         return self.starknet.decode_block(block)
@@ -306,17 +303,9 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         starknet_txn = txn.as_starknet_object()
         return self.starknet_client.send_transaction_sync(starknet_txn, token=token)
 
-    @handle_client_errors
-    def get_contract_logs(
-        self,
-        address: Union[AddressType, List[AddressType]],
-        abi: Union[EventABI, List[EventABI]],
-        start_block: Optional[int] = None,
-        stop_block: Optional[int] = None,
-        block_page_size: Optional[int] = None,
-        event_parameters: Optional[Dict] = None,
-    ) -> Iterator[ContractLog]:
-        raise NotImplementedError("TODO")
+    @raises_not_implemented
+    def get_contract_logs(self, log_filter: LogFilter) -> Iterator[ContractLog]:
+        pass
 
     @handle_client_errors
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:

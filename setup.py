@@ -4,16 +4,16 @@ from setuptools import find_packages, setup  # type: ignore
 
 extras_require = {
     "test": [  # `test` GitHub Action jobs uses this
-        "pytest>=6.0,<7.0",  # Core testing package
+        "pytest>=6.0",  # Core testing package
         "pytest-asyncio",  # For 'ape test' integration
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-cairo",  # For compiling contracts in tests
+        "ape-cairo>=0.4.0a0",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.3.0,<23.0",  # auto-formatter and linter
-        "mypy>=0.961,<1.0",  # Static type analyzer
+        "black>=22.6.0,<23.0",  # auto-formatter and linter
+        "mypy>=0.971,<1.0",  # Static type analyzer
         "types-requests",  # NOTE: Needed due to mypy typeshed
         "flake8>=4.0.1,<5.0",  # Style linter
         "isort>=5.10.1,<6.0",  # Import sorting linter
@@ -61,7 +61,7 @@ setup(
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.9.0,<2.0",
-        "eth-ape>=0.3.5,<0.4.0",
+        "eth-ape>=0.4.0,<0.5",
         "ethpm-types>=0.3.3,<0.4",
         "starknet.py>=0.4.2a0,<0.5",
         "starknet-devnet>=0.2.6,<0.3",
@@ -73,7 +73,7 @@ setup(
     py_modules=["ape_starknet"],
     license="Apache-2.0",
     zip_safe=False,
-    keywords="ethereum",
+    keywords="ethereum starknet",
     packages=find_packages(exclude=["tests", "tests.*"]),
     package_data={"<ape_starknet>": ["py.typed"]},
     classifiers=[

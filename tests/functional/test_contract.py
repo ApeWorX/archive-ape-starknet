@@ -42,10 +42,11 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     factory = factory_contract_container.deploy(declaration.class_hash)
     receipt = factory.create_my_contract(sender=account)
     logs = list(receipt.decode_logs(factory.contract_deployed))
-    new_contract_address = provider.starknet.decode_address(logs[0].contract_address)
+    new_contract_address = provider.starknet.decode_address(logs[0]["contract_address"])
 
     # # Ensure can interact with deployed contract from 'class_hash'.
     new_contract_instance = Contract(new_contract_address, contract_type=contract.contract_type)
+    assert new_contract_instance
     new_contract_instance.initialize(sender=account)
     balance_pre_call = new_contract_instance.get_balance(account)
     new_contract_instance.increase_balance(account, 9, sender=account)

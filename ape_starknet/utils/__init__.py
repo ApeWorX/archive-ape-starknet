@@ -1,9 +1,9 @@
 import re
 from dataclasses import asdict
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ApeException, ContractLogicError, VirtualMachineError
+from ape.exceptions import ApeException, ContractLogicError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
@@ -97,12 +97,16 @@ def handle_client_errors(f):
             return result
 
         except Exception as err:
-            raise get_virtual_machine_error(err) from err
+            vm_error = get_virtual_machine_error(err)
+            if vm_error:
+                raise vm_error from err
+
+            raise  # Raise original error
 
     return func
 
 
-def get_virtual_machine_error(err: Exception) -> Exception:
+def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
     if isinstance(err, TransactionRejectedError):
         # FIXME: https://github.com/Shard-Labs/starknet-devnet/issues/195
         # if "actual fee exceeded max fee" in err.message.lower():
@@ -118,7 +122,7 @@ def get_virtual_machine_error(err: Exception) -> Exception:
         # TODO: review all exceptions raised in ape-starknet to actually use Starknet*Error
         return StarknetProviderError(*err.args)
 
-    return VirtualMachineError(base_err=err)
+    return None
 
 
 def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
