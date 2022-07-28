@@ -29,8 +29,7 @@ def test_decode_logs(receipt, token_contract, account, second_account):
 def test_decode_logs_no_specify_abi(receipt, account, second_account):
     logs = list(receipt.decode_logs())
     assert len(logs) == 2
-    transfer_log = logs[0]
-    mint_log = logs[1]
+    transfer_log, mint_log = logs
 
     assert transfer_log.from_ == int(account.address, 16)
     assert transfer_log.to == int(second_account.address, 16)
