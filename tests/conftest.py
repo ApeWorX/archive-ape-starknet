@@ -7,6 +7,8 @@ from typing import cast
 import ape
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
+from ape.contracts import ContractContainer
+from ethpm_types import ContractType
 
 from ape_starknet import tokens as _tokens
 from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
@@ -29,6 +31,59 @@ CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B38746
 
 # Purposely pick a number larest enough to test Uint256 logic
 TOKEN_INITIAL_SUPPLY = 2 * 2**128
+
+ETH_CONTRACT_TYPE = {
+    "abi": [
+        {
+            "anonymous": False,
+            "inputs": [
+                {"indexed": False, "name": "prevNum", "type": "uint256"},
+                {"indexed": True, "name": "newNum", "type": "uint256"},
+            ],
+            "name": "NumberChange",
+            "type": "event",
+        },
+        {"inputs": [], "stateMutability": "nonpayable", "type": "constructor"},
+        {
+            "inputs": [{"name": "num", "type": "uint256"}],
+            "name": "setNumber",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "owner",
+            "outputs": [{"name": "", "type": "address"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "myNumber",
+            "outputs": [{"name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "prevNumber",
+            "outputs": [{"name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+    ],
+    "contractName": "EthContract",
+    "deploymentBytecode": {
+        "bytecode": "0x3360005561012261001c6300000000396101226000016300000000f3600436101561000d57610117565b60003560e01c3461011d57633fb5c1cb81186100d057600054331461008957600b6040527f21617574686f72697a65640000000000000000000000000000000000000000006060526040506040518060600181600003601f1636823750506308c379a06000526020602052601f19601f6040510116604401601cfd5b60056004351461011d576001546002556004356001556004357f2295d5ec33e3af0d43cc4b73aa3cd7d784150fe365cbdb4b4fd338220e4f135760025460405260206040a2005b638da5cb5b81186100e75760005460405260206040f35b6323fd0e4081186100fe5760015460405260206040f35b634825cf6f81186101155760025460405260206040f35b505b60006000fd5b600080fd"  # noqa: E501
+    },
+    "devdoc": {},
+    "runtimeBytecode": {
+        "bytecode": "0x600436101561000d57610117565b60003560e01c3461011d57633fb5c1cb81186100d057600054331461008957600b6040527f21617574686f72697a65640000000000000000000000000000000000000000006060526040506040518060600181600003601f1636823750506308c379a06000526020602052601f19601f6040510116604401601cfd5b60056004351461011d576001546002556004356001556004357f2295d5ec33e3af0d43cc4b73aa3cd7d784150fe365cbdb4b4fd338220e4f135760025460405260206040a2005b638da5cb5b81186100e75760005460405260206040f35b6323fd0e4081186100fe5760015460405260206040f35b634825cf6f81186101155760025460405260206040f35b505b60006000fd5b600080fd"  # noqa: E501
+    },
+    "sourceId": "EthContract.vy",
+    "userdoc": {},
+}
 
 
 @pytest.fixture(scope="session")
@@ -114,6 +169,12 @@ def contract_container(project):
 
 
 @pytest.fixture(scope="session")
+def eth_contract_container(project):
+    contract_type = ContractType.parse_obj(ETH_CONTRACT_TYPE)
+    return ContractContainer(contract_type)
+
+
+@pytest.fixture(scope="session")
 def contract(account, contract_container, provider):
     deployed_contract = contract_container.deploy()
     deployed_contract.initialize(sender=account)
@@ -152,6 +213,11 @@ def account(account_container, provider):
 def second_account(account_container, provider):
     _ = provider  # Connection required
     return account_container.test_accounts[1]
+
+
+@pytest.fixture(scope="session")
+def eth_account(accounts):
+    return accounts.test_accounts[0]
 
 
 @pytest.fixture(scope="session")

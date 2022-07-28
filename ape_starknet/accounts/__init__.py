@@ -31,6 +31,7 @@ from starkware.starknet.core.os.contract_address.contract_address import (
 )
 from starkware.starknet.services.api.contract_class import ContractClass
 
+from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction
 from ape_starknet.utils import (
@@ -255,7 +256,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         with network.use_provider(network.default_provider or "starknet"):
             contract_type = self.starknet_explorer.get_contract_type(address)
             if not contract_type:
-                raise ValueError(f"Failed to get contract type for account '{address}'.")
+                raise StarknetProviderError(f"Failed to get contract type for account '{address}'.")
 
             self.chain_manager.contracts[address] = contract_type
 
@@ -339,7 +340,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def public_key(self) -> str:
         account_data = self.get_account_data()
         if "address" not in account_data:
-            raise ValueError(f"Account data corrupted, missing 'address' key: {account_data}.")
+            raise StarknetProviderError(
+                f"Account data corrupted, missing 'address' key: {account_data}."
+            )
 
         address = account_data["address"]
         if isinstance(address, int):
@@ -461,7 +464,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             if value.isnumeric():
                 value = str(value)
             else:
-                raise ValueError("value is not an integer.")
+                raise StarknetProviderError("value is not an integer.")
 
         if not isinstance(account, str) and hasattr(account, "address"):
             receiver = getattr(account, "address")

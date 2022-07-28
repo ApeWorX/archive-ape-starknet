@@ -35,18 +35,12 @@ def test_get_negative_block_number(account, provider, contract):
     assert block.number == start_block + 2
 
 
-def test_get_block_negative_number_resulting_less_than_zero(provider, contract):
-    _ = contract  # Contract fixture used to increase blocks (since deploys happen)
-    latest_block_number = provider.get_block("latest").number
-    value = -1000000000000000
-    with pytest.raises(StarknetProviderError) as err:
-        provider.get_block(value)
+def test_get_negative_block_number_out_of_range(provider, contract):
+    _ = contract  # We have blocks because the contract was deployed.
 
-    expected_block_number = latest_block_number + value + 1
-    assert (
-        str(err.value)
-        == f"Negative block number '{expected_block_number}' results in non-existent block."
-    )
+    # Also tests against bug where every error was considered a `VirtualMachineError`.
+    with pytest.raises(StarknetProviderError, match=r"Block with number '-\d*' not found."):
+        provider.get_block(-46346)
 
 
 def test_get_transactions_by_block(provider, account, contract):

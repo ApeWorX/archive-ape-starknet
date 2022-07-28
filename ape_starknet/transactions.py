@@ -2,7 +2,7 @@ from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
-from ape.contracts import ContractContainer, ContractEvent, ContractInstance
+from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
@@ -31,7 +31,7 @@ from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
 from starkware.starknet.testing.contract_utils import get_contract_class
 
-from ape_starknet.utils import to_checksum_address
+from ape_starknet.utils import ContractEventABI, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -265,6 +265,10 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     def total_fees_paid(self) -> int:
         return 0  # Overidden by Invoke receipts
 
+    def decode_logs(self, abi: Optional[ContractEventABI] = None) -> Iterator[ContractLog]:
+        # Overriden in InvocationReceipt
+        pass
+
 
 class DeployReceipt(StarknetReceipt):
     contract_address: str
@@ -324,18 +328,10 @@ class InvocationReceipt(StarknetReceipt):
     def total_fees_paid(self) -> int:
         return self.actual_fee
 
-    def decode_logs(self, abi: Union[EventABI, ContractEvent]) -> Iterator[ContractLog]:
-        """
-        Decode the logs on the receipt.
-
-        Args:
-            abi (``EventABI``): The ABI of the event to decode into logs.
-
-        Returns:
-            Iterator[:class:`~ape.types.ContractLog`]
-        """
-        if not isinstance(abi, EventABI):
-            abi = abi.abi
+    def decode_logs(
+        self,
+        abi: Optional[ContractEventABI] = None,
+    ) -> Iterator[ContractLog]:
 
         log_data_items: List[Dict] = []
         for log in self.logs:
@@ -347,7 +343,30 @@ class InvocationReceipt(StarknetReceipt):
             }
             log_data_items.append(log_data)
 
-        yield from self.starknet.decode_logs(abi, log_data_items)
+        if abi is not None:
+            if not isinstance(abi, (list, tuple)):
+                abi = [abi]
+
+            event_abis: List[EventABI] = [a.abi if not isinstance(a, EventABI) else a for a in abi]
+            yield from self.starknet.decode_logs(log_data_items, *event_abis)
+
+        else:
+            # If ABI is not provided, decode all events
+            addresses = {self.starknet.decode_address(x["from_address"]) for x in log_data_items}
+            contract_types = self.chain_manager.contracts.get_multiple(addresses)
+            # address → selector → abi
+            selectors = {
+                address: {get_selector_from_name(e.name): e for e in contract.events}
+                for address, contract in contract_types.items()
+            }
+            for log in log_data_items:
+                contract_address = self.starknet.decode_address(log["from_address"])
+                if contract_address not in selectors:
+                    continue
+
+                for event_key in log.get("keys", []):
+                    event_abi = selectors[contract_address][event_key]
+                    yield from self.starknet.decode_logs([log], event_abi)
 
 
 class ContractDeclaration(StarknetReceipt):
