@@ -398,7 +398,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         if txn.max_fee is None:
             # NOTE: Signature cannot be None when estimating fees.
             txn.signature = self.sign_transaction(txn)
-            txn.max_fee = self.get_fee_estimate(txn)
+            txn.max_fee = int(self.get_fee_estimate(txn) * 1.1)
 
         txn.signature = self.sign_transaction(txn)
         return txn
@@ -603,7 +603,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 logger.set_level(original_level)
 
             txn.signature = self.sign_transaction(txn)
-            txn.max_fee = self.get_fee_estimate(txn)
+            txn.max_fee = int(self.get_fee_estimate(txn) * 1.1)
 
         txn.signature = self.sign_transaction(txn)
 

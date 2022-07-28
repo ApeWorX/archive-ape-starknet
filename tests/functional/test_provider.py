@@ -85,7 +85,7 @@ def test_set_timestamp(provider, account, contract):
 
 def test_estimate_gas_cost_external_method(contract, account, provider):
     estimated_fee = contract.increase_balance.estimate_gas_cost(account.address, 1, sender=account)
-    assert estimated_fee == 646_000_000_000_000
+    assert estimated_fee > 100_000_000_000_000
 
     receipt = contract.increase_balance(account.address, 1, sender=account)
     # `actual_fee` is suddenly `0` in devnet?
@@ -94,4 +94,4 @@ def test_estimate_gas_cost_external_method(contract, account, provider):
 
 def test_estimate_gas_cost_view_method(contract, account, provider):
     estimated_fee = contract.get_balance.estimate_gas_cost(account.address, sender=account)
-    assert estimated_fee == 965_300_000_000_000
+    assert estimated_fee > 100_000_000_000_000
