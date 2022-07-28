@@ -20,7 +20,7 @@ from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
 from starkware.starknet.services.api.contract_class import ContractClass
 
-from ape_starknet.exceptions import StarknetEcosystemError
+from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
 from ape_starknet.transactions import (
     ContractDeclaration,
     DeclareTransaction,
@@ -204,12 +204,12 @@ class Starknet(EcosystemAPI, StarknetBase):
         elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
         else:
-            raise ValueError(f"Unable to handle contract type '{txn_type.value}'.")
+            raise StarknetProviderError(f"Unable to handle contract type '{txn_type.value}'.")
 
         receipt = receipt_cls.parse_obj(data)
 
         if receipt is None:
-            raise ValueError("Failed to parse receipt from data.")
+            raise StarknetProviderError("Failed to parse receipt from data.")
 
         return receipt
 
@@ -245,7 +245,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         # NOTE: This method only works for invoke-transactions
         contract_type = self.starknet_explorer.get_contract_type(address)
         if not contract_type:
-            raise ValueError(f"No contract found at address '{address}'.")
+            raise StarknetProviderError(f"No contract found at address '{address}'.")
 
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
 
@@ -302,7 +302,9 @@ class Starknet(EcosystemAPI, StarknetBase):
             contract_str = self.decode_address(contract_int)
             contract = self.chain_manager.contracts.get(contract_str)
             if not contract:
-                raise ValueError("Unable to create transaction objects from other networks.")
+                raise StarknetEcosystemError(
+                    "Unable to create transaction objects from other networks."
+                )
 
             selector = txn_data["entry_point_selector"]
             if isinstance(selector, str):
