@@ -2,7 +2,7 @@ from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
-from ape.contracts import ContractContainer, ContractEvent, ContractInstance
+from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
@@ -31,7 +31,7 @@ from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
 from starkware.starknet.testing.contract_utils import get_contract_class
 
-from ape_starknet.utils import to_checksum_address
+from ape_starknet.utils import ContractEventABI, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -260,14 +260,9 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     def total_fees_paid(self) -> int:
         return 0  # Overidden by Invoke receipts
 
-    def decode_logs(
-        self,
-        abi: Optional[
-            Union[List[Union[EventABI, "ContractEvent"]], Union[EventABI, "ContractEvent"]]
-        ] = None,
-    ) -> Iterator[ContractLog]:
+    def decode_logs(self, abi: Optional[ContractEventABI] = None) -> Iterator[ContractLog]:
         # Overriden in InvocationReceipt
-        yield from []
+        pass
 
 
 class DeployReceipt(StarknetReceipt):
@@ -330,9 +325,7 @@ class InvocationReceipt(StarknetReceipt):
 
     def decode_logs(
         self,
-        abi: Optional[
-            Union[List[Union[EventABI, "ContractEvent"]], Union[EventABI, "ContractEvent"]]
-        ] = None,
+        abi: Optional[ContractEventABI] = None,
     ) -> Iterator[ContractLog]:
 
         log_data_items: List[Dict] = []
