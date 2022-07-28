@@ -3,9 +3,14 @@
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import deploy
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.bool import FALSE
 
 @storage_var
 func class_hash() -> (class_hash : felt):
+end
+
+@storage_var
+func salt() -> (value : felt):
 end
 
 @event
@@ -29,8 +34,16 @@ func create_my_contract{
     range_check_ptr,
 }():
     let (cls_hash) = class_hash.read()
-    let (ptr) = alloc()
-    let (contract_addr) = deploy(cls_hash, 123, 0, ptr, 1)
+    let (current_salt) = salt.read()
+    let (ctor_calldata) = alloc()
+    let (contract_addr) = deploy(
+        class_hash=cls_hash,
+        contract_address_salt=current_salt,
+        constructor_calldata_size=0,
+        constructor_calldata=ctor_calldata,
+        deploy_from_zero=FALSE,
+    )
+    salt.write(value=current_salt + 1)
     contract_deployed.emit(contract_address=contract_addr)
     return ()
 end

@@ -1,13 +1,15 @@
 import re
 from dataclasses import asdict
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ApeException, ContractLogicError, VirtualMachineError
+from ape.contracts import ContractEvent
+from ape.exceptions import ApeException, ContractLogicError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
+from ethpm_types.abi import EventABI
 from hexbytes import HexBytes
 from starknet_py.net.client_errors import ClientError, ContractNotFoundError
 from starknet_py.net.client_models import (
@@ -36,6 +38,7 @@ _HEX_ADDRESS_REG_EXP = re.compile("(0x)?[0-9a-f]*", re.IGNORECASE | re.ASCII)
 """Same as from eth-utils except not limited length."""
 ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
 DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
+ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, ContractEvent]]
 
 
 def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
@@ -97,12 +100,16 @@ def handle_client_errors(f):
             return result
 
         except Exception as err:
-            raise get_virtual_machine_error(err) from err
+            vm_error = get_virtual_machine_error(err)
+            if vm_error:
+                raise vm_error from err
+
+            raise  # Raise original error
 
     return func
 
 
-def get_virtual_machine_error(err: Exception) -> Exception:
+def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
     if isinstance(err, TransactionRejectedError):
         # FIXME: https://github.com/Shard-Labs/starknet-devnet/issues/195
         # if "actual fee exceeded max fee" in err.message.lower():
@@ -115,7 +122,7 @@ def get_virtual_machine_error(err: Exception) -> Exception:
     elif isinstance(err, ApeException):
         return err
 
-    return VirtualMachineError(base_err=err)
+    return None
 
 
 def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:

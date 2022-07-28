@@ -48,6 +48,6 @@ def test_encode_and_decode_address(value, ecosystem):
 
 
 def test_decode_logs(ecosystem, event_abi, raw_logs):
-    actual = list(ecosystem.decode_logs(event_abi, raw_logs))
+    actual = list(ecosystem.decode_logs(raw_logs, event_abi))
     assert len(actual) == 1
     assert actual[0].amount == "4321"

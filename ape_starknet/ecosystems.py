@@ -325,9 +325,9 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         return txn_cls(**txn_data)
 
-    def decode_logs(self, abi: EventABI, raw_logs: List[Dict]) -> Iterator[ContractLog]:
-        event_key = get_selector_from_name(abi.name)
-        matching_logs = [log for log in raw_logs if event_key in log["keys"]]
+    def decode_logs(self, logs: List[Dict], *events: EventABI) -> Iterator["ContractLog"]:
+        events_by_selector = {get_selector_from_name(e.name): e for e in events}
+        log_map = {s: [log for log in logs if s in log["keys"]] for s in events_by_selector}
 
         def from_uint(low: int, high: int) -> int:
             return low + (high << 128)
@@ -345,18 +345,22 @@ class Starknet(EcosystemAPI, StarknetBase):
                     decoded.append(next(iter_data))
             return decoded
 
-        for index, log in enumerate(matching_logs):
-            event_args = dict(
-                zip([a.name for a in abi.inputs], decode_items(abi.inputs, log["data"]))
-            )
-            yield ContractLog(  # type: ignore
-                name=abi.name,
-                index=index,
-                event_arguments=event_args,
-                transaction_hash=log["transaction_hash"],
-                block_hash=log["block_hash"],
-                block_number=log["block_number"],
-            )
+        for index, (selector, logs) in enumerate(log_map.items()):
+            abi = events_by_selector[selector]
+            for log in logs:
+                event_args = dict(
+                    zip([a.name for a in abi.inputs], decode_items(abi.inputs, log["data"]))
+                )
+                yield ContractLog(  # type: ignore
+                    block_hash=log["block_hash"],
+                    block_number=log["block_number"],
+                    contract_address=self.decode_address(log["from_address"]),
+                    event_arguments=event_args,
+                    event_name=abi.name,
+                    log_index=index,
+                    transaction_hash=log["transaction_hash"],
+                    transaction_index=0,  # Not available
+                )
 
     def get_proxy_info(self, address: AddressType) -> Optional[StarknetProxy]:
         # Proxies are handled elsewhere in Starknet due to ecosystem differences
@@ -368,7 +372,7 @@ class Starknet(EcosystemAPI, StarknetBase):
     ) -> Optional[StarknetProxy]:
         proxy_type: Optional[ProxyType] = None
         target: Optional[int] = None
-        instance = self.create_contract(address, contract_type)
+        instance = self.chain_manager.contracts.instance_at(address, contract_type=contract_type)
         # Legacy proxy check
         if "implementation" in contract_type.view_methods:
             target = instance.implementation()  # type: ignore
