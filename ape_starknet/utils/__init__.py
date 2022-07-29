@@ -11,7 +11,7 @@ from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI
 from hexbytes import HexBytes
-from starknet_py.net.client_errors import ClientError
+from starknet_py.net.client_errors import ClientError, ContractNotFoundError
 from starknet_py.net.client_models import (
     DeclareTransaction,
     DeployTransaction,
@@ -106,20 +106,31 @@ def handle_client_errors(f):
 
 
 def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
-    if isinstance(err, ClientError):
-        # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L11 # noqa
-        err_msg = err.message.split(":", 1)[1].strip()
-        return StarknetProviderError(err_msg)
-    elif isinstance(err, ApeException) or not isinstance(err, TransactionRejectedError):
+    if isinstance(err, ApeException) or not isinstance(
+        err, (ClientError, TransactionRejectedError)
+    ):
         return err
 
     err_msg = err.message
-    if "Error message:" in err_msg:
-        err_msg = err_msg.split("Error message:")[-1]
-    if "actual fee exceeded max fee" in err_msg.lower():
+
+    if "Actual fee exceeded max fee" in err_msg:
         return OutOfGasError()
 
-    return ContractLogicError(revert_message=err_msg.strip())
+    if isinstance(err, ContractNotFoundError):
+        # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L30 # noqa
+        err_msg = err_msg.split(":", 2)[-1]
+    elif isinstance(err, ClientError):
+        # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L11 # noqa
+        err_msg = err_msg.split(":", 1)[-1]
+
+    if "Error message:" in err_msg:
+        err_msg = err_msg.split("Error message:")[-1].splitlines()[0]
+        return ContractLogicError(revert_message=err_msg.strip())
+
+    if "Error at pc=" in err_msg:
+        return ContractLogicError(revert_message=err_msg.strip())
+
+    return StarknetProviderError(err_msg.strip())
 
 
 def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:

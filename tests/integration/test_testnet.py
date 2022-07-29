@@ -1,5 +1,6 @@
 import pytest
-from ape.exceptions import ContractLogicError
+
+from ape_starknet.exceptions import StarknetProviderError
 
 
 @pytest.fixture(scope="module")
@@ -24,7 +25,7 @@ def test_is_token(eth_contract, tokens):
 
 def test_revert_message_no_account_found(eth_contract, account):
     # It will obviously fail because we are using a local account
-    with pytest.raises(ContractLogicError) as err:
+    with pytest.raises(StarknetProviderError) as err:
         eth_contract.increaseAllowance(account, 1, sender=account)
 
     assert str(err.value) == "No contract found with following identifier {}"
