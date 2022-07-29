@@ -115,7 +115,7 @@ def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
 
     err_msg = err.message
     if "Error message:" in err_msg:
-        err_msg = err_msg.splitlines()[0].split("Error message:")[1]
+        err_msg = err_msg.split("Error message:")[-1]
     if "actual fee exceeded max fee" in err_msg.lower():
         return OutOfGasError()
 
