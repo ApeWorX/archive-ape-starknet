@@ -40,7 +40,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TransactionStatus.UNKNOWN
+    status: int = TransactionStatus.NOT_RECEIVED
     version: int = 0
 
     """Ignored"""
