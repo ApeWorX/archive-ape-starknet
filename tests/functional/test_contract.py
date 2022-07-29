@@ -115,19 +115,17 @@ def test_decode_logs(contract, account, ecosystem):
 
 
 def test_revert_message(contract):
-    with pytest.raises(ContractLogicError) as err:
+    reason = "Already initialized"
+    with pytest.raises(ContractLogicError, match=reason):
         # Already initialized from fixture
         contract.initialize()
-
-    assert str(err.value) == "Already initialized"
 
 
 def test_revert_no_message(contract, account):
     contract.reset()
-    with pytest.raises(ContractLogicError) as err:
+    reason = "An ASSERT_EQ instruction failed.*"
+    with pytest.raises(ContractLogicError, match=reason):
         contract.increase_balance(account.address, 123)
-
-    assert "An ASSERT_EQ instruction failed" in str(err.value.message)
 
     # Re-initialize (re-store state)
     contract.initialize()
