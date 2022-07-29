@@ -73,6 +73,7 @@ def test_get_transactions_by_block(provider, account, contract):
         expected_nonce,
     ]
     assert transactions[0].data == expected_data
+    assert transactions[0].total_transfer_value == transactions[0].max_fee + transactions[0].value
 
 
 def test_set_timestamp(provider, account, contract):
@@ -88,8 +89,10 @@ def test_estimate_gas_cost_external_method(contract, account, provider):
     assert estimated_fee > 100_000_000_000_000
 
     receipt = contract.increase_balance(account.address, 1, sender=account)
-    # `actual_fee` is suddenly `0` in devnet?
-    assert receipt.actual_fee == 0
+    assert receipt.actual_fee > estimated_fee
+    assert receipt.max_fee > estimated_fee
+    assert receipt.total_fees_paid == receipt.actual_fee
+    assert not receipt.ran_out_of_gas
 
 
 def test_estimate_gas_cost_view_method(contract, account, provider):

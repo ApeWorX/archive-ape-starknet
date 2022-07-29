@@ -2,6 +2,7 @@ import functools
 import json
 import random
 from dataclasses import dataclass
+from math import ceil
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Union
 
@@ -50,6 +51,9 @@ specific to the ape-starknet plugin.
 APP_KEY_FILE_VERSION = "0.1.0"
 OZ_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
+
+# https://github.com/starkware-libs/cairo-lang/blob/v0.9.1/src/starkware/starknet/cli/starknet_cli.py#L66
+FEE_MARGIN_OF_ESTIMATION = 1.1
 
 
 def sign_calldata(calldata: Iterable[int], priv_key: int):
@@ -398,18 +402,13 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         if txn.max_fee is None:
             # NOTE: Signature cannot be None when estimating fees.
             txn.signature = self.sign_transaction(txn)
-            txn.max_fee = int(self.get_fee_estimate(txn) * 1.1)
+            txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
 
         txn.signature = self.sign_transaction(txn)
         return txn
 
-    def get_fee_estimate(self, txn: TransactionAPI):
-        # Estimated fee are not enough to set max_fee.
-        # We need to bump the value to cover most of usages, in the same way it's done there:
-        # - https://github.com/software-mansion/starknet.py/blob/bd2e51e/starknet_py/contract.py#L221 (x1.5)  # noqa
-        # - https://github.com/0xs34n/starknet.js/blob/41eea22/src/utils/stark.ts#L53 (x1.1)
-        estimate_fee = self.provider.estimate_gas_cost(txn)
-        return int(estimate_fee * 1.1)
+    def get_fee_estimate(self, txn: TransactionAPI) -> int:
+        return self.provider.estimate_gas_cost(txn)
 
     def _prepare_transaction(self, txn: TransactionAPI):
         execute_abi = self.execute_abi
@@ -603,7 +602,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 logger.set_level(original_level)
 
             txn.signature = self.sign_transaction(txn)
-            txn.max_fee = int(self.get_fee_estimate(txn) * 1.1)
+            txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
 
         txn.signature = self.sign_transaction(txn)
 

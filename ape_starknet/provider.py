@@ -158,17 +158,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return contract.get_nonce()
 
     @handle_client_errors
-    def estimate_gas_cost(self, txn: TransactionAPI) -> int:
-        # Already computed, it's the case when calling as_transaction() with max_fee not set
-        if txn.max_fee:
-            return txn.max_fee
-
-        if not isinstance(txn, StarknetTransaction):
-            raise StarknetProviderError(
-                "Unable to estimate the gas cost for a non-Starknet transaction "
-                "using Starknet provider."
-            )
-
+    def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
         if not self.client:
             raise ProviderNotConnectedError()
 
