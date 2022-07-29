@@ -93,8 +93,10 @@ def test_estimate_gas_cost_external_method(contract, account, provider):
     assert receipt.max_fee > estimated_fee
     assert receipt.total_fees_paid == receipt.actual_fee
     assert not receipt.ran_out_of_gas
+    assert provider.gas_price >= 100_000_000_000
 
 
 def test_estimate_gas_cost_view_method(contract, account, provider):
     estimated_fee = contract.get_balance.estimate_gas_cost(account.address, sender=account)
     assert estimated_fee > 100_000_000_000_000
+    assert provider.gas_price >= 100_000_000_000

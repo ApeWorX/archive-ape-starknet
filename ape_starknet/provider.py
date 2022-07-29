@@ -52,6 +52,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
+    current_gas_price: int = 100_000_000_000
 
     @property
     def process_name(self) -> str:
@@ -164,14 +165,14 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
 
         starknet_object = txn.as_starknet_object()
         estimated_fee = self.client.estimate_fee_sync(starknet_object)
+
+        self.current_gas_price = estimated_fee.gas_price
+
         return estimated_fee.overall_fee
 
     @property
     def gas_price(self) -> int:
-        """
-        **NOTE**: Currently, the gas price is fixed to always be 100 gwei.
-        """
-        return self.conversion_manager.convert("100 gwei", int)
+        return self.current_gas_price
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
