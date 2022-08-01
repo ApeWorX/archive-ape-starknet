@@ -25,6 +25,6 @@ def test_is_token(eth_contract, tokens):
 
 def test_revert_message_no_account_found(eth_contract, account):
     # It will obviously fail because we are using a local account
-    reason = "No contract found with following identifier.*"
+    reason = "No contract found for identifier.*"
     with pytest.raises(StarknetProviderError, match=reason):
         eth_contract.increaseAllowance(account, 1, sender=account)
