@@ -96,7 +96,15 @@ def extract_trace_data(trace: BlockSingleTransactionTrace) -> Dict[str, Any]:
 
     trace_data = trace.function_invocation
 
-    # Keep the most revelant result
+    # Keep the most relevant `result`: given the account implementation, `result`
+    # may contain an additional number prepend to the data to expose the total
+    # number of items. For a method returning a 3-items array like `[1, 2, 3]`,
+    # in such scenario `results` would be `[0x4, 0x3, 0x1, 0x2, 0x3]` (the prepend
+    # number: 4, the array length: 3, then array items: 1, 2, and 3).
+    # As there is no known way to guess when to remove such a number, we prefer to "scan"
+    # trace internals to select the most appropriate result. For instance, when `result`
+    # contains the additional value, we just need to use the "internal call" `result`
+    # that will contain the exact value the method returned.
     invokation_result = trace_data["result"]
     internal_calls = trace_data["internal_calls"]
     trace_data["result"] = (
