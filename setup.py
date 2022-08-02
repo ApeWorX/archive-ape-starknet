@@ -12,11 +12,11 @@ extras_require = {
         "ape-cairo>=0.4.0a0",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.6.0,<23.0",  # auto-formatter and linter
-        "mypy>=0.971,<1.0",  # Static type analyzer
+        "black>=22.6.0",  # auto-formatter and linter
+        "mypy>=0.971",  # Static type analyzer
         "types-requests",  # NOTE: Needed due to mypy typeshed
-        "flake8>=4.0.1,<5.0",  # Style linter
-        "isort>=5.10.1,<6.0",  # Import sorting linter
+        "flake8>=4.0.1",  # Style linter
+        "isort>=5.10.1",  # Import sorting linter
         "types-pkg-resources>=0.1.3,<0.2",
     ],
     "release": [  # `release` GitHub Action job uses this
@@ -64,7 +64,7 @@ setup(
         "eth-ape>=0.4.0,<0.5",
         "ethpm-types>=0.3.3,<0.4",
         "starknet.py>=0.4.4a0,<0.5",
-        "starknet-devnet>=0.2.6,<0.3",
+        "starknet-devnet==0.2.6",
         "importlib-metadata ; python_version<'3.8'",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
