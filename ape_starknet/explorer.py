@@ -4,10 +4,10 @@ from ape.api import ExplorerAPI, ReceiptAPI
 from ape.types import AddressType
 from ethpm_types import ContractType
 
-from ape_starknet.utils.basemodel import StarknetMixin
+from ape_starknet.utils.basemodel import StarknetBase
 
 
-class StarknetExplorer(ExplorerAPI, StarknetMixin):
+class StarknetExplorer(ExplorerAPI, StarknetBase):
     BASE_URIS = {
         "testnet": "https://goerli.voyager.online",
         "mainnet": "https://voyager.online",
@@ -27,21 +27,16 @@ class StarknetExplorer(ExplorerAPI, StarknetMixin):
         return f"{base_uri}/txns/{transaction_hash}" if base_uri else ""
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
-        code = self.provider.get_code_and_abi(address)
-        contract_type = ContractType.parse_obj(code)
-        proxy_info = self.starknet._get_proxy_info(address, contract_type)
-        if proxy_info:
-            print("HERE")
-            contract_type = self.get_contract_type(proxy_info.target)
-            self.chain_manager.contracts[proxy_info.target] = contract_type
-            self.chain_manager.contracts._local_proxies[address] = proxy_info
-            if self.provider.network.name != LOCAL_NETWORK_NAME:
-                self.chain_manager.contracts._cache_proxy_info_to_disk(address, proxy_info)
+        if self.tokens.is_token(address):
+            return self.tokens.contract_type
 
-        else:
-            self.chain_manager.contracts[address] = contract_type
+        elif address in self.account_contracts:
+            starknet_account = self.account_contracts[address]
+            return starknet_account.get_contract_type()  # type: ignore
 
-        return contract_type
+        code_and_abi = self.provider.get_code_and_abi(address)
+        contract_type_dict = {"abi": code_and_abi.abi}
+        return ContractType.parse_obj(contract_type_dict)
 
     def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:
         # TODO

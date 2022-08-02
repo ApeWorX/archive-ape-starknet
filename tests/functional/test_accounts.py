@@ -1,20 +1,37 @@
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
-from eth_utils import remove_0x_prefix
+from click.testing import CliRunner
 from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
-from ape_starknet.utils import get_random_private_key, is_hex_address, to_checksum_address
+from ape_starknet.utils import is_hex_address
+
+from ..conftest import PASSWORD
 
 
-def test_public_keys(existing_key_file_account, public_key):
-    actual = existing_key_file_account.public_key
-    assert actual != public_key, "Result is not checksummed"
-    assert remove_0x_prefix(actual.lower()) == public_key
-    assert is_hex_address(actual)
+@pytest.fixture
+def isolation():
+    return CliRunner().isolation
 
 
-def test_sign_message_using_key_file_account(existing_key_file_account, password):
-    assert existing_key_file_account.sign_message(5, passphrase=password)
+@pytest.fixture
+def devnet_keyfile_account(account_container, account):
+    account_container.import_account(
+        "__DEV_AS_KEYFILE_ACCOUNT__",
+        "testnet",
+        account.address,
+        private_key=account.private_key,
+        passphrase="123",
+    )
+    return account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
+
+
+def test_public_keys(key_file_account, public_key):
+    actual = key_file_account.public_key
+    assert actual == public_key
+
+
+def test_sign_message_using_key_file_account(key_file_account, password):
+    assert key_file_account.sign_message(5, passphrase=password)
 
 
 def test_address(account):
@@ -35,6 +52,12 @@ def test_sign_message_and_check_signature_using_deployed_account(ephemeral_accou
     data_hash = pedersen_hash(data, 0)
     result = ephemeral_account.check_signature(data_hash, signature)
     assert result, "Failed to validate signature"
+
+
+def test_account_container_contains(account, second_account, key_file_account, account_container):
+    assert account.address in account_container
+    assert second_account.address in account_container
+    assert key_file_account.address in account_container
 
 
 @pytest.mark.parametrize(
@@ -58,17 +81,22 @@ def test_balance(account):
     assert account.balance > 0
 
 
-def test_import_with_passphrase(account_container):
+def test_can_access_devnet_accounts(account, second_account, chain):
+    assert chain.contracts[account.address] == account.get_contract_type()
+    assert chain.contracts[second_account.address] == second_account.get_contract_type()
+
+
+def test_import_with_passphrase(account_container, key_file_account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
-    private_key = int(get_random_private_key(), 16)
-    address = hex(private_key)
-
     account_container.import_account(
-        alias, LOCAL_NETWORK_NAME, address, private_key, passphrase="p@55W0rd"
+        alias,
+        LOCAL_NETWORK_NAME,
+        key_file_account.address,
+        key_file_account._get_key(PASSWORD),
+        passphrase="p@55W0rd",
     )
-
-    account = account_container.load(alias)
-    assert account.address == to_checksum_address(address)
+    new_account = account_container.load(alias)
+    assert new_account.address == key_file_account.address
 
 
 def test_transfer(account, second_account):
@@ -77,18 +105,53 @@ def test_transfer(account, second_account):
     assert second_account.balance == initial_balance + 10
 
 
-def test_use_unlocked_keyfile_account(account, account_container, contract):
-    # Copy normal dev account as a keyfile account
-    account_container.import_account(
-        "__DEV_AS_KEYFILE_ACCOUNT__",
-        "testnet",
-        account.address,
-        private_key=account.private_key,
-        passphrase="123",
-    )
-    new_account = account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
-    new_account.unlock("123")
-    new_account.set_autosign(True)
+def test_unlock_with_passphrase_and_sign_message(isolation, devnet_keyfile_account):
+    devnet_keyfile_account.unlock(passphrase="123")
 
-    # Should not prompt!
-    assert contract.get_array(sender=new_account)
+    with isolation(input="y\n"):
+        devnet_keyfile_account.sign_message([1, 2, 3])
+
+
+def test_unlock_from_prompt_and_sign_message(isolation, devnet_keyfile_account):
+    with isolation(input="123\n"):
+        devnet_keyfile_account.unlock()
+
+    with isolation(input="y\n"):
+        devnet_keyfile_account.sign_message([1, 2, 3])
+
+
+def test_unlock_with_passphrase_and_sign_transaction(isolation, devnet_keyfile_account, contract):
+    devnet_keyfile_account.unlock(passphrase="123")
+
+    with isolation(input="y\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+
+def test_unlock_from_prompt_and_sign_transaction(isolation, devnet_keyfile_account, contract):
+    with isolation(input="123\n"):
+        devnet_keyfile_account.unlock()
+
+    with isolation(input="y\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+
+def test_set_autosign(isolation, devnet_keyfile_account, contract):
+    with isolation(input="123\n"):
+        devnet_keyfile_account.set_autosign(True)
+
+    contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+    # Disable and verify we have to sign again
+    devnet_keyfile_account.set_autosign(False)
+    with isolation(input="123\ny\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+
+def test_set_autosign_and_provide_passphrase(isolation, devnet_keyfile_account, contract):
+    devnet_keyfile_account.set_autosign(True, passphrase="123")
+    contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+    # Disable and verify we have to sign again
+    devnet_keyfile_account.set_autosign(False)
+    with isolation(input="123\ny\n"):
+        contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)

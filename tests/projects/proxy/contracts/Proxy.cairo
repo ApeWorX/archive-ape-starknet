@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: MIT
-# OpenZeppelin Contracts for Cairo v0.1.0 (upgrades/Proxy.cairo)
+# OpenZeppelin Contracts for Cairo v0.2.0 (upgrades/Proxy.cairo)
 
 %lang starknet
+#%builtins pedersen range_check bitwise
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.starknet.common.syscalls import library_call_l1_handler, library_call
+from starkware.starknet.common.syscalls import (
+    library_call,
+    library_call_l1_handler
+)
 from library import Proxy
 
 #
@@ -16,19 +20,9 @@ func constructor{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(implementation_address: felt):
-    Proxy._set_implementation(implementation_address)
+    }(implementation_hash: felt):
+    Proxy._set_implementation_hash(implementation_hash)
     return ()
-end
-
-@view
-func implementation{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }() -> (res):
-    let (impl) = Proxy.get_implementation()
-    return (impl)
 end
 
 #
@@ -50,17 +44,17 @@ func __default__{
         retdata_size: felt,
         retdata: felt*
     ):
-    let (address) = Proxy.get_implementation()
+    let (class_hash) = Proxy.get_implementation_hash()
 
     let (retdata_size: felt, retdata: felt*) = library_call(
-        class_hash=address,
+        class_hash=class_hash,
         function_selector=selector,
         calldata_size=calldata_size,
-        calldata=calldata
+        calldata=calldata,
     )
-
     return (retdata_size=retdata_size, retdata=retdata)
 end
+
 
 @l1_handler
 @raw_input
@@ -73,14 +67,13 @@ func __l1_default__{
         calldata_size: felt,
         calldata: felt*
     ):
-    let (address) = Proxy.get_implementation()
+    let (class_hash) = Proxy.get_implementation_hash()
 
     library_call_l1_handler(
-        class_hash=address,
+        class_hash=class_hash,
         function_selector=selector,
         calldata_size=calldata_size,
-        calldata=calldata
+        calldata=calldata,
     )
-
     return ()
 end
