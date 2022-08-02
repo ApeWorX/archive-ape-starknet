@@ -13,6 +13,7 @@ from ethpm_types.abi import EventABI
 from hexbytes import HexBytes
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
+    BlockSingleTransactionTrace,
     DeclareTransaction,
     DeployTransaction,
     InvokeTransaction,
@@ -87,6 +88,22 @@ def is_checksum_address(value: Any) -> bool:
         return False
 
     return value == to_checksum_address(value)
+
+
+def extract_trace_data(trace: BlockSingleTransactionTrace) -> Dict[str, Any]:
+    if not trace:
+        return {}
+
+    trace_data = trace.function_invocation
+
+    # Keep the most revelant result
+    invokation_result = trace_data["result"]
+    internal_calls = trace_data["internal_calls"]
+    trace_data["result"] = (
+        internal_calls[-1]["result"] if internal_calls else invokation_result
+    ) or invokation_result
+
+    return trace_data
 
 
 def handle_client_errors(f):

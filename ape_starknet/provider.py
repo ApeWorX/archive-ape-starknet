@@ -35,6 +35,7 @@ from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     DEFAULT_ACCOUNT_SEED,
     PLUGIN_NAME,
+    extract_trace_data,
     get_chain_id,
     get_dict_from_tx_info,
     get_virtual_machine_error,
@@ -235,11 +236,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
 
+        trace_data = {}
         if isinstance(txn_info, InvokeTransaction):
             trace = self._get_single_trace(receipt.block_number, receipt.hash)
-            trace_data = trace.function_invocation if trace else {}
-        else:
-            trace_data = {}
+            trace_data = extract_trace_data(trace)
 
         receipt_dict: Dict[str, Any] = {"provider": self, **trace_data, **vars(receipt)}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
@@ -260,17 +260,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         receipt = self.get_transaction(response.transaction_hash)
 
         if isinstance(txn, InvokeFunctionTransaction):
-            returndata = receipt.returndata
-
             if txn.original_method_abi:
                 # Use ABI before going through account contract
                 abi = txn.original_method_abi
-                return_data = returndata[1:]
             else:
                 abi = txn.method_abi
-                return_data = returndata
 
-            return_value = self.starknet.decode_returndata(abi, return_data)
+            return_value = self.starknet.decode_returndata(abi, receipt.returndata)
             receipt.return_value = return_value
 
         return receipt

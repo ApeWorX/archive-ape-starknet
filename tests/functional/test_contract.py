@@ -152,11 +152,10 @@ def test_array_inputs(contract):
 @pytest.mark.parametrize(
     "method, returndata_expected, return_value_expected",
     [
-        ("array", ["0x4", "0x3", "0x1", "0x2", "0x3"], [1, 2, 3]),
+        ("array", ["0x3", "0x1", "0x2", "0x3"], [1, 2, 3]),
         (
             "array_complex_struct",
             [
-                "0x10",
                 "0x3",
                 "0x0",
                 "0x7b",
@@ -190,7 +189,7 @@ def test_array_inputs(contract):
         ),
         (
             "array_uint256",
-            ["0x7", "0x3", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
+            ["0x3", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
             [
                 123,
                 41854731131275431005995076714107490009088,
@@ -199,18 +198,17 @@ def test_array_inputs(contract):
         ),
         (
             "complex_struct",
-            ["0x5", "0x4d2", "0x7b", "0x0", "0x0", "0x7b"],
+            ["0x4d2", "0x7b", "0x0", "0x0", "0x7b"],
             {
                 "timestamp": 1234,
                 "value0": 123,
                 "value1": 41854731131275431005995076714107490009088,
             },
         ),
-        ("felt", ["0x1", "0x2"], 2),
+        ("felt", ["0x2"], 2),
         (
             "mix",
             [
-                "0xd",
                 "0x1",
                 "0x2",
                 "0x3",
@@ -234,10 +232,10 @@ def test_array_inputs(contract):
                 41854731131275431005995076714107490009088,
             ),
         ),
-        ("uint256", ["0x2", "0x1", "0x0"], 1),
+        ("uint256", ["0x1", "0x0"], 1),
         (
             "uint256s",
-            ["0x6", "0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
+            ["0x7b", "0x0", "0x0", "0x7b", "0x0", "0x0"],
             (
                 123,
                 41854731131275431005995076714107490009088,

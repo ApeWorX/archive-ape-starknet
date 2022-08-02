@@ -328,3 +328,20 @@ def key_file_account(config, key_file_account_data):
 @pytest.fixture(scope="session")
 def token_initial_supply():
     return TOKEN_INITIAL_SUPPLY
+
+
+@pytest.fixture(scope="session")
+def data_folder():
+    return Path(__file__).parent / "data"
+
+
+@pytest.fixture(scope="session")
+def traces_testnet_243810(data_folder):
+    content = (data_folder / "traces-testnet-block-243810.json").read_text()
+    return json.loads(content)["traces"]
+
+
+@pytest.fixture(scope="session")
+def traces_testnet_243810_results(data_folder):
+    content = (data_folder / "traces-testnet-block-243810_results.json").read_text()
+    return json.loads(content)

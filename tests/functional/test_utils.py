@@ -2,10 +2,12 @@ import pytest
 from ape.exceptions import ApeException, ContractLogicError, OutOfGasError
 from hexbytes import HexBytes
 from starknet_py.net.client_errors import ClientError, ContractNotFoundError
+from starknet_py.net.client_models import BlockSingleTransactionTrace
 from starknet_py.transaction_exceptions import TransactionRejectedError
 
 from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.utils import (
+    extract_trace_data,
     get_random_private_key,
     get_virtual_machine_error,
     is_checksum_address,
@@ -84,3 +86,13 @@ def test_to_checksum_address(account):
 def test_get_virtual_machine_error(exception, expected):
     error = get_virtual_machine_error(exception)
     assert str(error) == str(expected)
+
+
+def test_extract_trace_data(traces_testnet_243810, traces_testnet_243810_results):
+    for trace in traces_testnet_243810:
+        trace_object = BlockSingleTransactionTrace(**trace)
+        trace_data = extract_trace_data(trace_object)
+        assert isinstance(trace_data, dict)
+
+        expected_result = traces_testnet_243810_results[trace_object.transaction_hash]
+        assert trace_data["result"] == expected_result
