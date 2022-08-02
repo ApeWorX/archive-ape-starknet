@@ -144,6 +144,23 @@ def test_array_inputs(contract):
     assert contract.get_last_sum() == 6
 
 
+def test_complex_struct_argument(contract, account):
+    complex_struct = {
+        "timestamp": 42,
+        "value0": 123,  # == Uint256(123, 0)
+        "value1": {
+            "low": 0,
+            "high": 123,
+        },  # == Uint256(0, 123) == 41854731131275431005995076714107490009088
+    }
+    receipt = contract.store_complex_struct(complex_struct, sender=account)
+    assert receipt.return_value == {
+        "timestamp": 42,
+        "value0": 123,
+        "value1": 41854731131275431005995076714107490009088,
+    }
+
+
 #
 # Test external, and view, methods
 #

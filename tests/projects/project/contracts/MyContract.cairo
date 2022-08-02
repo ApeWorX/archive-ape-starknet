@@ -34,6 +34,10 @@ end
 func balance_increased(amount : felt):
 end
 
+@storage_var
+func complex_structs(index : felt) -> (res : ComplexStruct):
+end
+
 @external
 func initialize{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
     let (initialized) = is_initialized.read()
@@ -125,6 +129,15 @@ func get_last_sum{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 ):
     let (res) = last_sum.read()
     return (res)
+end
+
+@external
+func store_complex_struct{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    complex_struct : ComplexStruct
+) -> (res : ComplexStruct):
+    complex_structs.write(0, complex_struct)
+    let (stored_complex_struct : ComplexStruct) = complex_structs.read(0)
+    return (res=stored_complex_struct)
 end
 
 #
