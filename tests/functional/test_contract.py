@@ -114,27 +114,23 @@ def test_decode_logs(contract, account, ecosystem):
     assert log_sender_address == contract.address
 
 
-@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_revert_message(contract):
-    with pytest.raises(ContractLogicError) as err:
+    reason = "Already initialized"
+    with pytest.raises(ContractLogicError, match=reason):
         # Already initialized from fixture
         contract.initialize()
-
-    assert str(err.value) == "Already initialized"
 
 
 def test_revert_no_message(contract, account):
     contract.reset()
-    with pytest.raises(ContractLogicError) as err:
+    reason = "An ASSERT_EQ instruction failed.*"
+    with pytest.raises(ContractLogicError, match=reason):
         contract.increase_balance(account.address, 123)
-
-    assert str(err.value) == "Unknown starknet error"
 
     # Re-initialize (re-store state)
     contract.initialize()
 
 
-@pytest.mark.xfail(reason="https://github.com/Shard-Labs/starknet-devnet/issues/195")
 def test_unable_to_afford_transaction(contract, account, provider):
     with pytest.raises(OutOfGasError):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)

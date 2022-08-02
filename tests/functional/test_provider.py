@@ -73,6 +73,7 @@ def test_get_transactions_by_block(provider, account, contract):
         expected_nonce,
     ]
     assert transactions[0].data == expected_data
+    assert transactions[0].total_transfer_value == transactions[0].max_fee + transactions[0].value
 
 
 def test_set_timestamp(provider, account, contract):
@@ -81,3 +82,27 @@ def test_set_timestamp(provider, account, contract):
     contract.increase_balance(account.address, 123, sender=account)
     curr_time = time.time()
     assert pytest.approx(curr_time + 8600) == provider.get_block("latest").timestamp
+
+
+def test_estimate_gas_cost_external_method(contract, account, provider):
+    estimated_fee = contract.increase_balance.estimate_gas_cost(account.address, 1, sender=account)
+    assert estimated_fee > 100_000_000_000_000
+
+    receipt = contract.increase_balance(account.address, 1, sender=account)
+    assert receipt.actual_fee > estimated_fee
+    assert receipt.max_fee > estimated_fee
+    assert receipt.total_fees_paid == receipt.actual_fee
+    assert not receipt.ran_out_of_gas
+    assert provider.gas_price >= 100_000_000_000
+
+
+def test_estimate_gas_cost_view_method(contract, account, provider):
+    estimated_fee = contract.get_balance.estimate_gas_cost(account.address, sender=account)
+    assert estimated_fee > 100_000_000_000_000
+    assert provider.gas_price >= 100_000_000_000
+
+
+@pytest.mark.xfail(reason="https://github.com/ApeWorX/ape/issues/931", strict=True)
+def test_estimate_gas_cost_view_method_2(contract, account):
+    estimated_fee = contract.get_balance.estimate_gas_cost(account, sender=account)
+    assert estimated_fee > 100_000_000_000_000

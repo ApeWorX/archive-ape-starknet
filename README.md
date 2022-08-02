@@ -290,7 +290,6 @@ receipt = contract.my_mutable_method(123, max_fee=2900000000000)
 
 **NOTE**: By not setting the `max_fee`, it will automatically get set to the value returned from the provider `estimate_gas_cost()` call.
 You do **not** need to call `estimate_gas_cost()` explicitly.
-Currently, for `local` networks, the estimated gas is always `0` as it is not yet required.
 
 ### Mainnet Alpha Whitelist Deployment Token
 

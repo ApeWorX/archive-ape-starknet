@@ -2,6 +2,7 @@ import functools
 import json
 import random
 from dataclasses import dataclass
+from math import ceil
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Union
 
@@ -11,7 +12,7 @@ from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, SignatureError
-from ape.logging import logger
+from ape.logging import LogLevel, logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
 from ape.utils import abstractmethod, cached_property
 from eth_keyfile import create_keyfile_json, decode_keyfile_json
@@ -50,6 +51,9 @@ specific to the ape-starknet plugin.
 APP_KEY_FILE_VERSION = "0.1.0"
 OZ_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
+
+# https://github.com/starkware-libs/cairo-lang/blob/v0.9.1/src/starkware/starknet/cli/starknet_cli.py#L66
+FEE_MARGIN_OF_ESTIMATION = 1.1
 
 
 def sign_calldata(calldata: Iterable[int], priv_key: int):
@@ -97,7 +101,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     @property
     def _key_file_paths(self) -> Iterator[Path]:
-        return self.data_folder.glob("*.json")
+        for path in self.data_folder.glob("*.json"):
+            if path.stem not in ("deployments_map",):
+                yield path
 
     @property
     def aliases(self) -> Iterator[str]:
@@ -392,6 +398,19 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return self.provider.send_transaction(txn)
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        self._prepare_transaction(txn)
+        if txn.max_fee is None:
+            # NOTE: Signature cannot be None when estimating fees.
+            txn.signature = self.sign_transaction(txn)
+            txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
+
+        txn.signature = self.sign_transaction(txn)
+        return txn
+
+    def get_fee_estimate(self, txn: TransactionAPI) -> int:
+        return self.provider.estimate_gas_cost(txn)
+
+    def _prepare_transaction(self, txn: TransactionAPI):
         execute_abi = self.execute_abi
         if not execute_abi:
             raise AccountsError(
@@ -417,8 +436,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn.sender = None
         txn.original_method_abi = txn.method_abi
         txn.method_abi = execute_abi
-        txn.signature = self.sign_transaction(txn)
-        return txn
 
     def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
         if not isinstance(txn, InvokeFunctionTransaction):
@@ -573,6 +590,28 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def alias(self) -> Optional[str]:
         return self.key_file_path.stem
 
+    def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        self._prepare_transaction(txn)
+        do_relock = False
+        if not txn.max_fee:
+            if self.locked:
+                # Unlock to prevent multiple prompts for signing transaction.
+                original_level = logger.level
+                logger.set_level(LogLevel.ERROR)
+                self.set_autosign(True)
+                logger.set_level(original_level)
+
+            txn.signature = self.sign_transaction(txn)
+            txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
+
+        txn.signature = self.sign_transaction(txn)
+
+        if do_relock:
+            self.locked = True
+            self.set_autosign(False)
+
+        return txn
+
     def get_contract_type(self) -> ContractType:
         return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
 
@@ -668,7 +707,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
     def unlock(self, passphrase: Optional[str] = None):
         passphrase = passphrase or self._get_passphrase_from_prompt(
-            f"Enter passphrase to permanently unlock '{self.alias}'"
+            f"Enter passphrase to unlock '{self.alias}'"
         )
         self._get_key(passphrase=passphrase)
         self.locked = False

@@ -21,7 +21,6 @@ from starknet_py.net.client_models import (
 )
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
-from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
@@ -52,7 +51,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     # Gets set when 'connect()' is called.
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
-    default_gas_cost: int = 0
     cached_code: Dict[int, ContractCode] = {}
 
     @property
@@ -160,22 +158,13 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return contract.get_nonce()
 
     @handle_client_errors
-    def estimate_gas_cost(self, txn: TransactionAPI) -> int:
-        if self.network.name == LOCAL_NETWORK_NAME:
-            return self.default_gas_cost
-
-        if not isinstance(txn, StarknetTransaction):
-            raise StarknetProviderError(
-                "Unable to estimate the gas cost for a non-Starknet transaction "
-                "using Starknet provider."
-            )
-
-        starknet_object = txn.as_starknet_object()
-
+    def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
         if not self.client:
             raise ProviderNotConnectedError()
 
-        return self.client.estimate_fee_sync(starknet_object)
+        starknet_object = txn.as_starknet_object()
+        estimated_fee = self.client.estimate_fee_sync(starknet_object)
+        return estimated_fee.overall_fee
 
     @property
     def gas_price(self) -> int:
@@ -268,7 +257,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        receipt = self.get_transaction(response.hash)
+        receipt = self.get_transaction(response.transaction_hash)
 
         if isinstance(txn, InvokeFunctionTransaction):
             returndata = receipt.returndata
@@ -307,11 +296,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def get_contract_logs(self, log_filter: LogFilter) -> Iterator[ContractLog]:
         pass
 
-    @handle_client_errors
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        if txn.type == TransactionType.INVOKE_FUNCTION and not txn.max_fee:
-            txn.max_fee = self.estimate_gas_cost(txn)
-
         return txn
 
     def set_timestamp(self, new_timestamp: int):

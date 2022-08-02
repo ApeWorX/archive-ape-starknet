@@ -40,7 +40,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TransactionStatus.UNKNOWN
+    status: int = TransactionStatus.NOT_RECEIVED
     version: int = 0
 
     """Ignored"""
@@ -71,6 +71,11 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
         transaction equivalent so it can be accepted by the core Starknet OS
         framework.
         """
+
+    @property
+    def total_transfer_value(self) -> int:
+        max_fee = self.max_fee or 0
+        return self.value + max_fee
 
 
 class DeclareTransaction(StarknetTransaction):
@@ -148,7 +153,7 @@ class DeployTransaction(StarknetTransaction):
 
 
 class InvokeFunctionTransaction(StarknetTransaction):
-    max_fee: int = 0
+    max_fee: Optional[int] = None
     method_abi: MethodABI
 
     sender: Optional[AddressType] = None
@@ -198,7 +203,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
             chain_id=self.provider.chain_id,
             contract_address=self.receiver_int,
             entry_point_selector=self.entry_point_selector,
-            max_fee=self.max_fee,
+            max_fee=self.max_fee or 0,
             tx_hash_prefix=TransactionHashPrefix.INVOKE,
             version=self.version,
         )
@@ -212,7 +217,7 @@ class InvokeFunctionTransaction(StarknetTransaction):
             signature=[to_int(self.signature.r), to_int(self.signature.s)]
             if self.signature
             else [],
-            max_fee=self.max_fee,
+            max_fee=self.max_fee or 0,
             version=self.version,
         )
 
@@ -299,7 +304,7 @@ class InvocationReceipt(StarknetReceipt):
         if isinstance(value, str):
             return int(value, 16)
 
-        return value
+        return value or 0
 
     @validator("entry_point_selector", pre=True, allow_reuse=True)
     def validate_entry_point_selector(cls, value):
@@ -317,7 +322,7 @@ class InvocationReceipt(StarknetReceipt):
 
     @property
     def ran_out_of_gas(self) -> bool:
-        return self.actual_fee >= self.max_fee
+        return self.actual_fee >= (self.max_fee or 0)
 
     @property
     def total_fees_paid(self) -> int:
