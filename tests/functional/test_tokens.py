@@ -26,6 +26,14 @@ def test_transfer(tokens, account, second_account, token):
     assert tokens.get_balance(second_account.address, token=token) == initial_balance + 10
 
 
+@all_tokens
+def test_transfer_providing_a_struct(tokens, account, second_account, token):
+    amount = {"low": 10, "high": 0}  # == Uint256(10, 0) == 10
+    initial_balance = tokens.get_balance(second_account, token=token)
+    tokens.transfer(account, second_account, amount, token=token)
+    assert tokens.get_balance(second_account, token=token) == initial_balance + 10
+
+
 def test_large_transfer(tokens, account, second_account):
     initial_balance = tokens.get_balance(second_account.address, token="test_token")
 
