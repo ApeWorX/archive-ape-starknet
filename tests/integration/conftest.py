@@ -32,7 +32,9 @@ class ApeStarknetCliRunner:
         )
 
         if ensure_successful:
-            assert result.exit_code == 0, result.output
+            cmd_str = " ".join(ape_cmd)
+            msg = f"CMD '{cmd_str}' failed with output '{result.output}'"
+            assert result.exit_code == 0, msg
 
         return result.output
 

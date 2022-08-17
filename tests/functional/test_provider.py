@@ -102,7 +102,6 @@ def test_estimate_gas_cost_view_method(contract, account, provider):
     assert provider.gas_price >= 100_000_000_000
 
 
-@pytest.mark.xfail(reason="https://github.com/ApeWorX/ape/issues/931", strict=True)
 def test_estimate_gas_cost_view_method_2(contract, account):
     estimated_fee = contract.get_balance.estimate_gas_cost(account, sender=account)
     assert estimated_fee > 100_000_000_000_000

@@ -105,11 +105,11 @@ def extract_trace_data(trace: BlockSingleTransactionTrace) -> Dict[str, Any]:
     # trace internals to select the most appropriate result. For instance, when `result`
     # contains the additional value, we just need to use the "internal call" `result`
     # that will contain the exact value the method returned.
-    invokation_result = trace_data["result"]
+    invocation_result = trace_data["result"]
     internal_calls = trace_data["internal_calls"]
     trace_data["result"] = (
-        internal_calls[-1]["result"] if internal_calls else invokation_result
-    ) or invokation_result
+        internal_calls[-1]["result"] if internal_calls else invocation_result
+    ) or invocation_result
 
     return trace_data
 
