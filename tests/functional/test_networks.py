@@ -9,8 +9,19 @@ def in_ethereum(networks):
 
 
 @pytest.fixture(scope="module")
+def in_starknet(networks):
+    with networks.parse_network_choice("starknet:local"):
+        yield
+
+
+@pytest.fixture(scope="module")
 def eth_contract(in_ethereum, eth_account, eth_contract_container):
     yield eth_account.deploy(eth_contract_container, sender=eth_account)
+
+
+@pytest.fixture(scope="module")
+def stark_contract(in_starknet, contract):
+    yield contract
 
 
 def test_use_eth_network_from_fixture(eth_contract, eth_account):
@@ -20,9 +31,9 @@ def test_use_eth_network_from_fixture(eth_contract, eth_account):
     assert eth_contract.myNumber() == 123
 
 
-def test_use_starknet_network_from_fixture(account, contract):
+def test_use_starknet_network_from_fixture(account, stark_contract):
     # Shows that we can write Starknet-only tests within a multi-chain test module
-    receipt = contract.increase_balance(account.address, 123, sender=account)
+    receipt = stark_contract.increase_balance(account.address, 123, sender=account)
     assert not receipt.failed
 
 
