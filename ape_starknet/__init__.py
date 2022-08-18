@@ -7,7 +7,7 @@ from ape_starknet.config import StarknetConfig
 from ape_starknet.conversion import StarknetAddressConverter
 from ape_starknet.ecosystems import Starknet
 from ape_starknet.explorer import StarknetExplorer
-from ape_starknet.provider import StarknetProvider
+from ape_starknet.provider import StarknetDevnetProvider, StarknetProvider
 from ape_starknet.tokens import TokenManager
 from ape_starknet.utils import NETWORKS, PLUGIN_NAME
 
@@ -41,8 +41,10 @@ def networks():
 
 @plugins.register(plugins.ProviderPlugin)
 def providers():
-    for network_name in network_names:
+    for network_name in list(NETWORKS.keys()):
         yield PLUGIN_NAME, network_name, StarknetProvider
+
+    yield PLUGIN_NAME, LOCAL_NETWORK_NAME, StarknetDevnetProvider
 
 
 @plugins.register(plugins.AccountPlugin)

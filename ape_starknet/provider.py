@@ -68,7 +68,7 @@ class DevnetClient:
         return response.json()
 
 
-class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
+class StarknetProvider(ProviderAPI, StarknetBase):
     """
     A Starknet provider.
     """
@@ -77,10 +77,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
-
-    @property
-    def process_name(self) -> str:
-        return "starknet-devnet"
 
     @property
     def is_connected(self) -> bool:
@@ -106,24 +102,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return self.client
 
     @cached_property
-    def devnet_client(self) -> DevnetClient:
-        return DevnetClient(self.uri)
-
-    def build_command(self) -> List[str]:
-        parts = urlparse(self.uri)
-        return [
-            self.process_name,
-            "--host",
-            str(parts.hostname),
-            "--port",
-            str(parts.port),
-            "--accounts",
-            str(DEFAULT_NUMBER_OF_TEST_ACCOUNTS),
-            "--seed",
-            str(DEFAULT_ACCOUNT_SEED),
-        ]
-
-    @cached_property
     def plugin_config(self) -> StarknetConfig:
         return self.config_manager.get_config(PLUGIN_NAME) or StarknetConfig()  # type: ignore
 
@@ -136,13 +114,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return network_config.get("uri") or f"http://127.0.0.1:{DEFAULT_PORT}"
 
     def connect(self):
-        if self.network.name == LOCAL_NETWORK_NAME:
-            # Behave like a 'SubprocessProvider'
-            if not self.is_connected:
-                super().connect()
-
-            self.start()
-
         self.client = GatewayClient(self.uri, chain=self.chain_id)
 
     def disconnect(self):
@@ -324,16 +295,6 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
         return txn
 
-    def set_timestamp(self, new_timestamp: int):
-        if self.devnet_client is None:
-            raise StarknetProviderError("Must be connected to starknet-devnet to use this feature.")
-
-        pending_timestamp = self.get_block("pending").timestamp
-        seconds_to_increase = new_timestamp - pending_timestamp
-        result = self.devnet_client.increase_time(seconds_to_increase)
-        if "timestamp_increased_by" not in result:
-            raise StarknetProviderError(result)
-
     def get_virtual_machine_error(self, exception: Exception):
         return get_virtual_machine_error(exception)
 
@@ -352,4 +313,52 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return self.provider.send_transaction(transaction)
 
 
-__all__ = ["StarknetProvider"]
+class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
+    """
+    A subprocess provider for the starknet-devnet process.
+    """
+
+    @property
+    def process_name(self) -> str:
+        return "starknet-devnet"
+
+    @cached_property
+    def devnet_client(self) -> DevnetClient:
+        return DevnetClient(self.uri)
+
+    def connect(self):
+        if self.network.name == LOCAL_NETWORK_NAME:
+            # Behave like a 'SubprocessProvider'
+            if not self.is_connected:
+                super().connect()
+
+            self.start()
+
+        self.client = GatewayClient(self.uri, chain=self.chain_id)
+
+    def build_command(self) -> List[str]:
+        parts = urlparse(self.uri)
+        return [
+            self.process_name,
+            "--host",
+            str(parts.hostname),
+            "--port",
+            str(parts.port),
+            "--accounts",
+            str(DEFAULT_NUMBER_OF_TEST_ACCOUNTS),
+            "--seed",
+            str(DEFAULT_ACCOUNT_SEED),
+        ]
+
+    def set_timestamp(self, new_timestamp: int):
+        if self.devnet_client is None:
+            raise StarknetProviderError("Must be connected to starknet-devnet to use this feature.")
+
+        pending_timestamp = self.get_block("pending").timestamp
+        seconds_to_increase = new_timestamp - pending_timestamp
+        result = self.devnet_client.increase_time(seconds_to_increase)
+        if "timestamp_increased_by" not in result:
+            raise StarknetProviderError(result)
+
+
+__all__ = ["StarknetProvider", "StarknetDevnetProvider"]
