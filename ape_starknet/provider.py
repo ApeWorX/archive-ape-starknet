@@ -200,7 +200,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         """
         **NOTE**: Currently, the gas price is fixed to always be 100 gwei.
         """
-        return self.get_block("latest").gas_price
+
         return self.conversion_manager.convert("100 gwei", int)
 
     @handle_client_errors
