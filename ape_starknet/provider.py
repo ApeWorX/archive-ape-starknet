@@ -4,7 +4,6 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-import requests
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
@@ -12,6 +11,7 @@ from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
 from ethpm_types import ContractType
+from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     ContractCode,
@@ -42,6 +42,30 @@ from ape_starknet.utils import (
     handle_client_errors,
 )
 from ape_starknet.utils.basemodel import StarknetBase
+
+
+class DevnetClient:
+    def __init__(self, host_address: str):
+        self.session = Session()
+        self.host_address = host_address
+
+    @cached_property
+    def predeployed_accounts(self) -> List[Dict]:
+        return self._get("predeployed_accounts")
+
+    def increase_time(self, amount: int):
+        return self._post("increase_time", json={"time": amount})
+
+    def _get(self, uri: str, **kwargs):
+        return self._request("get", uri, **kwargs)
+
+    def _post(self, uri: str, **kwargs):
+        return self._request("post", uri, **kwargs)
+
+    def _request(self, method: str, uri: str, **kwargs):
+        response = self.session.request(method.upper(), url=f"{self.host_address}/{uri}", **kwargs)
+        response.raise_for_status()
+        return response.json()
 
 
 class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
@@ -80,6 +104,10 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
             raise StarknetProviderError("Provider is not connected to Starknet.")
 
         return self.client
+
+    @cached_property
+    def devnet_client(self) -> DevnetClient:
+        return DevnetClient(self.uri)
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
@@ -172,6 +200,7 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         """
         **NOTE**: Currently, the gas price is fixed to always be 100 gwei.
         """
+        return self.get_block("latest").gas_price
         return self.conversion_manager.convert("100 gwei", int)
 
     @handle_client_errors
@@ -296,15 +325,14 @@ class StarknetProvider(SubprocessProvider, ProviderAPI, StarknetBase):
         return txn
 
     def set_timestamp(self, new_timestamp: int):
+        if self.devnet_client is None:
+            raise StarknetProviderError("Must be connected to starknet-devnet to use this feature.")
+
         pending_timestamp = self.get_block("pending").timestamp
         seconds_to_increase = new_timestamp - pending_timestamp
-        response = requests.post(
-            url=f"{self.uri}/increase_time", json={"time": seconds_to_increase}
-        )
-        response.raise_for_status()
-        response_data = response.json()
-        if "timestamp_increased_by" not in response_data:
-            raise StarknetProviderError(response_data)
+        result = self.devnet_client.increase_time(seconds_to_increase)
+        if "timestamp_increased_by" not in result:
+            raise StarknetProviderError(result)
 
     def get_virtual_machine_error(self, exception: Exception):
         return get_virtual_machine_error(exception)

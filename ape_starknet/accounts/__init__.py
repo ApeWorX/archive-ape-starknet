@@ -1,6 +1,5 @@
 import functools
 import json
-import random
 from dataclasses import dataclass
 from math import ceil
 from pathlib import Path
@@ -118,11 +117,13 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     @cached_property
     def test_accounts(self) -> List["StarknetDevnetAccount"]:
-        random_generator = random.Random()
-        random_generator.seed(self.devnet_account_seed)
+        if self.provider.devnet_client is None:
+            raise AccountsError("Must be using starknet-devnet to access test accounts")
+
+        predeployed_accounts = self.provider.devnet_client.predeployed_accounts
         devnet_accounts = [
-            StarknetDevnetAccount(private_key=random_generator.getrandbits(128))
-            for _ in range(self.number_of_devnet_accounts)
+            StarknetDevnetAccount(private_key=int(acc["private_key"], 16))
+            for acc in predeployed_accounts
         ]
 
         # Track all devnet account contracts in chain manager for look-up purposes
