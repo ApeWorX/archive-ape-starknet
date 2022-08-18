@@ -115,11 +115,15 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         for account in self.accounts:
             yield account.address
 
-    @cached_property
+    @property
     def test_accounts(self) -> List["StarknetDevnetAccount"]:
-        if self.provider.devnet_client is None:
-            raise AccountsError("Must be using starknet-devnet to access test accounts")
+        if self.provider.network.name != LOCAL_NETWORK_NAME:
+            return []
 
+        return self._test_accounts
+
+    @cached_property
+    def _test_accounts(self):
         predeployed_accounts = self.provider.devnet_client.predeployed_accounts
         devnet_accounts = [
             StarknetDevnetAccount(private_key=int(acc["private_key"], 16))
