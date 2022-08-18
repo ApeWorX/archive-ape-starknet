@@ -13,14 +13,6 @@ def eth_contract(in_ethereum, eth_account, eth_contract_container):
     yield eth_account.deploy(eth_contract_container, sender=eth_account)
 
 
-@pytest.fixture(scope="module")
-def stark_contract(networks, project, stark_account):
-    with networks.parse_network_choice("starknet:local"):
-        contract = project.Bank.deploy()
-        contract.initialize(sender=stark_account)
-        yield contract
-
-
 def test_use_eth_network_from_fixture(eth_contract, eth_account):
     # Shows that we can write Ethereum-only tests within a multi-chain test module
     # (NOTE: 'starknet' is the default ecosystem for this project)
