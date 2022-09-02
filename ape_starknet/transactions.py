@@ -301,8 +301,14 @@ class InvocationReceipt(StarknetReceipt):
     def method_abi(self) -> MethodABI:
         # NOTE: The entry point selector should be the actual call and not __execute__
         #  and the receiver should be the actual contract and not the account address.
-        contract_type = self.chain_manager.contracts[self.receiver]
-        return get_method_abi_from_selector(self.entry_point_selector, contract_type)
+        contract_type = self.chain_manager.contracts[self.receiver]  # type: ignore
+        method_abi = get_method_abi_from_selector(self.entry_point_selector, contract_type)
+        if not method_abi:
+            raise ValueError(
+                f"Unknown selector '{self.entry_point_selector}' in '{contract_type.name}'"
+            )
+
+        return method_abi
 
     @cached_property
     def return_value(self) -> Any:
