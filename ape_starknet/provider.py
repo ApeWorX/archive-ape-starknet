@@ -263,11 +263,13 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             if txn.original_method_abi:
                 # Use ABI before going through account contract
                 abi = txn.original_method_abi
+                return_data = receipt.returndata[1:]
             else:
                 abi = txn.method_abi
+                return_data = receipt.returndata
 
-            return_value = self.starknet.decode_returndata(abi, receipt.returndata)
-            receipt.return_value = return_value
+            return_value = self.starknet.decode_returndata(abi, return_data)
+            receipt._return_value = return_value
 
         return receipt
 

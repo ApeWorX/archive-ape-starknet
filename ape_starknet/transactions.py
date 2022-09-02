@@ -294,7 +294,12 @@ class InvocationReceipt(StarknetReceipt):
     method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
     returndata: List[Any] = Field(default_factory=list, alias="result")
-    return_value: List[int] = []
+    _return_value: List[int] = []
+
+    @property
+    def return_value(self) -> Any:
+        # Overrides
+        return self._return_value
 
     """Aliased"""
     logs: List[dict] = Field(alias="events")

@@ -97,7 +97,6 @@ class Starknet(EcosystemAPI, StarknetBase):
             a.dict() for a in (abi.contract_type.abi if abi.contract_type is not None else [abi])
         ]
         call_serializer = FunctionCallSerializer(abi.dict(), identifier_manager_from_abi(full_abi))
-
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
         decoded = call_serializer.to_python(raw_data)
 
