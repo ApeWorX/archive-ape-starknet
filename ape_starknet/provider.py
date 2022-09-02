@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -8,6 +8,7 @@ from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, Trans
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
 from ape.exceptions import ProviderNotConnectedError, TransactionError
+from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
 from ethpm_types import ContractType
@@ -34,6 +35,7 @@ from ape_starknet.transactions import (
 from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     DEFAULT_ACCOUNT_SEED,
+    EXECUTE_SELECTOR,
     PLUGIN_NAME,
     extract_trace_data,
     get_chain_id,
@@ -235,13 +237,27 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
+        receipt_dict = vars(receipt)
 
         trace_data = {}
         if isinstance(txn_info, InvokeTransaction):
+            if txn_info.entry_point_selector == EXECUTE_SELECTOR:
+                num_calls = txn_info.calldata[0]
+                if num_calls != 1:
+                    logger.warning("Multi-call receipts currently are limited")
+                else:
+                    # Grab selector and actual address from execute call
+                    call_address = self.starknet.decode_address(txn_info.calldata[1])
+                    call_method_selector = receipt_dict["selector"] = txn_info.calldata[2]
+                    txn_info.entry_point_selector = call_method_selector
+                    txn_info.calldata = txn_info.calldata[4:]
+                    receipt_dict["sender"] = self.starknet.decode_address(txn_info.contract_address)
+                    txn_info.contract_address = call_address
+
             trace = self._get_single_trace(receipt.block_number, receipt.hash)
             trace_data = extract_trace_data(trace)
 
-        receipt_dict: Dict[str, Any] = {"provider": self, **trace_data, **vars(receipt)}
+        receipt_dict = {"provider": self, **trace_data, **receipt_dict}
         receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
         return self.starknet.decode_receipt(receipt_dict)
 
@@ -257,21 +273,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        receipt = self.get_transaction(response.transaction_hash)
-
-        if isinstance(txn, InvokeFunctionTransaction):
-            if txn.original_method_abi:
-                # Use ABI before going through account contract
-                abi = txn.original_method_abi
-                return_data = receipt.returndata[1:]
-            else:
-                abi = txn.method_abi
-                return_data = receipt.returndata
-
-            return_value = self.starknet.decode_returndata(abi, return_data)
-            receipt._return_value = return_value
-
-        return receipt
+        return self.get_transaction(response.transaction_hash)
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None

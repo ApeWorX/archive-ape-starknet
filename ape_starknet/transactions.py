@@ -31,7 +31,7 @@ from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
 from starkware.starknet.testing.contract_utils import get_contract_class
 
-from ape_starknet.utils import ContractEventABI, to_checksum_address
+from ape_starknet.utils import ContractEventABI, get_method_abi_from_selector, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -243,6 +243,11 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """Aliased"""
     txn_hash: str = Field(alias="hash")
 
+    @property
+    def return_value(self) -> Any:
+        # Override from ReceiptAPI
+        return None
+
     @validator("nonce", pre=True, allow_reuse=True)
     def validate(cls, value):
         if isinstance(value, str):
@@ -287,19 +292,21 @@ class DeployReceipt(StarknetReceipt):
 
 class InvocationReceipt(StarknetReceipt):
     actual_fee: int
-    entry_point_selector: Optional[int] = Field(
-        default=None, alias="selector"
-    )  # Either has this or method_abi
+    entry_point_selector: int = Field(default=None, alias="selector")
     max_fee: int
-    method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
     returndata: List[Any] = Field(default_factory=list, alias="result")
-    _return_value: List[int] = []
 
-    @property
+    @cached_property
+    def method_abi(self) -> MethodABI:
+        # NOTE: The entry point selector should be the actual call and not __execute__
+        #  and the receiver should be the actual contract and not the account address.
+        contract_type = self.chain_manager.contracts[self.receiver]
+        return get_method_abi_from_selector(self.entry_point_selector, contract_type)
+
+    @cached_property
     def return_value(self) -> Any:
-        # Overrides
-        return self._return_value
+        return self.starknet.decode_returndata(self.method_abi, self.returndata)
 
     """Aliased"""
     logs: List[dict] = Field(alias="events")

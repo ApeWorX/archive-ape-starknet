@@ -31,7 +31,7 @@ from ape_starknet.transactions import (
     StarknetReceipt,
     StarknetTransaction,
 )
-from ape_starknet.utils import to_checksum_address
+from ape_starknet.utils import get_method_abi_from_selector, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 NETWORKS = {
@@ -308,14 +308,7 @@ class Starknet(EcosystemAPI, StarknetBase):
                 )
 
             selector = txn_data["entry_point_selector"]
-            if isinstance(selector, str):
-                selector = int(selector, 16)
-
-            for abi in contract.mutable_methods:
-                selector_to_check = get_selector_from_name(abi.name)
-
-                if selector == selector_to_check:
-                    txn_data["method_abi"] = abi
+            txn_data["method_abi"] = get_method_abi_from_selector(selector, contract)
 
         if "calldata" in txn_data and txn_data["calldata"] is not None:
             # Transactions in blocks show calldata as flattened hex-strs
