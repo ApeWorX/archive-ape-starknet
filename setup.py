@@ -59,7 +59,7 @@ setup(
     install_requires=[
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
-        "pydantic>=1.9.0,<2.0",
+        "pydantic>=1.10.2,<2.0",
         "importlib-metadata ; python_version<'3.8'",
         # ** ApeWorX maintained **
         "eth-ape>=0.4.4,<0.5",
