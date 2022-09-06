@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractContainer, ContractInstance
-from ape.exceptions import TransactionError
+from ape.exceptions import APINotImplementedError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
 from eth_utils import to_int
@@ -245,8 +245,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
 
     @property
     def return_value(self) -> Any:
-        # Override from ReceiptAPI
-        return None
+        raise APINotImplementedError("'return_value' can only be accessed on InvokeTransactions")
 
     @validator("nonce", pre=True, allow_reuse=True)
     def validate(cls, value):
