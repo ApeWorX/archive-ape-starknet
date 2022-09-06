@@ -13,7 +13,7 @@ from starknet_py.constants import OZ_PROXY_STORAGE_KEY
 from starknet_py.net.client_models import StarknetBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
-from starknet_py.utils.data_transformer.data_transformer import CairoSerializer
+from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
 from starkware.starknet.definitions.fields import ContractAddressSalt
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name
@@ -31,7 +31,7 @@ from ape_starknet.transactions import (
     StarknetReceipt,
     StarknetTransaction,
 )
-from ape_starknet.utils import to_checksum_address
+from ape_starknet.utils import get_method_abi_from_selector, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 NETWORKS = {
@@ -96,10 +96,9 @@ class Starknet(EcosystemAPI, StarknetBase):
         full_abi = [
             a.dict() for a in (abi.contract_type.abi if abi.contract_type is not None else [abi])
         ]
-        transformer = CairoSerializer(identifier_manager_from_abi(full_abi))
-
+        call_serializer = FunctionCallSerializer(abi.dict(), identifier_manager_from_abi(full_abi))
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        decoded = transformer.to_python(abi.dict()["outputs"], raw_data)
+        decoded = call_serializer.to_python(raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
@@ -116,7 +115,9 @@ class Starknet(EcosystemAPI, StarknetBase):
         call_args: Union[List, Tuple],
     ) -> List:
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
-        transformer = CairoSerializer(identifier_manager_from_abi(full_abi))
+        call_serializer = FunctionCallSerializer(
+            method_abi.dict(), identifier_manager_from_abi(full_abi)
+        )
         pre_encoded_args: List[Any] = []
         index = 0
         last_index = min(len(method_abi.inputs), len(call_args)) - 1
@@ -152,7 +153,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
             index += 1
 
-        calldata, _ = transformer.from_python(method_abi.dict()["inputs"], *pre_encoded_args)
+        calldata, _ = call_serializer.from_python(*pre_encoded_args)
         return calldata
 
     def _pre_encode_value(self, value: Any) -> Any:
@@ -307,14 +308,7 @@ class Starknet(EcosystemAPI, StarknetBase):
                 )
 
             selector = txn_data["entry_point_selector"]
-            if isinstance(selector, str):
-                selector = int(selector, 16)
-
-            for abi in contract.mutable_methods:
-                selector_to_check = get_selector_from_name(abi.name)
-
-                if selector == selector_to_check:
-                    txn_data["method_abi"] = abi
+            txn_data["method_abi"] = get_method_abi_from_selector(selector, contract)
 
         if "calldata" in txn_data and txn_data["calldata"] is not None:
             # Transactions in blocks show calldata as flattened hex-strs

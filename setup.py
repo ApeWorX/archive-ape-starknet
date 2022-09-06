@@ -59,15 +59,15 @@ setup(
     install_requires=[
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
-        "pydantic>=1.9.0,<2.0",
+        "pydantic>=1.10.2,<2.0",
         "importlib-metadata ; python_version<'3.8'",
         # ** ApeWorX maintained **
         "eth-ape>=0.4.4,<0.5",
         "ethpm-types>=0.3.3,<0.4",
         # ** Starknet Ecosystem **
         "cairo-lang==0.9.1",
-        "starknet.py==0.4.6a0",
-        "starknet-devnet==0.2.10",
+        "starknet.py==0.4.7a0",
+        "starknet-devnet==0.2.11",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.7.2,<3.10",

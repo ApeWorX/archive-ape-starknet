@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractContainer, ContractInstance
-from ape.exceptions import TransactionError
+from ape.exceptions import APINotImplementedError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
 from eth_utils import to_int
@@ -31,7 +31,7 @@ from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
 from starkware.starknet.testing.contract_utils import get_contract_class
 
-from ape_starknet.utils import ContractEventABI, to_checksum_address
+from ape_starknet.utils import ContractEventABI, get_method_abi_from_selector, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -243,10 +243,9 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """Aliased"""
     txn_hash: str = Field(alias="hash")
 
-    @validator("nonce", pre=True, allow_reuse=True)
-    def validate(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
+    @property
+    def return_value(self) -> Any:
+        raise APINotImplementedError("'return_value' can only be accessed on InvokeTransactions")
 
     @validator("block_hash", pre=True, allow_reuse=True)
     def validate_block_hash(cls, value):
@@ -287,14 +286,27 @@ class DeployReceipt(StarknetReceipt):
 
 class InvocationReceipt(StarknetReceipt):
     actual_fee: int
-    entry_point_selector: Optional[int] = Field(
-        default=None, alias="selector"
-    )  # Either has this or method_abi
+    entry_point_selector: int = Field(default=None, alias="selector")
     max_fee: int
-    method_abi: Optional[MethodABI] = None  # Either has this or entry_point_selector
     receiver: str = Field(alias="contract_address")
     returndata: List[Any] = Field(default_factory=list, alias="result")
-    return_value: List[int] = []
+
+    @cached_property
+    def method_abi(self) -> MethodABI:
+        # NOTE: The entry point selector should be the actual call and not __execute__
+        #  and the receiver should be the actual contract and not the account address.
+        contract_type = self.chain_manager.contracts[self.receiver]  # type: ignore
+        method_abi = get_method_abi_from_selector(self.entry_point_selector, contract_type)
+        if not method_abi:
+            raise ValueError(
+                f"Unknown selector '{self.entry_point_selector}' in '{contract_type.name}'"
+            )
+
+        return method_abi
+
+    @cached_property
+    def return_value(self) -> Any:
+        return self.starknet.decode_returndata(self.method_abi, self.returndata)
 
     """Aliased"""
     logs: List[dict] = Field(alias="events")

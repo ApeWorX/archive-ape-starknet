@@ -9,7 +9,7 @@ from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
 from ethpm_types import ContractType
-from ethpm_types.abi import EventABI
+from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
@@ -25,6 +25,7 @@ from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.crypto.signature.fast_pedersen_hash import pedersen_hash
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
 from starkware.starknet.definitions.general_config import StarknetChainId
+from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import StarknetProviderError
@@ -38,6 +39,7 @@ NETWORKS = {
 _HEX_ADDRESS_REG_EXP = re.compile("(0x)?[0-9a-f]*", re.IGNORECASE | re.ASCII)
 """Same as from eth-utils except not limited length."""
 ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
+EXECUTE_SELECTOR = get_selector_from_name("__execute__")
 DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
 ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, ContractEvent]]
 
@@ -171,6 +173,23 @@ def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
         txn_dict["type"] = TransactionType.DECLARE
 
     return txn_dict
+
+
+def get_method_abi_from_selector(
+    selector: Union[str, int], contract_type: ContractType
+) -> Optional[MethodABI]:
+    # TODO: Properly integrate with ethpm-types
+
+    if isinstance(selector, str):
+        selector = int(selector, 16)
+
+    for abi in contract_type.mutable_methods:
+        selector_to_check = get_selector_from_name(abi.name)
+
+        if selector == selector_to_check:
+            return abi
+
+    return None
 
 
 def convert_contract_class_to_contract_type(contract_class: ContractClass):
