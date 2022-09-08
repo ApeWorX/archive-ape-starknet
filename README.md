@@ -1,10 +1,10 @@
-# Ape StarkNet
+# Quick Start
 
 Plugins for the [StarkNet Ethereum L2 networks](https://starkware.co/starknet/).
 
 ## Dependencies
 
-* [python3](https://www.python.org/downloads) version 3.7.2 or greater, python3-dev
+* [python3](https://www.python.org/downloads) version 3.8 or greater, python3-dev
 
 ## Installation
 
@@ -321,7 +321,3 @@ ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
 This project is in development and should be considered a beta.
 Things might not be in their final state and breaking changes may occur.
 Comments, questions, criticisms and pull requests are welcomed.
-
-## License
-
-This project is licensed under the [Apache 2.0](LICENSE).

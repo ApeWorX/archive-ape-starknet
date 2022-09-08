@@ -60,9 +60,8 @@ setup(
         "click>=8.1.0,<8.2",
         "hexbytes>=0.2.2,<0.3",
         "pydantic>=1.10.2,<2.0",
-        "importlib-metadata ; python_version<'3.8'",
         # ** ApeWorX maintained **
-        "eth-ape>=0.4.4,<0.5",
+        "eth-ape>=0.5.0,<0.6.0",
         "ethpm-types>=0.3.3,<0.4",
         # ** Starknet Ecosystem **
         "cairo-lang==0.9.1",
@@ -70,7 +69,7 @@ setup(
         "starknet-devnet==0.2.11",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
-    python_requires=">=3.7.2,<3.10",
+    python_requires=">=3.8,<3.10",
     extras_require=extras_require,
     py_modules=["ape_starknet"],
     license="Apache-2.0",
@@ -86,7 +85,6 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
