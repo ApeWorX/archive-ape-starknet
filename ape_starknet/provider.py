@@ -4,7 +4,14 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
+from ape.api import (
+    AccountAPI,
+    BlockAPI,
+    ProviderAPI,
+    ReceiptAPI,
+    SubprocessProvider,
+    TransactionAPI,
+)
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
 from ape.exceptions import ProviderNotConnectedError, TransactionError
@@ -312,8 +319,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return self.cached_code[address_int]
 
     @handle_client_errors
-    def declare(self, contract_type: ContractType) -> ContractDeclaration:
-        transaction = self.starknet.encode_contract_declaration(contract_type)
+    def declare(self, sender: AccountAPI, contract_type: ContractType) -> ContractDeclaration:
+        transaction = self.starknet.encode_contract_blueprint(contract_type, sender=sender)
         return self.provider.send_transaction(transaction)
 
 

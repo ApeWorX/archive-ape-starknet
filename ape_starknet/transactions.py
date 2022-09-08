@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.contracts import ContractContainer, ContractInstance
@@ -11,24 +11,15 @@ from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
 from starknet_py.net.client_models import Event, TransactionStatus
-from starknet_py.net.models.transaction import (
-    Declare,
-    Deploy,
-    InvokeFunction,
-    Transaction,
-    TransactionType,
-)
+from starknet_py.net.models.transaction import Declare, InvokeFunction, Transaction, TransactionType
 from starkware.starknet.core.os.class_hash import compute_class_hash
-from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (
     TransactionHashPrefix,
     calculate_declare_transaction_hash,
-    calculate_deploy_transaction_hash,
     calculate_transaction_hash_common,
 )
 from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
-from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
 from starkware.starknet.testing.contract_utils import get_contract_class
 
 from ape_starknet.utils import ContractEventABI, get_method_abi_from_selector, to_checksum_address
@@ -43,9 +34,12 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     status: int = TransactionStatus.NOT_RECEIVED
     version: int = 0
 
+    """Ignored but present in ``AccountTransaction``"""
+    max_fee: Optional[int] = Field(None, exclude=True)
+    nonce: Optional[int] = Field(None, exclude=True)
+
     """Ignored"""
     gas_limit: int = Field(0, exclude=True)
-    max_fee: Optional[int] = Field(None, exclude=True)
     max_priority_fee: Optional[int] = Field(None, exclude=True)
 
     class Config:
@@ -78,8 +72,18 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
         return self.value + max_fee
 
 
-class DeclareTransaction(StarknetTransaction):
-    sender: AddressType = to_checksum_address(DECLARE_SENDER_ADDRESS)
+class AccountTransaction(StarknetTransaction):
+    """
+    Transactions that must go through an account contract.
+    (Invoke and Declare).
+    """
+
+    max_fee: int = Field(0)
+    nonce: Optional[int] = None
+
+
+class DeclareTransaction(AccountTransaction):
+    sender: AddressType
     type: TransactionType = TransactionType.DECLARE
 
     @property
@@ -95,65 +99,17 @@ class DeclareTransaction(StarknetTransaction):
         )
 
     def as_starknet_object(self) -> Declare:
-        sender_int = self.starknet.encode_address(self.sender)
-
-        # NOTE: The sender address is a special address, nonce has to be 0, and signatures
-        # and fees are not supported.
         return Declare(
             contract_class=self.starknet_contract,
-            max_fee=0,
-            nonce=0,
-            sender_address=sender_int,
+            max_fee=self.max_fee,
+            nonce=self.nonce,
+            sender_address=self.starknet.encode_address(self.sender),
             signature=[],
             version=self.version,
         )
 
 
-class DeployTransaction(StarknetTransaction):
-    salt: int
-
-    caller_address: int = 0
-    constructor_calldata: Union[List, Tuple] = []
-    token: Optional[str] = None
-    type: TransactionType = TransactionType.DEPLOY
-
-    """Aliases"""
-    data: bytes = Field(alias="contract_code")
-
-    """Ignored"""
-    receiver: Optional[str] = Field(None, exclude=True)
-
-    @property
-    def starknet_contract(self) -> Optional[ContractClass]:
-        return ContractClass.deserialize(self.data)
-
-    @property
-    def txn_hash(self) -> HexBytes:
-        contract_address = calculate_contract_address(
-            contract_class=self.starknet_contract,
-            constructor_calldata=self.constructor_calldata,
-            deployer_address=self.caller_address,
-            salt=self.salt,
-        )
-        hash_int = calculate_deploy_transaction_hash(
-            chain_id=self.provider.chain_id,
-            contract_address=contract_address,
-            constructor_calldata=self.constructor_calldata,
-            version=self.version,
-        )
-        return HexBytes(hash_int)
-
-    def as_starknet_object(self) -> Deploy:
-        return Deploy(
-            constructor_calldata=self.constructor_calldata,
-            contract_address_salt=self.salt,
-            contract_definition=self.starknet_contract,
-            version=self.version,
-        )
-
-
-class InvokeFunctionTransaction(StarknetTransaction):
-    max_fee: Optional[int] = None
+class InvokeFunctionTransaction(AccountTransaction):
     method_abi: MethodABI
 
     sender: Optional[AddressType] = None
@@ -267,21 +223,6 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     def decode_logs(self, abi: Optional[ContractEventABI] = None) -> Iterator[ContractLog]:
         # Overriden in InvocationReceipt
         pass
-
-
-class DeployReceipt(StarknetReceipt):
-    contract_address: str
-    receiver: Optional[str] = None  # type: ignore
-
-    # Only get a receipt if deploy was accepted
-    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
-
-    @validator("contract_address", pre=True, allow_reuse=True)
-    def validate_contract_address(cls, value):
-        if isinstance(value, int):
-            return to_checksum_address(value)
-
-        return value
 
 
 class InvocationReceipt(StarknetReceipt):
@@ -428,14 +369,13 @@ class ContractDeclaration(StarknetReceipt):
 
         raise TransactionError(message="Contract type declaration was not successful.")
 
-    def deploy(self, *args, **kwargs) -> ContractInstance:
+    def deploy(self, sender, *args, **kwargs) -> ContractInstance:
         container = ContractContainer(self.contract_type)
-        return container.deploy(*args, **kwargs)
+        return sender.deploy(container, *args, **kwargs)
 
 
 __all__ = [
     "ContractDeclaration",
-    "DeployTransaction",
     "InvokeFunctionTransaction",
     "StarknetReceipt",
     "StarknetTransaction",

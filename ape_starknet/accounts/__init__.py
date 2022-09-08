@@ -9,7 +9,6 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, SignatureError
 from ape.logging import LogLevel, logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
@@ -21,6 +20,7 @@ from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
 from starknet_py.net import KeyPair
+from starknet_py.net.account.account_client import deploy_account_contract
 from starknet_py.net.account.compiled_account_contract import COMPILED_ACCOUNT_CONTRACT
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
 from starknet_py.utils.crypto.facade import ECSignature, message_signature, pedersen_hash
@@ -289,14 +289,11 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         network_name = self.provider.network.name
         logger.info(f"Deploying an account to '{network_name}' network ...")
-
         private_key = private_key or int(get_random_private_key(), 16)
         key_pair = KeyPair.from_private_key(private_key)
-
-        account_container = ContractContainer(contract_type=OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE)
-        instance = account_container.deploy(key_pair.public_key, token=token)
-        self.import_account(alias, network_name, instance.address, key_pair.private_key)
-        return instance.address
+        contract_address = deploy_account_contract(self.provider.client, key_pair.public_key)
+        self.import_account(alias, network_name, contract_address, key_pair.private_key)
+        return contract_address
 
     def delete_account(
         self, alias: str, network: Optional[str] = None, passphrase: Optional[str] = None
@@ -506,6 +503,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def get_deployments(self) -> List[StarknetAccountDeployment]:
         plugin_key_file_data = self.get_account_data().get(APP_KEY_FILE_KEY, {})
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data.get("deployments", [])]
+
+    def declare(self, contract_type: ContractType):
+        return self.provider.declare(self, contract_type)
 
 
 class StarknetDevelopmentAccount(BaseStarknetAccount):

@@ -24,8 +24,6 @@ from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderErro
 from ape_starknet.transactions import (
     ContractDeclaration,
     DeclareTransaction,
-    DeployReceipt,
-    DeployTransaction,
     InvocationReceipt,
     InvokeFunctionTransaction,
     StarknetReceipt,
@@ -200,8 +198,6 @@ class Starknet(EcosystemAPI, StarknetBase):
         receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvocationReceipt
-        elif txn_type == TransactionType.DEPLOY:
-            receipt_cls = DeployReceipt
         elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
         else:
@@ -233,12 +229,13 @@ class Starknet(EcosystemAPI, StarknetBase):
         constructor_args = list(args)
         contract = ContractClass.deserialize(deployment_bytecode)
         calldata = self.encode_calldata(contract.abi, abi, constructor_args)
-        return DeployTransaction(
-            salt=salt,
-            constructor_calldata=calldata,
-            contract_code=contract.dumps(),
-            token=kwargs.get("token"),
-        )
+        return None  # TODO
+        # return DeployTransaction(
+        #     salt=salt,
+        #     constructor_calldata=calldata,
+        #     contract_code=contract.dumps(),
+        #     token=kwargs.get("token"),
+        # )
 
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
@@ -258,7 +255,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             max_fee=kwargs.get("max_fee"),
         )
 
-    def encode_contract_declaration(
+    def encode_contract_blueprint(
         self, contract: Union[ContractContainer, ContractType], *args, **kwargs
     ) -> DeclareTransaction:
         contract_type = (
@@ -270,18 +267,16 @@ class Starknet(EcosystemAPI, StarknetBase):
             else 0
         )
         starknet_contract = ContractClass.deserialize(HexBytes(code))
-        return DeclareTransaction(contract_type=contract_type, data=starknet_contract.dumps())
+        return DeclareTransaction(
+            contract_type=contract_type, data=starknet_contract.dumps(), **kwargs
+        )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
-        txn_cls: Union[
-            Type[InvokeFunctionTransaction], Type[DeployTransaction], Type[DeclareTransaction]
-        ]
+        txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeclareTransaction]]
         invoking = txn_type == TransactionType.INVOKE_FUNCTION
         if invoking:
             txn_cls = InvokeFunctionTransaction
-        elif txn_type == TransactionType.DEPLOY:
-            txn_cls = DeployTransaction
         elif txn_type == TransactionType.DECLARE:
             txn_cls = DeclareTransaction
 

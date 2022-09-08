@@ -15,7 +15,6 @@ from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     DeclareTransaction,
-    DeployTransaction,
     InvokeTransaction,
     Transaction,
 )
@@ -160,11 +159,7 @@ def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
 def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
     txn_dict = {**asdict(txn_info), **extra_kwargs}
 
-    if isinstance(txn_info, DeployTransaction):
-        txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
-        txn_dict["max_fee"] = 0
-        txn_dict["type"] = TransactionType.DEPLOY
-    elif isinstance(txn_info, InvokeTransaction):
+    if isinstance(txn_info, InvokeTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
         txn_dict["events"] = [vars(e) for e in txn_dict.get("events", [])]
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
