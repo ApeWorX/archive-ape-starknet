@@ -57,12 +57,12 @@ setup(
     url="https://github.com/ApeWorX/ape-starknet",
     include_package_data=True,
     install_requires=[
-        "click",  # Use same version as eth-ape,
+        "click",  # Use same version as eth-ape
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.4.5,<0.5",
-        "ethpm-types",  # Use same version as eth-ape,
+        "eth-ape>=0.5.1,<0.6.0",
+        "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang==0.10.0",
         "starknet.py==0.5.2a0",
