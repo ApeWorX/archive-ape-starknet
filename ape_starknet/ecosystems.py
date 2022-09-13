@@ -252,7 +252,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             method_abi=abi,
             calldata=encoded_calldata,
             sender=kwargs.get("sender"),
-            max_fee=kwargs.get("max_fee"),
+            max_fee=kwargs.get("max_fee") or 0,
         )
 
     def encode_contract_blueprint(

@@ -4,7 +4,7 @@ Plugins for the [StarkNet Ethereum L2 networks](https://starkware.co/starknet/).
 
 ## Dependencies
 
-* [python3](https://www.python.org/downloads) version 3.7.2 or greater, python3-dev
+* [python3](https://www.python.org/downloads) version 3.8 or greater, python3-dev
 
 ## Installation
 
@@ -120,10 +120,10 @@ This allows other contracts to create instances of them using the [deploy system
 To declare a contract using `ape-starknet`, do the following (in a script or console):
 
 ```python
-from ape import project, networks
+from ape import accounts, project
 
-provider = networks.active_provider
-declaration = provider.declare(project.MyContract)
+account = accounts.load("<MY_STARK_ACCOUNT>")
+declaration = account.declare(project.MyContract)
 print(declaration.class_hash)
 ```
 
@@ -155,9 +155,10 @@ func deploy_my_contract{
 After deploying the factory contract, you can use it to create contract instances:
 
 ```python
-from ape import Contract, networks, project
+from ape import Contract, accounts, networks, project
 
-declaration = project.provider.declare(project.MyContract)
+account = accounts.load("<MY_STARK_ACCOUNT>")
+declaration = account.declare(project.MyContract)
 
 # NOTE: Assuming you have a contract named 'ContractFactory'.
 factory = project.ContractFactory.deploy(declaration.class_hash)

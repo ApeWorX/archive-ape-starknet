@@ -10,7 +10,7 @@ from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.net.client_models import Event, TransactionStatus
+from starknet_py.net.client_models import Call, Event, TransactionStatus
 from starknet_py.net.models.transaction import Declare, InvokeFunction, Transaction, TransactionType
 from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (
@@ -32,7 +32,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     """
 
     status: int = TransactionStatus.NOT_RECEIVED
-    version: int = 0
+    version: int = 1
 
     """Ignored but present in ``AccountTransaction``"""
     max_fee: Optional[int] = Field(None, exclude=True)
@@ -166,14 +166,23 @@ class InvokeFunctionTransaction(AccountTransaction):
         return HexBytes(hash_int)
 
     def as_starknet_object(self) -> InvokeFunction:
+        if self.sender:
+            return self._as_call()
+
+        return self._as_txn()
+
+    def _as_call(self) -> InvokeFunction:
+        return Call(to_addr=self.receiver, selector=self.entry_point_selector, calldata=self.data)
+
+    def _as_txn(self) -> InvokeFunction:
         return InvokeFunction(
             calldata=self.data,
             contract_address=self.receiver_int,
-            entry_point_selector=self.entry_point_selector,
+            max_fee=self.max_fee or 0,
+            nonce=self.nonce,
             signature=[to_int(self.signature.r), to_int(self.signature.s)]
             if self.signature
             else [],
-            max_fee=self.max_fee or 0,
             version=self.version,
         )
 

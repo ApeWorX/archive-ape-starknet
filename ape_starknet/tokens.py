@@ -7,6 +7,7 @@ from ape.types import AddressType
 from eth_typing import HexAddress, HexStr
 from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
+from starknet_py.constants import FEE_CONTRACT_ADDRESS
 
 from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.utils.basemodel import StarknetBase
@@ -159,6 +160,7 @@ ERC20 = ContractType(
         ],
     }
 )
+TEST_TOKEN_ADDRESS = "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458ce245bc10"
 
 
 class TokenManager(StarknetBase):
@@ -169,22 +171,11 @@ class TokenManager(StarknetBase):
     @property
     def token_address_map(self) -> Dict:
         local_eth = self.starknet.decode_address(FeeToken.ADDRESS)
-        mainnet_eth = self.starknet.decode_address(
-            "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
-        )
-        testnet_eth = self.starknet.decode_address(
-            "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
-        )
-        testnet_test_token = self.starknet.decode_address(
-            "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458ce245bc10"
-        )
-        mainnet_test_token = self.starknet.decode_address(
-            "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458ce245bc10"
-        )
-
+        live_eth = self.starknet.decode_address(FEE_CONTRACT_ADDRESS)
+        live_token = self.starknet.decode_address(TEST_TOKEN_ADDRESS)
         return {
-            "eth": {"local": local_eth, "mainnet": mainnet_eth, "testnet": testnet_eth},
-            "test_token": {"testnet": testnet_test_token, "mainnet": mainnet_test_token},
+            "eth": {"local": local_eth, "mainnet": live_eth, "testnet": live_eth},
+            "test_token": {"testnet": live_token, "mainnet": live_token},
             **self.additional_tokens,
         }
 
@@ -212,7 +203,8 @@ class TokenManager(StarknetBase):
         if hasattr(account, "address"):
             account = account.address  # type: ignore
 
-        return self[token].balanceOf(account)
+        low, high = self[token].balanceOf(account)
+        return (high << 128) + low
 
     def transfer(
         self,

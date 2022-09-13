@@ -152,26 +152,14 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:
-        # Check if passing a public-key address of a local account
-        if address in self.account_contracts.public_key_addresses:
-            contract_address = self.account_contracts.get_account(address).address
-            if contract_address:
-                address = contract_address
-
-        checksum_address = self.starknet.decode_address(address)
-        contract = self.chain_manager.contracts.instance_at(checksum_address)
-
-        if not isinstance(contract, ContractInstance):
-            raise StarknetProviderError(f"Account contract '{checksum_address}' not found.")
-
-        return contract.get_nonce()
+        return self.client.get_contract_nonce_sync(address)
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
         if not self.client:
             raise ProviderNotConnectedError()
 
-        starknet_object = txn.as_starknet_object()
+        starknet_object = txn.as_starknet_transaction()
         estimated_fee = self.client.estimate_fee_sync(starknet_object)
         return estimated_fee.overall_fee
 
@@ -224,7 +212,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if not self.client:
             raise ProviderNotConnectedError()
 
-        starknet_obj = txn.as_starknet_object()
+        starknet_obj = txn._as_call()
         return self.client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
@@ -317,11 +305,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.cached_code[address_int] = self.starknet_client.get_code_sync(address_int)
 
         return self.cached_code[address_int]
-
-    @handle_client_errors
-    def declare(self, sender: AccountAPI, contract_type: ContractType) -> ContractDeclaration:
-        transaction = self.starknet.encode_contract_blueprint(contract_type, sender=sender)
-        return self.provider.send_transaction(transaction)
 
 
 class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):

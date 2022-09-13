@@ -33,7 +33,7 @@ from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import InvokeFunctionTransaction
+from ape_starknet.transactions import DeclareTransaction, InvokeFunctionTransaction
 from ape_starknet.utils import (
     convert_contract_class_to_contract_type,
     get_chain_id,
@@ -419,32 +419,34 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
                 f"Account is not deployed to network '{self.provider.network.name}'."
             )
 
-        if not isinstance(txn, InvokeFunctionTransaction):
-            raise AccountsError("Can only prepare invoke transactions.")
+        if not isinstance(txn, (InvokeFunctionTransaction, DeclareTransaction)):
+            raise AccountsError("Can only prepare invoke or declare transactions.")
 
-        txn: InvokeFunctionTransaction = super().prepare_transaction(txn)  # type: ignore
-        stark_tx = txn.as_starknet_object()
-        account_call = {
-            "to": stark_tx.contract_address,
-            "selector": stark_tx.entry_point_selector,
-            "data_offset": 0,
-            "data_len": len(stark_tx.calldata),
-        }
-        contract_type = self.chain_manager.contracts[self.address]
-        txn.data = self.starknet.encode_calldata(
-            contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
-        )
-        txn.receiver = self.address
-        txn.sender = None
-        txn.original_method_abi = txn.method_abi
-        txn.method_abi = execute_abi
+        txn = super().prepare_transaction(txn)  # type: ignore
+
+        if isinstance(txn, InvokeFunctionTransaction):
+            stark_tx = txn.as_starknet_object()
+            account_call = {
+                "to": stark_tx.contract_address,
+                "selector": stark_tx.entry_point_selector,
+                "data_offset": 0,
+                "data_len": len(stark_tx.calldata),
+            }
+            contract_type = self.chain_manager.contracts[self.address]
+            txn.data = self.starknet.encode_calldata(
+                contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
+            )
+            txn.receiver = self.address
+            txn.sender = None
+            txn.original_method_abi = txn.method_abi
+            txn.method_abi = execute_abi
 
     def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
         if not isinstance(txn, InvokeFunctionTransaction):
             raise AccountsError("This account can only sign Starknet transactions.")
 
         # NOTE: 'v' is not used
-        sign_result = self.signer.sign_transaction(txn.as_starknet_object())
+        sign_result = self.signer.sign_transaction(txn._as_txn())
         if not sign_result:
             raise SignatureError("Failed to sign transaction.")
 
@@ -505,7 +507,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data.get("deployments", [])]
 
     def declare(self, contract_type: ContractType):
-        return self.provider.declare(self, contract_type)
+        transaction = self.starknet.encode_contract_blueprint(contract_type, sender=self.address)
+        prepared_transaction = self.prepare_transaction(transaction)
+        return self.provider.send_transaction(prepared_transaction)
 
 
 class StarknetDevelopmentAccount(BaseStarknetAccount):
