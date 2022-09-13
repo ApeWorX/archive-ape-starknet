@@ -203,8 +203,12 @@ class TokenManager(StarknetBase):
         if hasattr(account, "address"):
             account = account.address  # type: ignore
 
-        low, high = self[token].balanceOf(account)
-        return (high << 128) + low
+        result = self[token].balanceOf(account)
+        if isinstance(result, (tuple, list)) and len(result) == 2:
+            low, high = result
+            return (high << 128) + low
+
+        return result
 
     def transfer(
         self,

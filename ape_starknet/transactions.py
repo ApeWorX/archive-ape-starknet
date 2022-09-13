@@ -115,12 +115,6 @@ class InvokeFunctionTransaction(AccountTransaction):
     sender: Optional[AddressType] = None
     type: TransactionType = TransactionType.INVOKE_FUNCTION
 
-    original_method_abi: Optional[MethodABI] = None
-    """
-    Only set when invoked from an account `__execute__`
-    special method to help decoding return data
-    """
-
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore
     receiver: AddressType = Field(alias="contract_address")
@@ -172,7 +166,8 @@ class InvokeFunctionTransaction(AccountTransaction):
         return self._as_txn()
 
     def _as_call(self) -> InvokeFunction:
-        return Call(to_addr=self.receiver, selector=self.entry_point_selector, calldata=self.data)
+        receiver_int = self.starknet.encode_address(self.receiver)
+        return Call(to_addr=receiver_int, selector=self.entry_point_selector, calldata=self.data)
 
     def _as_txn(self) -> InvokeFunction:
         return InvokeFunction(

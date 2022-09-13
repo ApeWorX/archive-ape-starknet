@@ -338,6 +338,14 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
         raise AccountsError("Account not deployed.")
 
+    @cached_property
+    def contract_type(self) -> ContractType:
+        contract_type = self.get_contract_type()
+        if not contract_type:
+            raise AccountsError("Account missing contract type.")
+
+        return contract_type
+
     @property
     def address_int(self) -> int:
         return self.starknet.encode_address(self.address)
@@ -367,21 +375,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @cached_property
     def execute_abi(self) -> Optional[MethodABI]:
-        contract_type = self.get_contract_type()
-        if not contract_type:
-            return None
-
-        execute_abi_ls = [
-            abi for abi in contract_type.abi if getattr(abi, "name", "") == "__execute__"
-        ]
-        if not execute_abi_ls:
-            raise AccountsError(f"Account '{self.address}' does not have __execute__ method.")
-
-        abi = execute_abi_ls[0]
-        if not isinstance(abi, MethodABI):
-            raise AccountsError("ABI for '__execute__' is not a method.")
-
-        return abi
+        return self.contract_type.mutable_methods["__execute__"]
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.address}>"
@@ -412,7 +406,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def get_fee_estimate(self, txn: TransactionAPI) -> int:
         return self.provider.estimate_gas_cost(txn)
 
-    def _prepare_transaction(self, txn: TransactionAPI):
+    def _prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
         execute_abi = self.execute_abi
         if not execute_abi:
             raise AccountsError(
@@ -422,7 +416,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         if not isinstance(txn, (InvokeFunctionTransaction, DeclareTransaction)):
             raise AccountsError("Can only prepare invoke or declare transactions.")
 
-        txn = super().prepare_transaction(txn)  # type: ignore
+        txn = super().prepare_transaction(txn)
 
         if isinstance(txn, InvokeFunctionTransaction):
             stark_tx = txn.as_starknet_object()
@@ -438,15 +432,19 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             )
             txn.receiver = self.address
             txn.sender = None
-            txn.original_method_abi = txn.method_abi
             txn.method_abi = execute_abi
 
+        return txn
+
     def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
-        if not isinstance(txn, InvokeFunctionTransaction):
-            raise AccountsError("This account can only sign Starknet transactions.")
+        if not isinstance(txn, (InvokeFunctionTransaction, DeclareTransaction)):
+            raise AccountsError(
+                f"This account can only sign Starknet transactions (received={type(txn)}."
+            )
 
         # NOTE: 'v' is not used
-        sign_result = self.signer.sign_transaction(txn._as_txn())
+        stark_txn = txn.as_starknet_object()
+        sign_result = self.signer.sign_transaction(stark_txn)
         if not sign_result:
             raise SignatureError("Failed to sign transaction.")
 
@@ -600,7 +598,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return self.key_file_path.stem
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        self._prepare_transaction(txn)
+        txn = self._prepare_transaction(txn)
         do_relock = False
         if not txn.max_fee:
             if self.locked:
@@ -614,6 +612,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
 
         txn.signature = self.sign_transaction(txn)
+        breakpoint()
 
         if do_relock:
             self.locked = True

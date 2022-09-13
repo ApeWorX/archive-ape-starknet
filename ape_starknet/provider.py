@@ -150,7 +150,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
-        starknet_object = txn.as_starknet_transaction()
+        starknet_object = txn.as_starknet_object()
         estimated_fee = self.connected_client.estimate_fee_sync(starknet_object)
         return estimated_fee.overall_fee
 
@@ -280,6 +280,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         pass
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        # All preparation happens on the account side.
         return txn
 
     def get_virtual_machine_error(self, exception: Exception):
