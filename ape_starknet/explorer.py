@@ -2,6 +2,7 @@ from typing import Iterator, Optional
 
 from ape.api import ExplorerAPI, ReceiptAPI
 from ape.types import AddressType
+from ape.utils import raises_not_implemented
 from ethpm_types import ContractType
 
 from ape_starknet.utils.basemodel import StarknetBase
@@ -38,6 +39,12 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         contract_type_dict = {"abi": code_and_abi.abi}
         return ContractType.parse_obj(contract_type_dict)
 
+    @raises_not_implemented
     def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:
         # TODO
-        yield from ()
+        pass
+
+    @raises_not_implemented
+    def publish_contract(self, address: AddressType):
+        # TODO
+        pass

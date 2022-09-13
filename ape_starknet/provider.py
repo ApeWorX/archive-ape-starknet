@@ -4,21 +4,12 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from ape.api import (
-    AccountAPI,
-    BlockAPI,
-    ProviderAPI,
-    ReceiptAPI,
-    SubprocessProvider,
-    TransactionAPI,
-)
+from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractInstance
 from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
-from ethpm_types import ContractType
 from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -34,11 +25,7 @@ from starkware.starkware_utils.error_handling import StarkErrorCode
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
 from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import (
-    ContractDeclaration,
-    InvokeFunctionTransaction,
-    StarknetTransaction,
-)
+from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     DEFAULT_ACCOUNT_SEED,
@@ -86,6 +73,13 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
+
+    @property
+    def connected_client(self) -> GatewayClient:
+        if not self.client:
+            raise ProviderNotConnectedError()
+
+        return self.client
 
     @property
     def is_connected(self) -> bool:
@@ -152,15 +146,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:
-        return self.client.get_contract_nonce_sync(address)
+        return self.connected_client.get_contract_nonce_sync(address)
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
-        if not self.client:
-            raise ProviderNotConnectedError()
-
         starknet_object = txn.as_starknet_transaction()
-        estimated_fee = self.client.estimate_fee_sync(starknet_object)
+        estimated_fee = self.connected_client.estimate_fee_sync(starknet_object)
         return estimated_fee.overall_fee
 
     @property
@@ -209,11 +200,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
                 f"Transaction must be from an invocation. Received type {type_str}."
             )
 
-        if not self.client:
-            raise ProviderNotConnectedError()
-
         starknet_obj = txn._as_call()
-        return self.client.call_contract_sync(starknet_obj)  # type: ignore
+        return self.connected_client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
     def _get_traces(self, block_number: int) -> List[BlockSingleTransactionTrace]:
@@ -228,7 +216,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
 
     @handle_client_errors
-    def get_transaction(self, txn_hash: str) -> ReceiptAPI:
+    def get_receipt(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
@@ -268,7 +256,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        return self.get_transaction(response.transaction_hash)
+        return self.get_receipt(response.transaction_hash)
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
