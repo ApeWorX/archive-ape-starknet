@@ -1,3 +1,4 @@
+import asyncio
 import re
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Union
@@ -15,6 +16,7 @@ from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     DeclareTransaction,
+    DeployTransaction,
     InvokeTransaction,
     Transaction,
 )
@@ -150,16 +152,21 @@ def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
         err_msg = err_msg.split("Error message:")[-1].splitlines()[0]
         return ContractLogicError(revert_message=err_msg.strip())
 
-    if "Error at pc=" in err_msg:
-        return ContractLogicError(revert_message=err_msg.strip())
+    elif "Error at pc=" in err_msg:
+        err_msg = err_msg.strip().replace("\n", " ")
+        return ContractLogicError(revert_message=err_msg)
 
     return StarknetProviderError(err_msg.strip())
 
 
-def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
-    txn_dict = {**asdict(txn_info), **extra_kwargs}
+def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
+    txn_dict = {**asdict(txn_info)}
 
-    if isinstance(txn_info, InvokeTransaction):
+    if isinstance(txn_info, DeployTransaction):
+        txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
+        txn_dict["max_fee"] = 0
+        txn_dict["type"] = TransactionType.DEPLOY
+    elif isinstance(txn_info, InvokeTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
         txn_dict["events"] = [vars(e) for e in txn_dict.get("events", [])]
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
@@ -209,3 +216,8 @@ def pad_hex_str(value: str, to_length: int = 66) -> str:
     actual_len = len(val)
     padding = "0" * (to_length - 2 - actual_len)
     return f"0x{padding}{val}"
+
+
+def run_until_complete(coroutine):
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(coroutine)

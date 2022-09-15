@@ -3,7 +3,7 @@
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import deploy
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.bool import FALSE
+from starkware.cairo.common.bool import FALSE, TRUE
 
 @storage_var
 func class_hash() -> (class_hash: felt) {

@@ -23,7 +23,7 @@ from starknet_py.net.models import parse_address
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
-from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
+from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
 from ape_starknet.utils import (
@@ -93,7 +93,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             was_successful = False
 
         if was_successful and self.client is None:
-            self.client = GatewayClient(self.uri, chain=self.chain_id)
+            self.client = self._create_client()
 
         return was_successful
 
@@ -117,7 +117,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return network_config.get("uri") or f"http://127.0.0.1:{DEFAULT_PORT}"
 
     def connect(self):
-        self.client = GatewayClient(self.uri, chain=self.chain_id)
+        self.client = self._create_client()
 
     def disconnect(self):
         self.client = None
@@ -219,8 +219,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     def get_receipt(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
+        txn_dict = get_dict_from_tx_info(txn_info)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        receipt_dict = vars(receipt)
+        receipt_dict = {**txn_dict, **vars(receipt)}
 
         trace_data = {}
         if isinstance(txn_info, InvokeTransaction):
@@ -240,8 +241,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             trace = self._get_single_trace(receipt.block_number, receipt.hash)
             trace_data = extract_trace_data(trace)
 
-        receipt_dict = {"provider": self, **trace_data, **receipt_dict}
-        receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
+        transaction = self.starknet.create_transaction(**{**txn_dict, **trace_data})
+        receipt_dict = {"provider": self, **receipt_dict, "transaction": transaction}
         return self.starknet.decode_receipt(receipt_dict)
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
@@ -268,8 +269,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
 
         if not isinstance(txn, StarknetTransaction):
-            raise StarknetEcosystemError(
-                "Unable to send non-Starknet transaction using a Starknet provider."
+            raise StarknetProviderError(
+                "Unable to send non-Starknet transaction using a Starknet provider "
+                f"(received type '{type(txn)}')."
             )
 
         starknet_txn = txn.as_starknet_object()
@@ -295,6 +297,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         return self.cached_code[address_int]
 
+    def _create_client(self) -> GatewayClient:
+        network = self.uri if self.network.name == LOCAL_NETWORK_NAME else self.network.name
+        return GatewayClient(network)
+
 
 class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
     """
@@ -317,7 +323,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
             self.start()
 
-        self.client = GatewayClient(self.uri, chain=self.chain_id)
+        self.client = self._create_client()
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)

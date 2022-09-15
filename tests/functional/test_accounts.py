@@ -5,8 +5,6 @@ from starkware.cairo.lang.vm.cairo_runner import pedersen_hash
 
 from ape_starknet.utils import is_hex_address
 
-from ..conftest import PASSWORD
-
 
 @pytest.fixture
 def isolation():
@@ -78,21 +76,21 @@ def test_access_account_by_str_address(account, account_container, ecosystem, ge
 def test_balance(account):
     balance = account.balance
     assert isinstance(balance, int)
-    assert account.balance > 0
+    assert balance > 0
 
 
 def test_can_access_devnet_accounts(account, second_account, chain):
-    assert chain.contracts[account.address] == account.get_contract_type()
-    assert chain.contracts[second_account.address] == second_account.get_contract_type()
+    assert chain.contracts[account.address] == account.get_account_contract_type()
+    assert chain.contracts[second_account.address] == second_account.get_account_contract_type()
 
 
-def test_import_with_passphrase(account_container, key_file_account):
+def test_import_with_passphrase(account_container, key_file_account, password):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     account_container.import_account(
         alias,
         LOCAL_NETWORK_NAME,
         key_file_account.address,
-        key_file_account._get_key(PASSWORD),
+        key_file_account._get_key(password),
         passphrase="p@55W0rd",
     )
     new_account = account_container.load(alias)

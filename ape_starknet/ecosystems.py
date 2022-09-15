@@ -20,10 +20,16 @@ from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
 from starkware.starknet.services.api.contract_class import ContractClass
 
-from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
+from ape_starknet.exceptions import (
+    ContractTypeNotFoundError,
+    StarknetEcosystemError,
+    StarknetProviderError,
+)
 from ape_starknet.transactions import (
     ContractDeclaration,
     DeclareTransaction,
+    DeployReceipt,
+    DeployTransaction,
     InvocationReceipt,
     InvokeFunctionTransaction,
     StarknetReceipt,
@@ -194,10 +200,12 @@ class Starknet(EcosystemAPI, StarknetBase):
         return value
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
-        txn_type = TransactionType(data["type"])
+        txn_type = TransactionType(data["transaction"].type)
         receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvocationReceipt
+        elif txn_type == TransactionType.DEPLOY:
+            receipt_cls = DeployReceipt
         elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
         else:
@@ -229,13 +237,12 @@ class Starknet(EcosystemAPI, StarknetBase):
         constructor_args = list(args)
         contract = ContractClass.deserialize(deployment_bytecode)
         calldata = self.encode_calldata(contract.abi, abi, constructor_args)
-        return None  # TODO
-        # return DeployTransaction(
-        #     salt=salt,
-        #     constructor_calldata=calldata,
-        #     contract_code=contract.dumps(),
-        #     token=kwargs.get("token"),
-        # )
+        return DeployTransaction(
+            salt=salt,
+            constructor_calldata=calldata,
+            contract_code=contract.dumps(),
+            token=kwargs.get("token"),
+        )
 
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
@@ -243,7 +250,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         # NOTE: This method only works for invoke-transactions
         contract_type = self.starknet_explorer.get_contract_type(address)
         if not contract_type:
-            raise StarknetProviderError(f"No contract found at address '{address}'.")
+            raise ContractTypeNotFoundError(address)
 
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
 
@@ -273,10 +280,14 @@ class Starknet(EcosystemAPI, StarknetBase):
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
-        txn_cls: Union[Type[InvokeFunctionTransaction], Type[DeclareTransaction]]
+        txn_cls: Union[
+            Type[InvokeFunctionTransaction], Type[DeployTransaction], Type[DeclareTransaction]
+        ]
         invoking = txn_type == TransactionType.INVOKE_FUNCTION
         if invoking:
             txn_cls = InvokeFunctionTransaction
+        elif txn_type == TransactionType.DEPLOY:
+            txn_cls = DeployTransaction
         elif txn_type == TransactionType.DECLARE:
             txn_cls = DeclareTransaction
 
@@ -286,7 +297,21 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         # For deploy-txns, 'contract_address' is the address of the newly deployed contract.
         if "contract_address" in txn_data:
-            txn_data["contract_address"] = self.decode_address(txn_data["contract_address"])
+            contract_address = self.decode_address(txn_data["contract_address"])
+            txn_data["contract_address"] = contract_address
+            contract_type = None
+
+            if "class_hash" in txn_data:
+                contract_type = self.get_local_contract_type(txn_data["class_hash"])
+
+            if not contract_type:
+                contract_type = self.get_contract_type(contract_address)
+
+            if contract_type:
+                bytecode_obj = contract_type.deployment_bytecode
+                if bytecode_obj:
+                    bytecode = bytecode_obj.bytecode
+                    txn_data["contract_code"] = bytecode
 
         if not invoking:
             return txn_cls(**txn_data)

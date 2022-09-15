@@ -9,7 +9,7 @@ from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
 from starknet_py.constants import FEE_CONTRACT_ADDRESS
 
-from ape_starknet.exceptions import StarknetProviderError
+from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
 from ape_starknet.utils.basemodel import StarknetBase
 
 if TYPE_CHECKING:
@@ -185,7 +185,7 @@ class TokenManager(StarknetBase):
             HexAddress(HexStr(self.token_address_map[token.lower()].get(network)))
         )
         if not contract_address:
-            raise IndexError(f"No token '{token}'.")
+            raise ContractTypeNotFoundError(contract_address)
 
         return ContractInstance(contract_address, ERC20)
 

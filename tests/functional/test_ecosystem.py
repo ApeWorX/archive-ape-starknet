@@ -1,5 +1,6 @@
+from typing import Literal
+
 import pytest
-from ape._compat import Literal
 from ape.types import AddressType
 from eth_typing import HexAddress, HexStr
 from ethpm_types.abi import MethodABI
