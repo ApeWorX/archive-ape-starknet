@@ -41,7 +41,6 @@ def test_to_checksum_address(account):
         (ApeException("Foo!"), ApeException("Foo!")),
         (
             ClientError(
-                code=500,
                 message=(
                     '{"message":"Error at pc=0:91:\nGot an exception '
                     "while executing a hint.\nCairo traceback (most r"
@@ -74,10 +73,10 @@ def test_to_checksum_address(account):
         ),
         (
             TransactionRejectedError(
-                message="Error at pc=0:330:\nAn ASSERT_EQ instruction failed: 0 != 1."
+                message="Error at pc=0:330: An ASSERT_EQ instruction failed: 0 != 1."
             ),
             ContractLogicError(
-                revert_message="Error at pc=0:330:\nAn ASSERT_EQ instruction failed: 0 != 1."
+                revert_message="Error at pc=0:330: An ASSERT_EQ instruction failed: 0 != 1."
             ),
         ),
         (ValueError("Foo!"), ValueError("Foo!")),

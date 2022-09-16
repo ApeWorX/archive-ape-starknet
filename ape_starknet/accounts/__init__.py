@@ -37,6 +37,7 @@ from ape_starknet.utils import (
     convert_contract_class_to_contract_type,
     get_chain_id,
     get_random_private_key,
+    is_checksum_address,
     pad_hex_str,
     run_until_complete,
 )
@@ -184,8 +185,10 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
                 return super().__getitem__(account.address)
 
         # Else, use the contract address (more expected)
-        checksum_address = self.starknet.decode_address(address)
-        return super().__getitem__(checksum_address)
+        if not is_checksum_address(address):
+            address = self.starknet.decode_address(address)
+
+        return super().__getitem__(address)
 
     def get_account(self, address: Union[AddressType, int]) -> "BaseStarknetAccount":
         return self[address]  # type: ignore

@@ -139,17 +139,16 @@ def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
         return err
 
     err_msg = err.message
-
     if "Actual fee exceeded max fee" in err_msg:
         return OutOfGasError()
 
     if isinstance(err, ClientError):
         # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L11 # noqa
-        err_msg = err_msg.split(":", 1)[-1]
+        err_msg = err_msg.split(":", 1)[-1].strip()
 
     if "Error message:" in err_msg:
-        err_msg = err_msg.split("Error message:")[-1].splitlines()[0]
-        return ContractLogicError(revert_message=err_msg.strip())
+        err_msg = err_msg.split("Error message:")[-1].splitlines()[0].strip()
+        return ContractLogicError(revert_message=err_msg)
 
     elif "Error at pc=" in err_msg:
         err_msg = err_msg.strip().replace("\n", " ")

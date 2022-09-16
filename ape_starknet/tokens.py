@@ -1,9 +1,11 @@
 from typing import TYPE_CHECKING, Dict, Union
 
 from ape.api import Address
+from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
 from ape.exceptions import ContractError
 from ape.types import AddressType
+from ape.utils import cached_property
 from eth_typing import HexAddress, HexStr
 from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
@@ -170,13 +172,25 @@ class TokenManager(StarknetBase):
 
     @property
     def token_address_map(self) -> Dict:
+        return {
+            **self._base_token_address_map,
+            **self.additional_tokens,
+        }
+
+    @cached_property
+    def _base_token_address_map(self):
         local_eth = self.starknet.decode_address(FeeToken.ADDRESS)
         live_eth = self.starknet.decode_address(FEE_CONTRACT_ADDRESS)
         live_token = self.starknet.decode_address(TEST_TOKEN_ADDRESS)
+
+        if self.provider.network.name == LOCAL_NETWORK_NAME:
+            self.chain_manager.contracts[local_eth] = self.contract_type
+        else:
+            self.chain_manager.contracts[live_eth] = self.contract_type
+
         return {
             "eth": {"local": local_eth, "mainnet": live_eth, "testnet": live_eth},
             "test_token": {"testnet": live_token, "mainnet": live_token},
-            **self.additional_tokens,
         }
 
     def __getitem__(self, token: str) -> ContractInstance:
