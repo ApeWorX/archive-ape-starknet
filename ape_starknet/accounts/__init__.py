@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass
 from math import ceil
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union, cast
 
 import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
@@ -17,9 +17,7 @@ from eth_keyfile import create_keyfile_json, decode_keyfile_json
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, text_if_str, to_bytes
 from ethpm_types import ContractType
-from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
-from starknet_devnet.account import Account as DevnetAccount
 from starknet_py.net import KeyPair
 from starknet_py.net.account.account_client import deploy_account_contract
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
@@ -32,9 +30,9 @@ from starkware.starknet.core.os.contract_address.contract_address import (
 
 from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
 from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import DeclareTransaction, InvokeFunctionTransaction
+from ape_starknet.transactions import AccountTransaction, InvokeFunctionTransaction
 from ape_starknet.utils import (
-    convert_contract_class_to_contract_type,
+    OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
     get_chain_id,
     get_random_private_key,
     is_checksum_address,
@@ -49,8 +47,6 @@ The key-file stanza containing custom properties
 specific to the ape-starknet plugin.
 """
 APP_KEY_FILE_VERSION = "0.1.0"
-OZ_CONTRACT_CLASS = DevnetAccount.get_contract_class()
-OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
 
 # https://github.com/starkware-libs/cairo-lang/blob/v0.9.1/src/starkware/starknet/cli/starknet_cli.py#L66
 FEE_MARGIN_OF_ESTIMATION = 1.1
@@ -188,7 +184,8 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         if not is_checksum_address(address):
             address = self.starknet.decode_address(address)
 
-        return super().__getitem__(address)
+        checksum_address = cast(AddressType, address)
+        return super().__getitem__(checksum_address)
 
     def get_account(self, address: Union[AddressType, int]) -> "BaseStarknetAccount":
         return self[address]  # type: ignore
@@ -387,10 +384,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             chain_id=get_chain_id(self.provider.chain_id),
         )
 
-    @cached_property
-    def execute_abi(self) -> Optional[MethodABI]:
-        return self.contract_type.mutable_methods["__execute__"]  # type: ignore
-
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.address}>"
 
@@ -399,7 +392,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             raise NotImplementedError("send_everything currently isn't implemented in Starknet.")
 
         if not isinstance(txn, InvokeFunctionTransaction):
-            raise AccountsError("Can only call Starknet transactions.")
+            raise AccountsError("Can only call Starknet invoke transactions.")
 
         txn = self.prepare_transaction(txn)
         if not txn.signature:
@@ -408,8 +401,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return self.provider.send_transaction(txn)
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        self._prepare_transaction(txn)
-        if txn.max_fee is None:
+        if not isinstance(txn, AccountTransaction):
+            return txn
+
+        txn = self._prepare_transaction(txn)
+        if not txn.max_fee:
             # NOTE: Signature cannot be None when estimating fees.
             txn.signature = self.sign_transaction(txn)
             txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
@@ -417,41 +413,23 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn.signature = self.sign_transaction(txn)
         return txn
 
-    def get_fee_estimate(self, txn: TransactionAPI) -> int:
-        return self.provider.estimate_gas_cost(txn)
-
     def _prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        execute_abi = self.execute_abi
-        if not execute_abi:
-            raise AccountsError(
-                f"Account is not deployed to network '{self.provider.network.name}'."
-            )
-
-        if not isinstance(txn, (InvokeFunctionTransaction, DeclareTransaction)):
-            raise AccountsError("Can only prepare invoke or declare transactions.")
+        if isinstance(txn, AccountTransaction):
+            # Set now to prevent infinite loop
+            txn.is_prepared = True
 
         txn = super().prepare_transaction(txn)
 
         if isinstance(txn, InvokeFunctionTransaction):
-            stark_tx = txn.as_starknet_object()
-            account_call = {
-                "to": stark_tx.contract_address,
-                "selector": txn.entry_point_selector,
-                "data_offset": 0,
-                "data_len": len(stark_tx.calldata),
-            }
-            full_abi = self.contract_type.abi
-            entire_call_data = [[account_call], stark_tx.calldata]
-            txn.data = self.starknet.encode_calldata(full_abi, execute_abi, entire_call_data)
-            txn.receiver = self.address
-            txn.sender = None
-            txn.method_abi = execute_abi
-            txn.nonce = self.nonce
+            return txn.to_execute_transaction()
 
         return txn
 
+    def get_fee_estimate(self, txn: TransactionAPI) -> int:
+        return self.provider.estimate_gas_cost(txn)
+
     def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
-        if not isinstance(txn, (InvokeFunctionTransaction, DeclareTransaction)):
+        if not isinstance(txn, AccountTransaction):
             raise AccountsError(
                 f"This account can only sign Starknet transactions (received={type(txn)}."
             )

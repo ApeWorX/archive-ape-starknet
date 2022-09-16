@@ -9,7 +9,7 @@ from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.utils import (
     extract_trace_data,
     get_random_private_key,
-    get_virtual_machine_error,
+    handle_client_error,
     is_checksum_address,
     to_checksum_address,
 )
@@ -64,6 +64,17 @@ def test_to_checksum_address(account):
             ContractLogicError(revert_message="Strings: exceeding max felt string length (31)"),
         ),
         (
+            ClientError(
+                message=(
+                    '{"message":"An InvokeFunction transaction '
+                    '(version != 0) must have a nonce.","status_code":500}\n'
+                )
+            ),
+            StarknetProviderError(
+                "An InvokeFunction transaction (version != 0) must have a nonce."
+            ),
+        ),
+        (
             ContractNotFoundError(block_hash="pending"),
             StarknetProviderError("No contract found for identifier: pending"),
         ),
@@ -82,8 +93,8 @@ def test_to_checksum_address(account):
         (ValueError("Foo!"), ValueError("Foo!")),
     ],
 )
-def test_get_virtual_machine_error(exception, expected):
-    error = get_virtual_machine_error(exception)
+def test_handle_client_error(exception, expected):
+    error = handle_client_error(exception)
     assert str(error) == str(expected)
 
 

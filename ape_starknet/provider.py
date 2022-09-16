@@ -20,22 +20,24 @@ from starknet_py.net.client_models import (
 )
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
-from starknet_py.net.models.transaction import TransactionType
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import InvokeFunctionTransaction, StarknetTransaction
+from ape_starknet.transactions import (
+    AccountTransaction,
+    InvokeFunctionTransaction,
+    StarknetTransaction,
+)
 from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     DEFAULT_ACCOUNT_SEED,
     EXECUTE_SELECTOR,
     PLUGIN_NAME,
-    extract_trace_data,
     get_chain_id,
     get_dict_from_tx_info,
-    get_virtual_machine_error,
+    handle_client_error,
     handle_client_errors,
 )
 from ape_starknet.utils.basemodel import StarknetBase
@@ -220,33 +222,23 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     def get_receipt(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
-        txn_dict = get_dict_from_tx_info(txn_info)
-        is_invoke = txn_dict["type"] == TransactionType.INVOKE_FUNCTION
-        has_execute_overhead = is_invoke and txn_dict["entry_point_selector"] == EXECUTE_SELECTOR
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        receipt_dict = asdict(receipt)
+        data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
 
-        if has_execute_overhead:
-            # User only cares about target contract invoke and not __execute__ overhead
-            num_calls = txn_dict["calldata"][0]
+        # Handle __execute__ overhead. User only cares for target ABI.
+        if data.get("entry_point_selector") == EXECUTE_SELECTOR:
+            num_calls = data["calldata"][0]
             if num_calls != 1:
-                logger.warning("Multi-call not supported. Only parsing first receipt.")
+                logger.warning("Multi-call not yet supported. Only parsing first receipt.")
 
-            txn_dict["sender"] = txn_dict["contract_address"]
-            txn_dict["contract_address"] = self.starknet.decode_address(txn_dict["calldata"][1])
-            txn_dict["entry_point_selector"] = txn_dict["calldata"][2]
-            stop_index = txn_dict["calldata"][3] + 1
-            txn_dict["calldata"] = txn_dict["calldata"][4:stop_index]
+            data["sender"] = data["contract_address"]
+            data["contract_address"] = self.starknet.decode_address(data["calldata"][1])
+            data["entry_point_selector"] = data["calldata"][2]
+            stop_index = data["calldata"][3] + 1
+            data["calldata"] = data["calldata"][4:stop_index]
 
-        all_data = {**receipt_dict, **txn_dict}
-        if is_invoke:
-            # The trace data contains only useful data, such as the `returndata`.
-            trace = self._get_single_trace(receipt.block_number, receipt.hash)
-            all_data = {**extract_trace_data(trace), **all_data}
-
-        transaction = self.starknet.create_transaction(**all_data)
-        raw_receipt = {"provider": self, "transaction": transaction, **all_data}
-        return self.starknet.decode_receipt(raw_receipt)
+        transaction = self.starknet.create_transaction(**data)
+        return self.starknet.decode_receipt({"provider": self, "transaction": transaction, **data})
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
@@ -265,7 +257,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
     ) -> SentTransactionResponse:
-        txn = self.prepare_transaction(txn)
         if not token and hasattr(txn, "token") and txn.token:  # type: ignore
             token = txn.token  # type: ignore
         else:
@@ -286,10 +277,14 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
         # All preparation happens on the account side.
+        if isinstance(txn, AccountTransaction) and not txn.is_prepared and txn.sender:
+            account = self.account_contracts[txn.sender]
+            return account.prepare_transaction(txn)
+
         return txn
 
     def get_virtual_machine_error(self, exception: Exception):
-        return get_virtual_machine_error(exception)
+        return handle_client_error(exception)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         address_int = parse_address(address)

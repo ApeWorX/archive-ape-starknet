@@ -5,7 +5,6 @@ from ape.api import ReceiptAPI, TransactionAPI
 from ape.exceptions import APINotImplementedError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
-from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
@@ -22,7 +21,14 @@ from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import ContractTypeNotFoundError
-from ape_starknet.utils import ContractEventABI, to_checksum_address
+from ape_starknet.utils import (
+    EXECUTE_ABI,
+    OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
+    ContractEventABI,
+    extract_trace_data,
+    to_checksum_address,
+    to_int,
+)
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -60,6 +66,7 @@ class AccountTransaction(StarknetTransaction):
 
     max_fee: int = Field(0)
     nonce: Optional[int] = None
+    is_prepared: bool = Field(False, exclude=True)
 
     @validator("max_fee", pre=True, allow_reuse=True)
     def validate_max_fee(cls, value):
@@ -157,17 +164,11 @@ class InvokeFunctionTransaction(AccountTransaction):
 
     @validator("receiver", pre=True, allow_reuse=True)
     def validate_receiver(cls, value):
-        if isinstance(value, int):
-            return to_checksum_address(value)
-
-        return value
+        return to_checksum_address(value)
 
     @validator("max_fee", pre=True, allow_reuse=True)
     def validate_max_fee(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-
-        return value
+        return to_int(value)
 
     @property
     def receiver_int(self) -> int:
@@ -213,6 +214,29 @@ class InvokeFunctionTransaction(AccountTransaction):
         receiver_int = self.starknet.encode_address(self.receiver)
         return Call(to_addr=receiver_int, selector=self.entry_point_selector, calldata=self.data)
 
+    def to_execute_transaction(self) -> "InvokeFunctionTransaction":
+        """
+        Convert this transaction to an account ``__execute__`` transaction.
+        """
+
+        stark_tx = self.as_starknet_object()
+        account_call = {
+            "to": stark_tx.contract_address,
+            "selector": self.entry_point_selector,
+            "data_offset": 0,
+            "data_len": len(stark_tx.calldata),
+        }
+        full_abi = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.abi
+        entire_call_data = [[account_call], stark_tx.calldata]
+        self.data = self.starknet.encode_calldata(full_abi, EXECUTE_ABI, entire_call_data)
+
+        if self.sender:
+            self.receiver = self.sender
+
+        self.sender = None
+        self.method_abi = EXECUTE_ABI
+        return self
+
 
 class StarknetReceipt(ReceiptAPI, StarknetBase):
     """
@@ -226,7 +250,6 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """Aliased"""
     txn_hash: str = Field(alias="hash")
     gas_used: int = Field(alias="actual_fee")
-    returndata: List = Field([], alias="result")
 
     @property
     def return_value(self) -> Any:
@@ -267,19 +290,8 @@ class DeployReceipt(StarknetReceipt):
 
 
 class InvocationReceipt(StarknetReceipt):
-    returndata: List[Any] = Field(default_factory=list, alias="result")
-
-    @cached_property
-    def return_value(self) -> Any:
-        txn = self.transaction
-        if not isinstance(txn, InvokeFunctionTransaction):
-            raise TypeError(
-                f"Expected transaction class of type '{InvokeFunctionTransaction.__name__}'."
-            )
-
-        return self.starknet.decode_returndata(txn.method_abi, self.returndata)
-
     """Aliased"""
+
     logs: List[dict] = Field(alias="events")
 
     @validator("logs", pre=True, allow_reuse=True)
@@ -291,11 +303,24 @@ class InvocationReceipt(StarknetReceipt):
 
     @property
     def ran_out_of_gas(self) -> bool:
-        return self.actual_fee >= (self.max_fee or 0)
+        return self.gas_used >= (self.max_fee or 0)
 
     @property
     def total_fees_paid(self) -> int:
-        return self.actual_fee
+        return self.gas_used
+
+    @cached_property
+    def trace(self) -> Dict:  # type: ignore
+        trace = self.provider._get_single_trace(self.block_number, int(self.txn_hash, 16))
+        return extract_trace_data(trace) if trace else {}
+
+    @property
+    def returndata(self):
+        return self.trace.get("result", [])
+
+    @cached_property
+    def return_value(self) -> Any:
+        return self.starknet.decode_returndata(self.method_abi, self.returndata)
 
     def decode_logs(
         self,

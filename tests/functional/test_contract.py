@@ -254,3 +254,26 @@ def test_external_and_view_method_outputs(
     receipt = getattr(contract, f"{method}_external")(sender=account)
     assert receipt.returndata == returndata_expected
     assert receipt.return_value == return_value
+
+
+def test_estimate_gas_cost_external_method(contract, account, provider):
+    estimated_fee = contract.increase_balance.estimate_gas_cost(account.address, 1, sender=account)
+    assert estimated_fee > 100_000_000_000_000
+
+    receipt = contract.increase_balance(account.address, 1, sender=account)
+    assert receipt.gas_used == estimated_fee
+    assert receipt.max_fee > estimated_fee
+    assert receipt.total_fees_paid == receipt.gas_used
+    assert not receipt.ran_out_of_gas
+    assert provider.gas_price >= 100_000_000_000
+
+
+def test_estimate_gas_cost_view_method(contract, account, provider):
+    estimated_fee = contract.get_balance.estimate_gas_cost(account.address, sender=account)
+    assert estimated_fee > 100_000_000_000_000
+    assert provider.gas_price >= 100_000_000_000
+
+
+def test_estimate_gas_cost_view_method_2(contract, account):
+    estimated_fee = contract.get_balance.estimate_gas_cost(account, sender=account)
+    assert estimated_fee > 100_000_000_000_000
