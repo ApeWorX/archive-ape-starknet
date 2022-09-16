@@ -48,7 +48,7 @@ def test_validate_signature_on_chain(contract, account, initial_balance):
 
     signature = account.sign_message(increase_amount)
     contract.increase_balance_signed(
-        account.public_key, account.address, increase_amount, signature
+        account.public_key, account.address, increase_amount, signature, sender=account
     )
 
     actual = contract.get_balance(account)
