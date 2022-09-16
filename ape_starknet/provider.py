@@ -238,13 +238,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             stop_index = txn_dict["calldata"][3] + 1
             txn_dict["calldata"] = txn_dict["calldata"][4:stop_index]
 
-        # The trace data contains only useful data, such as the `returndata`.
-        trace_data = {}
+        all_data = {**receipt_dict, **txn_dict}
         if is_invoke:
+            # The trace data contains only useful data, such as the `returndata`.
             trace = self._get_single_trace(receipt.block_number, receipt.hash)
-            trace_data = extract_trace_data(trace)
+            all_data = {**extract_trace_data(trace), **all_data}
 
-        all_data = {**receipt_dict, **trace_data, **txn_dict}
         transaction = self.starknet.create_transaction(**all_data)
         raw_receipt = {"provider": self, "transaction": transaction, **all_data}
         return self.starknet.decode_receipt(raw_receipt)

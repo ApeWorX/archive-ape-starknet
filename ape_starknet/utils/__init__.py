@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractEvent
-from ape.exceptions import ApeException, ContractLogicError, OutOfGasError
+from ape.exceptions import ApeException, ContractError, ContractLogicError, OutOfGasError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
@@ -113,7 +113,6 @@ def extract_trace_data(trace: BlockSingleTransactionTrace) -> Dict[str, Any]:
     trace_data["result"] = (
         internal_calls[-1]["result"] if internal_calls else invocation_result
     ) or invocation_result
-
     return trace_data
 
 
@@ -168,7 +167,6 @@ def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
         txn_dict["type"] = TransactionType.DEPLOY
     elif isinstance(txn_info, InvokeTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
-        txn_dict["events"] = [vars(e) for e in txn_dict.get("events", [])]
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
     elif isinstance(txn_info, DeclareTransaction):
         txn_dict["sender"] = to_checksum_address(txn_info.sender_address)
@@ -179,7 +177,7 @@ def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
 
 def get_method_abi_from_selector(
     selector: Union[str, int], contract_type: ContractType
-) -> Optional[MethodABI]:
+) -> MethodABI:
     # TODO: Properly integrate with ethpm-types
 
     if isinstance(selector, str):
@@ -191,7 +189,7 @@ def get_method_abi_from_selector(
         if selector == selector_to_check:
             return abi
 
-    return None
+    raise ContractError(f"Method '{selector}' not found in '{contract_type.name}'.")
 
 
 def convert_contract_class_to_contract_type(contract_class: ContractClass):

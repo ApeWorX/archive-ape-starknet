@@ -2,6 +2,8 @@ import pytest
 from ape import Contract
 from ape.exceptions import ContractLogicError, OutOfGasError
 
+from ape_starknet.exceptions import StarknetEcosystemError
+
 
 @pytest.fixture(scope="module", autouse=True)
 def connection(provider):
@@ -75,12 +77,11 @@ def test_contracts_as_arguments(contract, account):
 
 def test_unsigned_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
-    receipt = contract.increase_balance(account.address, increase_amount)
 
-    actual_from_receipt = receipt.return_value
-    actual_from_call = contract.get_balance(account.address)
-    expected = initial_balance + increase_amount
-    assert actual_from_receipt == actual_from_call == expected
+    with pytest.raises(
+        StarknetEcosystemError, match="'sender=<account>' required for invoke transactions"
+    ):
+        contract.increase_balance(account.address, increase_amount)
 
 
 def test_decode_logs(contract, account, ecosystem):
@@ -95,21 +96,21 @@ def test_decode_logs(contract, account, ecosystem):
     assert log_sender_address == contract.address
 
 
-def test_revert_message(contract):
+def test_revert_message(contract, account):
     reason = "Already initialized"
     with pytest.raises(ContractLogicError, match=reason):
         # Already initialized from fixture
-        contract.initialize()
+        contract.initialize(sender=account)
 
 
 def test_revert_no_message(contract, account):
-    contract.reset()
+    contract.reset(sender=account)
     reason = "An ASSERT_EQ instruction failed.*"
     with pytest.raises(ContractLogicError, match=reason):
-        contract.increase_balance(account.address, 123)
+        contract.increase_balance(account.address, 123, sender=account)
 
     # Re-initialize (re-store state)
-    contract.initialize()
+    contract.initialize(sender=account)
 
 
 def test_unable_to_afford_transaction(contract, account, provider):
@@ -117,11 +118,11 @@ def test_unable_to_afford_transaction(contract, account, provider):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)
 
 
-def test_array_inputs(contract):
+def test_array_inputs(contract, account):
     # This test makes sure we can pass python lists as arguments
     # to Cairo methods that accept arrays.
     # NOTE: Due to a limitation in ape, we have to include the array length argument.
-    contract.store_sum(3, [1, 2, 3])
+    contract.store_sum(3, [1, 2, 3], sender=account)
     assert contract.get_last_sum() == 6
 
 

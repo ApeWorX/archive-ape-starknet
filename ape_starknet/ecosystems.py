@@ -212,7 +212,6 @@ class Starknet(EcosystemAPI, StarknetBase):
             raise StarknetProviderError(f"Unable to handle contract type '{txn_type.value}'.")
 
         receipt = receipt_cls.parse_obj(data)
-
         if receipt is None:
             raise StarknetProviderError("Failed to parse receipt from data.")
 
@@ -253,6 +252,9 @@ class Starknet(EcosystemAPI, StarknetBase):
             raise ContractTypeNotFoundError(address)
 
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
+
+        if "sender" not in kwargs and abi.is_stateful:
+            raise StarknetEcosystemError("'sender=<account>' required for invoke transactions")
 
         return InvokeFunctionTransaction(
             contract_address=address,
@@ -318,17 +320,16 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         """ ~ Invoke transactions ~ """
 
-        if "method_abi" not in txn_data:
-            contract_int = txn_data["contract_address"]
-            contract_str = self.decode_address(contract_int)
-            contract = self.chain_manager.contracts.get(contract_str)
-            if not contract:
-                raise StarknetEcosystemError(
-                    "Unable to create transaction objects from other networks."
-                )
+        if not txn_data.get("method_abi") and "entry_point_selector" in txn_data:
+            target_address = self.decode_address(txn_data["contract_address"])
+            target_contract_type = self.chain_manager.contracts.get(target_address)
+            if not target_contract_type:
+                raise StarknetEcosystemError(f"Contract '{target_address}' not found.")
 
             selector = txn_data["entry_point_selector"]
-            txn_data["method_abi"] = get_method_abi_from_selector(selector, contract)
+            txn_data["method_abi"] = get_method_abi_from_selector(selector, target_contract_type)
+        else:
+            raise ValueError("Must provide either 'method_abi' or 'entry_point_selector' kwarg.")
 
         if "calldata" in txn_data and txn_data["calldata"] is not None:
             # Transactions in blocks show calldata as flattened hex-strs
