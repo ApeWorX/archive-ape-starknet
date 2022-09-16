@@ -1,4 +1,5 @@
 import os
+from dataclasses import asdict
 from typing import Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -14,12 +15,12 @@ from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     ContractCode,
-    InvokeTransaction,
     SentTransactionResponse,
     StarknetBlock,
 )
 from starknet_py.net.gateway_client import GatewayClient
 from starknet_py.net.models import parse_address
+from starknet_py.net.models.transaction import TransactionType
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
@@ -220,30 +221,33 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         txn_dict = get_dict_from_tx_info(txn_info)
+        is_invoke = txn_dict["type"] == TransactionType.INVOKE_FUNCTION
+        has_execute_overhead = is_invoke and txn_dict["entry_point_selector"] == EXECUTE_SELECTOR
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        receipt_dict = {**txn_dict, **vars(receipt)}
+        receipt_dict = asdict(receipt)
 
+        if has_execute_overhead:
+            # User only cares about target contract invoke and not __execute__ overhead
+            num_calls = txn_dict["calldata"][0]
+            if num_calls != 1:
+                logger.warning("Multi-call not supported. Only parsing first receipt.")
+
+            txn_dict["sender"] = txn_dict["contract_address"]
+            txn_dict["contract_address"] = self.starknet.decode_address(txn_dict["calldata"][1])
+            txn_dict["entry_point_selector"] = txn_dict["calldata"][2]
+            stop_index = txn_dict["calldata"][3] + 1
+            txn_dict["calldata"] = txn_dict["calldata"][4:stop_index]
+
+        # The trace data contains only useful data, such as the `returndata`.
         trace_data = {}
-        if isinstance(txn_info, InvokeTransaction):
-            if txn_info.entry_point_selector == EXECUTE_SELECTOR:
-                num_calls = txn_info.calldata[0]
-                if num_calls != 1:
-                    logger.warning("Multi-call receipts currently are limited")
-                else:
-                    # Grab selector and actual address from execute call
-                    call_address = self.starknet.decode_address(txn_info.calldata[1])
-                    call_method_selector = receipt_dict["selector"] = txn_info.calldata[2]
-                    txn_info.entry_point_selector = call_method_selector
-                    txn_info.calldata = txn_info.calldata[4:]
-                    receipt_dict["sender"] = self.starknet.decode_address(txn_info.contract_address)
-                    txn_info.contract_address = call_address
-
+        if is_invoke:
             trace = self._get_single_trace(receipt.block_number, receipt.hash)
             trace_data = extract_trace_data(trace)
 
-        transaction = self.starknet.create_transaction(**{**txn_dict, **trace_data})
-        receipt_dict = {"provider": self, **receipt_dict, "transaction": transaction}
-        return self.starknet.decode_receipt(receipt_dict)
+        all_data = {**receipt_dict, **trace_data, **txn_dict}
+        transaction = self.starknet.create_transaction(**all_data)
+        raw_receipt = {"provider": self, "transaction": transaction, **all_data}
+        return self.starknet.decode_receipt(raw_receipt)
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)

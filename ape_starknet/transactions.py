@@ -22,7 +22,7 @@ from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import ContractTypeNotFoundError
-from ape_starknet.utils import ContractEventABI, get_method_abi_from_selector, to_checksum_address
+from ape_starknet.utils import ContractEventABI, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -31,7 +31,6 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TransactionStatus.NOT_RECEIVED
     version: int = 1
 
     class Config:
@@ -39,16 +38,6 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
 
     def serialize_transaction(self) -> dict:  # type: ignore
         return self.dict()
-
-    @validator("status", pre=True, allow_reuse=True)
-    def validate_status(cls, value):
-        if isinstance(value, TransactionStatus):
-            return value.value
-
-        elif isinstance(value, str):
-            return int(value, 16)
-
-        return value
 
     @abstractmethod
     def as_starknet_object(self) -> Transaction:
@@ -60,8 +49,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
 
     @property
     def total_transfer_value(self) -> int:
-        max_fee = self.max_fee or 0
-        return self.value + max_fee
+        return self.value + (self.max_fee or 0)
 
 
 class AccountTransaction(StarknetTransaction):
@@ -160,7 +148,6 @@ class DeployTransaction(StarknetTransaction):
 
 class InvokeFunctionTransaction(AccountTransaction):
     method_abi: MethodABI
-
     sender: Optional[AddressType] = None
     type: TransactionType = TransactionType.INVOKE_FUNCTION
 
@@ -239,6 +226,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """Aliased"""
     txn_hash: str = Field(alias="hash")
     gas_used: int = Field(alias="actual_fee")
+    returndata: List = Field([], alias="result")
 
     @property
     def return_value(self) -> Any:
@@ -268,9 +256,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
 
 class DeployReceipt(StarknetReceipt):
     contract_address: AddressType
-
-    # Only get a receipt if deploy was accepted
-    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
+    status: TransactionStatus
 
     @validator("contract_address", pre=True, allow_reuse=True)
     def validate_contract_address(cls, value):
@@ -284,24 +270,8 @@ class InvocationReceipt(StarknetReceipt):
     returndata: List[Any] = Field(default_factory=list, alias="result")
 
     @cached_property
-    def method_abi(self) -> MethodABI:
-        # NOTE: The entry point selector should be the actual call and not __execute__
-        #  and the receiver should be the actual contract and not the account address.
-        contract_type = self.get_contract_type(self.receiver)
-        if not contract_type:
-            raise ContractTypeNotFoundError(self.receiver)
-
-        method_abi = get_method_abi_from_selector(self.entry_point_selector, contract_type)
-        if not method_abi:
-            raise ValueError(
-                f"Unknown selector '{self.entry_point_selector}' in '{contract_type.name}'"
-            )
-
-        return method_abi
-
-    @cached_property
     def return_value(self) -> Any:
-        return self.starknet.decode_returndata(self.method_abi, self.returndata)
+        return self.starknet.decode_returndata(self.transaction.method_abi, self.returndata)
 
     """Aliased"""
     logs: List[dict] = Field(alias="events")
