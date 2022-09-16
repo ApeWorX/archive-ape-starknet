@@ -271,7 +271,13 @@ class InvocationReceipt(StarknetReceipt):
 
     @cached_property
     def return_value(self) -> Any:
-        return self.starknet.decode_returndata(self.transaction.method_abi, self.returndata)
+        txn = self.transaction
+        if not isinstance(txn, InvokeFunctionTransaction):
+            raise TypeError(
+                f"Expected transaction class of type '{InvokeFunctionTransaction.__name__}'."
+            )
+
+        return self.starknet.decode_returndata(txn.method_abi, self.returndata)
 
     """Aliased"""
     logs: List[dict] = Field(alias="events")
