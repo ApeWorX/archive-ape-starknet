@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass
 from math import ceil
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Union, cast
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
@@ -35,7 +35,6 @@ from ape_starknet.utils import (
     OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
     get_chain_id,
     get_random_private_key,
-    is_checksum_address,
     pad_hex_str,
     run_until_complete,
 )
@@ -181,10 +180,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
                 return super().__getitem__(account.address)
 
         # Else, use the contract address (more expected)
-        if not is_checksum_address(address):
-            address = self.starknet.decode_address(address)
-
-        checksum_address = cast(AddressType, address)
+        checksum_address = self.starknet.decode_address(address)
         return super().__getitem__(checksum_address)
 
     def get_account(self, address: Union[AddressType, int]) -> "BaseStarknetAccount":
