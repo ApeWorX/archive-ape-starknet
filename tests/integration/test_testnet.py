@@ -19,10 +19,3 @@ def test_can_connect_to_testnet(eth_contract):
 def test_is_token(eth_contract, tokens):
     # Ensure it's recognized as a token
     assert tokens.is_token(eth_contract)
-
-
-def test_revert_message_no_account_found(eth_contract, account):
-    # It will obviously fail because we are using a local account
-    reason = f"No local account {account.address}"
-    with pytest.raises(IndexError, match=reason):
-        eth_contract.increaseAllowance(account, 1, sender=account)
