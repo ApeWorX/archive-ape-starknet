@@ -9,7 +9,7 @@ extras_require = {
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-cairo>=0.4.0a0",  # For compiling contracts in tests
+        "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
         "black>=22.6.0",  # auto-formatter and linter
