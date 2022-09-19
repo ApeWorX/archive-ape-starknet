@@ -9,7 +9,7 @@ extras_require = {
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-cairo>=0.4.0a0",  # For compiling contracts in tests
+        "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
         "black>=22.6.0",  # auto-formatter and linter
@@ -57,16 +57,16 @@ setup(
     url="https://github.com/ApeWorX/ape-starknet",
     include_package_data=True,
     install_requires=[
-        "click>=8.1.0,<8.2",
-        "hexbytes>=0.2.2,<0.3",
-        "pydantic>=1.10.2,<2.0",
+        "click",  # Use same version as eth-ape
+        "hexbytes",  # Use same version as eth-ape
+        "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.5.0,<0.6.0",
-        "ethpm-types>=0.3.3,<0.4",
+        "eth-ape>=0.5.1,<0.6",
+        "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
-        "cairo-lang==0.9.1",
-        "starknet.py==0.4.7a0",
-        "starknet-devnet==0.2.11",
+        "cairo-lang==0.10.0",
+        "starknet.py==0.6.0a0",
+        "starknet-devnet==0.3.1",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.10",

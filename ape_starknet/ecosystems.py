@@ -20,7 +20,11 @@ from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
 from starkware.starknet.services.api.contract_class import ContractClass
 
-from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
+from ape_starknet.exceptions import (
+    ContractTypeNotFoundError,
+    StarknetEcosystemError,
+    StarknetProviderError,
+)
 from ape_starknet.transactions import (
     ContractDeclaration,
     DeclareTransaction,
@@ -196,7 +200,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         return value
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
-        txn_type = TransactionType(data["type"])
+        txn_type = TransactionType(data["transaction"].type)
         receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvocationReceipt
@@ -208,7 +212,6 @@ class Starknet(EcosystemAPI, StarknetBase):
             raise StarknetProviderError(f"Unable to handle contract type '{txn_type.value}'.")
 
         receipt = receipt_cls.parse_obj(data)
-
         if receipt is None:
             raise StarknetProviderError("Failed to parse receipt from data.")
 
@@ -246,19 +249,22 @@ class Starknet(EcosystemAPI, StarknetBase):
         # NOTE: This method only works for invoke-transactions
         contract_type = self.starknet_explorer.get_contract_type(address)
         if not contract_type:
-            raise StarknetProviderError(f"No contract found at address '{address}'.")
+            raise ContractTypeNotFoundError(address)
 
         encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
+
+        if "sender" not in kwargs and abi.is_stateful:
+            raise StarknetEcosystemError("'sender=<account>' required for invoke transactions")
 
         return InvokeFunctionTransaction(
             contract_address=address,
             method_abi=abi,
             calldata=encoded_calldata,
             sender=kwargs.get("sender"),
-            max_fee=kwargs.get("max_fee"),
+            max_fee=kwargs.get("max_fee") or 0,
         )
 
-    def encode_contract_declaration(
+    def encode_contract_blueprint(
         self, contract: Union[ContractContainer, ContractType], *args, **kwargs
     ) -> DeclareTransaction:
         contract_type = (
@@ -270,7 +276,9 @@ class Starknet(EcosystemAPI, StarknetBase):
             else 0
         )
         starknet_contract = ContractClass.deserialize(HexBytes(code))
-        return DeclareTransaction(contract_type=contract_type, data=starknet_contract.dumps())
+        return DeclareTransaction(
+            contract_type=contract_type, data=starknet_contract.dumps(), **kwargs
+        )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
@@ -291,24 +299,37 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         # For deploy-txns, 'contract_address' is the address of the newly deployed contract.
         if "contract_address" in txn_data:
-            txn_data["contract_address"] = self.decode_address(txn_data["contract_address"])
+            contract_address = self.decode_address(txn_data["contract_address"])
+            txn_data["contract_address"] = contract_address
+            contract_type = None
+
+            if "class_hash" in txn_data:
+                contract_type = self.get_local_contract_type(txn_data["class_hash"])
+
+            if not contract_type:
+                contract_type = self.get_contract_type(contract_address)
+
+            if contract_type:
+                bytecode_obj = contract_type.deployment_bytecode
+                if bytecode_obj:
+                    bytecode = bytecode_obj.bytecode
+                    txn_data["contract_code"] = bytecode
 
         if not invoking:
             return txn_cls(**txn_data)
 
         """ ~ Invoke transactions ~ """
 
-        if "method_abi" not in txn_data:
-            contract_int = txn_data["contract_address"]
-            contract_str = self.decode_address(contract_int)
-            contract = self.chain_manager.contracts.get(contract_str)
-            if not contract:
-                raise StarknetEcosystemError(
-                    "Unable to create transaction objects from other networks."
-                )
+        if not txn_data.get("method_abi") and "entry_point_selector" in txn_data:
+            target_address = self.decode_address(txn_data["contract_address"])
+            target_contract_type = self.chain_manager.contracts.get(target_address)
+            if not target_contract_type:
+                raise StarknetEcosystemError(f"Contract '{target_address}' not found.")
 
             selector = txn_data["entry_point_selector"]
-            txn_data["method_abi"] = get_method_abi_from_selector(selector, contract)
+            txn_data["method_abi"] = get_method_abi_from_selector(selector, target_contract_type)
+        else:
+            raise ValueError("Must provide either 'method_abi' or 'entry_point_selector' kwarg.")
 
         if "calldata" in txn_data and txn_data["calldata"] is not None:
             # Transactions in blocks show calldata as flattened hex-strs

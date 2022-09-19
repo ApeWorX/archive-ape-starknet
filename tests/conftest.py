@@ -111,6 +111,16 @@ def chain():
     return ape.chain
 
 
+@pytest.fixture
+def existing_key_file_alias():
+    return EXISTING_KEY_FILE_ALIAS
+
+
+@pytest.fixture
+def contract_address():
+    return CONTRACT_ADDRESS
+
+
 @pytest.fixture(scope="session")
 def token_contract(config, account, token_initial_supply, project):
     project_path = projects_directory / "token"

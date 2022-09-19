@@ -1,4 +1,5 @@
 import os
+from dataclasses import asdict
 from typing import Dict, Iterator, List, Optional, Union
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -6,17 +7,14 @@ from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractInstance
 from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
-from ethpm_types import ContractType
 from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     ContractCode,
-    InvokeTransaction,
     SentTransactionResponse,
     StarknetBlock,
 )
@@ -25,10 +23,10 @@ from starknet_py.net.models import parse_address
 from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
-from ape_starknet.exceptions import StarknetEcosystemError, StarknetProviderError
+from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import (
-    ContractDeclaration,
+    AccountTransaction,
     InvokeFunctionTransaction,
     StarknetTransaction,
 )
@@ -37,10 +35,9 @@ from ape_starknet.utils import (
     DEFAULT_ACCOUNT_SEED,
     EXECUTE_SELECTOR,
     PLUGIN_NAME,
-    extract_trace_data,
     get_chain_id,
     get_dict_from_tx_info,
-    get_virtual_machine_error,
+    handle_client_error,
     handle_client_errors,
 )
 from ape_starknet.utils.basemodel import StarknetBase
@@ -81,6 +78,13 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     cached_code: Dict[int, ContractCode] = {}
 
     @property
+    def connected_client(self) -> GatewayClient:
+        if not self.client:
+            raise ProviderNotConnectedError()
+
+        return self.client
+
+    @property
     def is_connected(self) -> bool:
         was_successful = False
         try:
@@ -92,7 +96,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             was_successful = False
 
         if was_successful and self.client is None:
-            self.client = GatewayClient(self.uri, chain=self.chain_id)
+            self.client = self._create_client()
 
         return was_successful
 
@@ -116,7 +120,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return network_config.get("uri") or f"http://127.0.0.1:{DEFAULT_PORT}"
 
     def connect(self):
-        self.client = GatewayClient(self.uri, chain=self.chain_id)
+        self.client = self._create_client()
 
     def disconnect(self):
         self.client = None
@@ -145,27 +149,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:
-        # Check if passing a public-key address of a local account
-        if address in self.account_contracts.public_key_addresses:
-            contract_address = self.account_contracts.get_account(address).address
-            if contract_address:
-                address = contract_address
-
-        checksum_address = self.starknet.decode_address(address)
-        contract = self.chain_manager.contracts.instance_at(checksum_address)
-
-        if not isinstance(contract, ContractInstance):
-            raise StarknetProviderError(f"Account contract '{checksum_address}' not found.")
-
-        return contract.get_nonce()
+        return self.connected_client.get_contract_nonce_sync(address)
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
-        if not self.client:
-            raise ProviderNotConnectedError()
-
         starknet_object = txn.as_starknet_object()
-        estimated_fee = self.client.estimate_fee_sync(starknet_object)
+        estimated_fee = self.connected_client.estimate_fee_sync(starknet_object)
         return estimated_fee.overall_fee
 
     @property
@@ -214,11 +203,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
                 f"Transaction must be from an invocation. Received type {type_str}."
             )
 
-        if not self.client:
-            raise ProviderNotConnectedError()
-
-        starknet_obj = txn.as_starknet_object()
-        return self.client.call_contract_sync(starknet_obj)  # type: ignore
+        starknet_obj = txn._as_call()
+        return self.connected_client.call_contract_sync(starknet_obj)  # type: ignore
 
     @handle_client_errors
     def _get_traces(self, block_number: int) -> List[BlockSingleTransactionTrace]:
@@ -233,33 +219,34 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
 
     @handle_client_errors
-    def get_transaction(self, txn_hash: str) -> ReceiptAPI:
+    def get_receipt(self, txn_hash: str) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
         receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
-        receipt_dict = vars(receipt)
+        data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
 
-        trace_data = {}
-        if isinstance(txn_info, InvokeTransaction):
-            if txn_info.entry_point_selector == EXECUTE_SELECTOR:
-                num_calls = txn_info.calldata[0]
-                if num_calls != 1:
-                    logger.warning("Multi-call receipts currently are limited")
-                else:
-                    # Grab selector and actual address from execute call
-                    call_address = self.starknet.decode_address(txn_info.calldata[1])
-                    call_method_selector = receipt_dict["selector"] = txn_info.calldata[2]
-                    txn_info.entry_point_selector = call_method_selector
-                    txn_info.calldata = txn_info.calldata[4:]
-                    receipt_dict["sender"] = self.starknet.decode_address(txn_info.contract_address)
-                    txn_info.contract_address = call_address
+        # Handle __execute__ overhead. User only cares for target ABI.
+        if data.get("entry_point_selector") == EXECUTE_SELECTOR:
+            num_calls = data["calldata"][0]
+            if num_calls != 1:
+                logger.warning("Multi-call not yet supported. Only parsing first receipt.")
 
-            trace = self._get_single_trace(receipt.block_number, receipt.hash)
-            trace_data = extract_trace_data(trace)
+            data["sender"] = data["contract_address"]
+            data["contract_address"] = self.starknet.decode_address(data["calldata"][1])
+            data["entry_point_selector"] = data["calldata"][2]
+            stop_index = data["calldata"][3] + 1
+            data["calldata"] = data["calldata"][4:stop_index]
 
-        receipt_dict = {"provider": self, **trace_data, **receipt_dict}
-        receipt_dict = get_dict_from_tx_info(txn_info, **receipt_dict)
-        return self.starknet.decode_receipt(receipt_dict)
+        if "contract_address" in data:
+            # TODO: Figure out why strange Transfer events show up in receipts sometimes
+            data["events"] = [
+                e
+                for e in data.get("events", [])
+                if e["from_address"] == int(data["contract_address"], 16)
+            ]
+
+        transaction = self.starknet.create_transaction(**data)
+        return self.starknet.decode_receipt({"provider": self, "transaction": transaction, **data})
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
@@ -273,20 +260,20 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        return self.get_transaction(response.transaction_hash)
+        return self.get_receipt(response.transaction_hash)
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
     ) -> SentTransactionResponse:
-        txn = self.prepare_transaction(txn)
         if not token and hasattr(txn, "token") and txn.token:  # type: ignore
             token = txn.token  # type: ignore
         else:
             token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
 
         if not isinstance(txn, StarknetTransaction):
-            raise StarknetEcosystemError(
-                "Unable to send non-Starknet transaction using a Starknet provider."
+            raise StarknetProviderError(
+                "Unable to send non-Starknet transaction using a Starknet provider "
+                f"(received type '{type(txn)}')."
             )
 
         starknet_txn = txn.as_starknet_object()
@@ -297,10 +284,15 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         pass
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        # All preparation happens on the account side.
+        if isinstance(txn, AccountTransaction) and not txn.is_prepared and txn.sender:
+            account = self.account_contracts[txn.sender]
+            return account.prepare_transaction(txn)
+
         return txn
 
     def get_virtual_machine_error(self, exception: Exception):
-        return get_virtual_machine_error(exception)
+        return handle_client_error(exception)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         address_int = parse_address(address)
@@ -311,10 +303,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         return self.cached_code[address_int]
 
-    @handle_client_errors
-    def declare(self, contract_type: ContractType) -> ContractDeclaration:
-        transaction = self.starknet.encode_contract_declaration(contract_type)
-        return self.provider.send_transaction(transaction)
+    def _create_client(self) -> GatewayClient:
+        network = self.uri if self.network.name == LOCAL_NETWORK_NAME else self.network.name
+        return GatewayClient(network)
 
 
 class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
@@ -338,7 +329,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
             self.start()
 
-        self.client = GatewayClient(self.uri, chain=self.chain_id)
+        self.client = self._create_client()
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)

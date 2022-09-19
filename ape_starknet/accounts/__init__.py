@@ -9,8 +9,7 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.contracts import ContractContainer
-from ape.exceptions import AccountsError, SignatureError
+from ape.exceptions import AccountsError, ProviderNotConnectedError, SignatureError
 from ape.logging import LogLevel, logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
 from ape.utils import abstractmethod, cached_property
@@ -18,10 +17,9 @@ from eth_keyfile import create_keyfile_json, decode_keyfile_json
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, text_if_str, to_bytes
 from ethpm_types import ContractType
-from ethpm_types.abi import MethodABI
 from hexbytes import HexBytes
 from starknet_py.net import KeyPair
-from starknet_py.net.account.compiled_account_contract import COMPILED_ACCOUNT_CONTRACT
+from starknet_py.net.account.account_client import deploy_account_contract
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
 from starknet_py.utils.crypto.facade import ECSignature, message_signature, pedersen_hash
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
@@ -29,16 +27,16 @@ from starkware.crypto.signature.signature import private_to_stark_key
 from starkware.starknet.core.os.contract_address.contract_address import (
     calculate_contract_address_from_hash,
 )
-from starkware.starknet.services.api.contract_class import ContractClass
 
-from ape_starknet.exceptions import StarknetProviderError
+from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
 from ape_starknet.tokens import TokenManager
-from ape_starknet.transactions import InvokeFunctionTransaction
+from ape_starknet.transactions import AccountTransaction, InvokeFunctionTransaction
 from ape_starknet.utils import (
-    convert_contract_class_to_contract_type,
+    OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
     get_chain_id,
     get_random_private_key,
     pad_hex_str,
+    run_until_complete,
 )
 from ape_starknet.utils.basemodel import StarknetBase
 
@@ -48,8 +46,6 @@ The key-file stanza containing custom properties
 specific to the ape-starknet plugin.
 """
 APP_KEY_FILE_VERSION = "0.1.0"
-OZ_CONTRACT_CLASS = ContractClass.loads(COMPILED_ACCOUNT_CONTRACT)
-OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
 
 # https://github.com/starkware-libs/cairo-lang/blob/v0.9.1/src/starkware/starknet/cli/starknet_cli.py#L66
 FEE_MARGIN_OF_ESTIMATION = 1.1
@@ -117,14 +113,22 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     @property
     def test_accounts(self) -> List["StarknetDevnetAccount"]:
-        if self.provider.network.name != LOCAL_NETWORK_NAME:
+        if (
+            self.network_manager.active_provider
+            and self.network_manager.active_provider.network.name != LOCAL_NETWORK_NAME
+        ):
             return []
 
         return self._test_accounts
 
     @cached_property
     def _test_accounts(self):
-        predeployed_accounts = self.provider.devnet_client.predeployed_accounts
+        try:
+            predeployed_accounts = self.provider.devnet_client.predeployed_accounts
+        except ProviderNotConnectedError:
+            logger.warning("Devnet not running")
+            return []
+
         devnet_accounts = [
             StarknetDevnetAccount(private_key=int(acc["private_key"], 16))
             for acc in predeployed_accounts
@@ -132,7 +136,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         # Track all devnet account contracts in chain manager for look-up purposes
         for account in devnet_accounts:
-            self.chain_manager.contracts[account.address] = account.get_contract_type()
+            self.chain_manager.contracts[account.address] = account.get_account_contract_type()
 
         return devnet_accounts
 
@@ -265,9 +269,10 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         with network.use_provider(network.default_provider or "starknet"):
             contract_type = self.starknet_explorer.get_contract_type(address)
             if not contract_type:
-                raise StarknetProviderError(f"Failed to get contract type for account '{address}'.")
+                ContractTypeNotFoundError(address)
 
-            self.chain_manager.contracts[address] = contract_type
+            if contract_type:
+                self.chain_manager.contracts[address] = contract_type
 
     def deploy_account(
         self, alias: str, private_key: Optional[int] = None, token: Optional[str] = None
@@ -289,14 +294,13 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         network_name = self.provider.network.name
         logger.info(f"Deploying an account to '{network_name}' network ...")
-
         private_key = private_key or int(get_random_private_key(), 16)
         key_pair = KeyPair.from_private_key(private_key)
-
-        account_container = ContractContainer(contract_type=OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE)
-        instance = account_container.deploy(key_pair.public_key, token=token)
-        self.import_account(alias, network_name, instance.address, key_pair.private_key)
-        return instance.address
+        contract_address = run_until_complete(
+            deploy_account_contract(self.provider.client, key_pair.public_key)
+        )
+        self.import_account(alias, network_name, contract_address, key_pair.private_key)
+        return contract_address
 
     def delete_account(
         self, alias: str, network: Optional[str] = None, passphrase: Optional[str] = None
@@ -327,7 +331,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         ...
 
     @abstractmethod
-    def get_contract_type(self) -> ContractType:
+    def get_account_contract_type(self) -> ContractType:
         ...
 
     @property
@@ -340,6 +344,14 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
                 return self.starknet.decode_address(contract_address)
 
         raise AccountsError("Account not deployed.")
+
+    @cached_property
+    def contract_type(self) -> ContractType:
+        contract_type = self.get_account_contract_type()
+        if not contract_type:
+            raise ContractTypeNotFoundError(self.address)
+
+        return contract_type
 
     @property
     def address_int(self) -> int:
@@ -368,24 +380,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             chain_id=get_chain_id(self.provider.chain_id),
         )
 
-    @cached_property
-    def execute_abi(self) -> Optional[MethodABI]:
-        contract_type = self.get_contract_type()
-        if not contract_type:
-            return None
-
-        execute_abi_ls = [
-            abi for abi in contract_type.abi if getattr(abi, "name", "") == "__execute__"
-        ]
-        if not execute_abi_ls:
-            raise AccountsError(f"Account '{self.address}' does not have __execute__ method.")
-
-        abi = execute_abi_ls[0]
-        if not isinstance(abi, MethodABI):
-            raise AccountsError("ABI for '__execute__' is not a method.")
-
-        return abi
-
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.address}>"
 
@@ -394,7 +388,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             raise NotImplementedError("send_everything currently isn't implemented in Starknet.")
 
         if not isinstance(txn, InvokeFunctionTransaction):
-            raise AccountsError("Can only call Starknet transactions.")
+            raise AccountsError("Can only call Starknet invoke transactions.")
 
         txn = self.prepare_transaction(txn)
         if not txn.signature:
@@ -403,8 +397,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         return self.provider.send_transaction(txn)
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        self._prepare_transaction(txn)
-        if txn.max_fee is None:
+        if not isinstance(txn, AccountTransaction):
+            return txn
+
+        txn = self._prepare_transaction(txn)
+        if not txn.max_fee:
             # NOTE: Signature cannot be None when estimating fees.
             txn.signature = self.sign_transaction(txn)
             txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
@@ -412,42 +409,30 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn.signature = self.sign_transaction(txn)
         return txn
 
+    def _prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        if isinstance(txn, AccountTransaction):
+            # Set now to prevent infinite loop
+            txn.is_prepared = True
+
+        txn = super().prepare_transaction(txn)
+
+        if isinstance(txn, InvokeFunctionTransaction):
+            return txn.to_execute_transaction()
+
+        return txn
+
     def get_fee_estimate(self, txn: TransactionAPI) -> int:
         return self.provider.estimate_gas_cost(txn)
 
-    def _prepare_transaction(self, txn: TransactionAPI):
-        execute_abi = self.execute_abi
-        if not execute_abi:
+    def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
+        if not isinstance(txn, AccountTransaction):
             raise AccountsError(
-                f"Account is not deployed to network '{self.provider.network.name}'."
+                f"This account can only sign Starknet transactions (received={type(txn)}."
             )
 
-        if not isinstance(txn, InvokeFunctionTransaction):
-            raise AccountsError("Can only prepare invoke transactions.")
-
-        txn: InvokeFunctionTransaction = super().prepare_transaction(txn)  # type: ignore
-        stark_tx = txn.as_starknet_object()
-        account_call = {
-            "to": stark_tx.contract_address,
-            "selector": stark_tx.entry_point_selector,
-            "data_offset": 0,
-            "data_len": len(stark_tx.calldata),
-        }
-        contract_type = self.chain_manager.contracts[self.address]
-        txn.data = self.starknet.encode_calldata(
-            contract_type.abi, execute_abi, [[account_call], stark_tx.calldata, self.nonce]
-        )
-        txn.receiver = self.address
-        txn.sender = None
-        txn.original_method_abi = txn.method_abi
-        txn.method_abi = execute_abi
-
-    def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
-        if not isinstance(txn, InvokeFunctionTransaction):
-            raise AccountsError("This account can only sign Starknet transactions.")
-
         # NOTE: 'v' is not used
-        sign_result = self.signer.sign_transaction(txn.as_starknet_object())
+        stark_txn = txn.as_starknet_object()
+        sign_result = self.signer.sign_transaction(stark_txn)
         if not sign_result:
             raise SignatureError("Failed to sign transaction.")
 
@@ -507,9 +492,14 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         plugin_key_file_data = self.get_account_data().get(APP_KEY_FILE_KEY, {})
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data.get("deployments", [])]
 
+    def declare(self, contract_type: ContractType):
+        transaction = self.starknet.encode_contract_blueprint(contract_type, sender=self.address)
+        prepared_transaction = self.prepare_transaction(transaction)
+        return self.provider.send_transaction(prepared_transaction)
+
 
 class StarknetDevelopmentAccount(BaseStarknetAccount):
-    def get_contract_type(self) -> ContractType:
+    def get_account_contract_type(self) -> ContractType:
         return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
 
     def sign_message(self, msg: SignableMessage) -> Optional[ECSignature]:
@@ -596,7 +586,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return self.key_file_path.stem
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        self._prepare_transaction(txn)
+        txn = self._prepare_transaction(txn)
         do_relock = False
         if not txn.max_fee:
             if self.locked:
@@ -617,7 +607,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         return txn
 
-    def get_contract_type(self) -> ContractType:
+    def get_account_contract_type(self) -> ContractType:
         return OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
 
     def write(
