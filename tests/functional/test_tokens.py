@@ -45,3 +45,9 @@ def test_large_transfer(tokens, account, second_account):
     actual = tokens.get_balance(second_account.address, token="test_token")
     expected = initial_balance + balance_to_transfer
     assert actual == expected
+
+
+@all_tokens
+def test_is_token(tokens, token):
+    # Ensure it's recognized as a token
+    assert tokens.is_token(tokens[token])

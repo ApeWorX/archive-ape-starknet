@@ -2,23 +2,14 @@ from dataclasses import asdict
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from ape.api import ReceiptAPI, TransactionAPI
-from ape.contracts import ContractContainer, ContractInstance
 from ape.exceptions import APINotImplementedError, TransactionError
 from ape.types import AddressType, ContractLog
 from ape.utils import abstractmethod, cached_property
-from eth_utils import to_int
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.net.client_models import Event, TransactionStatus
-from starknet_py.net.models.transaction import (
-    Declare,
-    Deploy,
-    InvokeFunction,
-    Transaction,
-    TransactionType,
-)
-from starkware.starknet.core.os.class_hash import compute_class_hash
+from starknet_py.net.client_models import Call, Deploy, Event, TransactionStatus
+from starknet_py.net.models.transaction import Declare, InvokeFunction, Transaction, TransactionType
 from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (
     TransactionHashPrefix,
@@ -28,10 +19,16 @@ from starkware.starknet.core.os.transaction_hash.transaction_hash import (
 )
 from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
-from starkware.starknet.services.api.gateway.transaction import DECLARE_SENDER_ADDRESS
-from starkware.starknet.testing.contract_utils import get_contract_class
 
-from ape_starknet.utils import ContractEventABI, get_method_abi_from_selector, to_checksum_address
+from ape_starknet.exceptions import ContractTypeNotFoundError
+from ape_starknet.utils import (
+    EXECUTE_ABI,
+    OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
+    ContractEventABI,
+    extract_trace_data,
+    to_checksum_address,
+    to_int,
+)
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -40,29 +37,13 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    status: int = TransactionStatus.NOT_RECEIVED
-    version: int = 0
-
-    """Ignored"""
-    gas_limit: int = Field(0, exclude=True)
-    max_fee: Optional[int] = Field(None, exclude=True)
-    max_priority_fee: Optional[int] = Field(None, exclude=True)
+    version: int = 1
 
     class Config:
         use_enum_values = True
 
     def serialize_transaction(self) -> dict:  # type: ignore
         return self.dict()
-
-    @validator("status", pre=True, allow_reuse=True)
-    def validate_status(cls, value):
-        if isinstance(value, TransactionStatus):
-            return value.value
-
-        elif isinstance(value, str):
-            return int(value, 16)
-
-        return value
 
     @abstractmethod
     def as_starknet_object(self) -> Transaction:
@@ -74,12 +55,36 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
 
     @property
     def total_transfer_value(self) -> int:
-        max_fee = self.max_fee or 0
-        return self.value + max_fee
+        return self.value + (self.max_fee or 0)
 
 
-class DeclareTransaction(StarknetTransaction):
-    sender: AddressType = to_checksum_address(DECLARE_SENDER_ADDRESS)
+class AccountTransaction(StarknetTransaction):
+    """
+    Transactions that must go through an account contract.
+    (Invoke and Declare).
+    """
+
+    max_fee: int = Field(0)
+    nonce: Optional[int] = None
+    is_prepared: bool = Field(False, exclude=True)
+
+    @validator("max_fee", pre=True, allow_reuse=True)
+    def validate_max_fee(cls, value):
+        if isinstance(value, str):
+            return int(value, 16)
+
+        return value or 0
+
+    @property
+    def starknet_signature(self) -> List[int]:
+        if self.signature:
+            return [to_int(self.signature.r), to_int(self.signature.s)]
+
+        return []
+
+
+class DeclareTransaction(AccountTransaction):
+    sender: AddressType
     type: TransactionType = TransactionType.DECLARE
 
     @property
@@ -95,22 +100,18 @@ class DeclareTransaction(StarknetTransaction):
         )
 
     def as_starknet_object(self) -> Declare:
-        sender_int = self.starknet.encode_address(self.sender)
-
-        # NOTE: The sender address is a special address, nonce has to be 0, and signatures
-        # and fees are not supported.
         return Declare(
             contract_class=self.starknet_contract,
-            max_fee=0,
-            nonce=0,
-            sender_address=sender_int,
-            signature=[],
+            max_fee=self.max_fee,
+            nonce=self.nonce,
+            sender_address=self.starknet.encode_address(self.sender),
+            signature=self.starknet_signature,
             version=self.version,
         )
 
 
 class DeployTransaction(StarknetTransaction):
-    salt: int
+    salt: Optional[int] = None  # Only None when unknown, but required when sending
 
     caller_address: int = 0
     constructor_calldata: Union[List, Tuple] = []
@@ -121,7 +122,7 @@ class DeployTransaction(StarknetTransaction):
     data: bytes = Field(alias="contract_code")
 
     """Ignored"""
-    receiver: Optional[str] = Field(None, exclude=True)
+    receiver: Optional[AddressType] = Field(None, exclude=True)
 
     @property
     def starknet_contract(self) -> Optional[ContractClass]:
@@ -152,18 +153,10 @@ class DeployTransaction(StarknetTransaction):
         )
 
 
-class InvokeFunctionTransaction(StarknetTransaction):
-    max_fee: Optional[int] = None
+class InvokeFunctionTransaction(AccountTransaction):
     method_abi: MethodABI
-
     sender: Optional[AddressType] = None
     type: TransactionType = TransactionType.INVOKE_FUNCTION
-
-    original_method_abi: Optional[MethodABI] = None
-    """
-    Only set when invoked from an account `__execute__`
-    special method to help decoding return data
-    """
 
     """Aliases"""
     data: List[Any] = Field(alias="calldata")  # type: ignore
@@ -171,17 +164,11 @@ class InvokeFunctionTransaction(StarknetTransaction):
 
     @validator("receiver", pre=True, allow_reuse=True)
     def validate_receiver(cls, value):
-        if isinstance(value, int):
-            return to_checksum_address(value)
-
-        return value
+        return to_checksum_address(value)
 
     @validator("max_fee", pre=True, allow_reuse=True)
     def validate_max_fee(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-
-        return value
+        return to_int(value)
 
     @property
     def receiver_int(self) -> int:
@@ -189,7 +176,11 @@ class InvokeFunctionTransaction(StarknetTransaction):
 
     @property
     def contract_type(self) -> ContractType:
-        return self.chain_manager.contracts[self.receiver]
+        contract_type = self.get_contract_type(self.receiver)
+        if not contract_type:
+            raise ContractTypeNotFoundError(self.receiver)
+
+        return contract_type
 
     @property
     def entry_point_selector(self) -> int:
@@ -213,13 +204,38 @@ class InvokeFunctionTransaction(StarknetTransaction):
         return InvokeFunction(
             calldata=self.data,
             contract_address=self.receiver_int,
-            entry_point_selector=self.entry_point_selector,
-            signature=[to_int(self.signature.r), to_int(self.signature.s)]
-            if self.signature
-            else [],
             max_fee=self.max_fee or 0,
+            nonce=self.nonce,
+            signature=self.starknet_signature,
             version=self.version,
         )
+
+    def _as_call(self) -> InvokeFunction:
+        receiver_int = self.starknet.encode_address(self.receiver)
+        return Call(to_addr=receiver_int, selector=self.entry_point_selector, calldata=self.data)
+
+    def to_execute_transaction(self) -> "InvokeFunctionTransaction":
+        """
+        Convert this transaction to an account ``__execute__`` transaction.
+        """
+
+        stark_tx = self.as_starknet_object()
+        account_call = {
+            "to": stark_tx.contract_address,
+            "selector": self.entry_point_selector,
+            "data_offset": 0,
+            "data_len": len(stark_tx.calldata),
+        }
+        full_abi = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.abi
+        entire_call_data = [[account_call], stark_tx.calldata]
+        self.data = self.starknet.encode_calldata(full_abi, EXECUTE_ABI, entire_call_data)
+
+        if self.sender:
+            self.receiver = self.sender
+
+        self.sender = None
+        self.method_abi = EXECUTE_ABI
+        return self
 
 
 class StarknetReceipt(ReceiptAPI, StarknetBase):
@@ -228,20 +244,12 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     """
 
     status: TransactionStatus
-    type: TransactionType
-
-    # NOTE: Might be a backend bug causing this to be None
+    # TODO: Figure out why None sometimes
     block_hash: Optional[str] = None
-    block_number: Optional[int] = None  # type: ignore
-
-    """Ignored"""
-    gas_limit: int = Field(0, exclude=True)
-    gas_price: int = Field(0, exclude=True)
-    gas_used: int = Field(0, exclude=True)
-    sender: str = Field("", exclude=True)
 
     """Aliased"""
     txn_hash: str = Field(alias="hash")
+    gas_used: int = Field(alias="actual_fee")
 
     @property
     def return_value(self) -> Any:
@@ -270,11 +278,8 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
 
 
 class DeployReceipt(StarknetReceipt):
-    contract_address: str
-    receiver: Optional[str] = None  # type: ignore
-
-    # Only get a receipt if deploy was accepted
-    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
+    contract_address: AddressType
+    status: TransactionStatus
 
     @validator("contract_address", pre=True, allow_reuse=True)
     def validate_contract_address(cls, value):
@@ -285,45 +290,9 @@ class DeployReceipt(StarknetReceipt):
 
 
 class InvocationReceipt(StarknetReceipt):
-    actual_fee: int
-    entry_point_selector: int = Field(default=None, alias="selector")
-    max_fee: int
-    receiver: str = Field(alias="contract_address")
-    returndata: List[Any] = Field(default_factory=list, alias="result")
-
-    @cached_property
-    def method_abi(self) -> MethodABI:
-        # NOTE: The entry point selector should be the actual call and not __execute__
-        #  and the receiver should be the actual contract and not the account address.
-        contract_type = self.chain_manager.contracts[self.receiver]  # type: ignore
-        method_abi = get_method_abi_from_selector(self.entry_point_selector, contract_type)
-        if not method_abi:
-            raise ValueError(
-                f"Unknown selector '{self.entry_point_selector}' in '{contract_type.name}'"
-            )
-
-        return method_abi
-
-    @cached_property
-    def return_value(self) -> Any:
-        return self.starknet.decode_returndata(self.method_abi, self.returndata)
-
     """Aliased"""
+
     logs: List[dict] = Field(alias="events")
-
-    @validator("max_fee", pre=True, allow_reuse=True)
-    def validate_max_fee(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-
-        return value or 0
-
-    @validator("entry_point_selector", pre=True, allow_reuse=True)
-    def validate_entry_point_selector(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-
-        return value
 
     @validator("logs", pre=True, allow_reuse=True)
     def validate_logs(cls, value):
@@ -334,11 +303,24 @@ class InvocationReceipt(StarknetReceipt):
 
     @property
     def ran_out_of_gas(self) -> bool:
-        return self.actual_fee >= (self.max_fee or 0)
+        return self.gas_used >= (self.max_fee or 0)
 
     @property
     def total_fees_paid(self) -> int:
-        return self.actual_fee
+        return self.gas_used
+
+    @cached_property
+    def trace(self) -> Dict:  # type: ignore
+        trace = self.provider._get_single_trace(self.block_number, int(self.txn_hash, 16))
+        return extract_trace_data(trace) if trace else {}
+
+    @property
+    def returndata(self):
+        return self.trace.get("result", [])
+
+    @cached_property
+    def return_value(self) -> Any:
+        return self.starknet.decode_returndata(self.method_abi, self.returndata)
 
     def decode_logs(
         self,
@@ -387,12 +369,6 @@ class ContractDeclaration(StarknetReceipt):
     """
 
     class_hash: int
-    receiver: Optional[str] = None  # type: ignore
-
-    # Only get a receipt if deploy was accepted
-    status: TransactionStatus = TransactionStatus.ACCEPTED_ON_L2
-
-    type: TransactionType = TransactionType.DECLARE
 
     @validator("class_hash", pre=True)
     def validate_class_hash(cls, value):
@@ -407,35 +383,15 @@ class ContractDeclaration(StarknetReceipt):
     def contract_type(
         self,
     ) -> ContractType:
-        # Look up contract type by class_hash.
-        for contract_name, contract_type in self.project_manager.contracts.items():
-            if not contract_type.source_id:
-                continue
+        contract_type = self.get_local_contract_type(self.class_hash)
+        if not contract_type:
+            raise TransactionError(message="Contract type declaration was not successful.")
 
-            program = contract_type.deployment_bytecode
-            if not program:
-                continue
-
-            code = program.bytecode
-            if not code:
-                continue
-
-            contract_class = ContractClass.deserialize(HexBytes(code))
-            contract_cls = get_contract_class(contract_class=contract_class)
-            computed_class_hash = compute_class_hash(contract_cls)
-            if computed_class_hash == self.class_hash:
-                return contract_type
-
-        raise TransactionError(message="Contract type declaration was not successful.")
-
-    def deploy(self, *args, **kwargs) -> ContractInstance:
-        container = ContractContainer(self.contract_type)
-        return container.deploy(*args, **kwargs)
+        return contract_type
 
 
 __all__ = [
     "ContractDeclaration",
-    "DeployTransaction",
     "InvokeFunctionTransaction",
     "StarknetReceipt",
     "StarknetTransaction",

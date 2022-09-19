@@ -1,16 +1,20 @@
+import asyncio
 import re
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional, Union
+from json import JSONDecodeError, loads
+from typing import Any, Dict, List, Optional, Union, cast
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractEvent
-from ape.exceptions import ApeException, ContractLogicError, OutOfGasError
+from ape.exceptions import ApeException, ContractError, ContractLogicError, OutOfGasError
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
+from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
+from starknet_devnet.account import Account as DevnetAccount
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -42,6 +46,23 @@ ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
 EXECUTE_SELECTOR = get_selector_from_name("__execute__")
 DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
 ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, ContractEvent]]
+OZ_CONTRACT_CLASS = DevnetAccount.get_contract_class()
+
+
+def convert_contract_class_to_contract_type(contract_class: ContractClass):
+    return ContractType.parse_obj(
+        {
+            "contractName": "Account",
+            "sourceId": "openzeppelin.account.Account.cairo",
+            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
+            "runtimeBytecode": {},
+            "abi": contract_class.abi,
+        }
+    )
+
+
+OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
+EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods["__execute__"]  # type: ignore
 
 
 def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
@@ -58,6 +79,13 @@ def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
 
 
 def to_checksum_address(address: RawAddress) -> AddressType:
+    if is_checksum_address(address):
+        return cast(AddressType, address)
+
+    return _to_checksum_address(address)
+
+
+def _to_checksum_address(address: RawAddress) -> AddressType:
     if isinstance(address, bytes):
         address = HexBytes(address).hex()
 
@@ -89,7 +117,7 @@ def is_checksum_address(value: Any) -> bool:
     if not is_hex_address(value):
         return False
 
-    return value == to_checksum_address(value)
+    return value == _to_checksum_address(value)
 
 
 def extract_trace_data(trace: BlockSingleTransactionTrace) -> Dict[str, Any]:
@@ -112,7 +140,6 @@ def extract_trace_data(trace: BlockSingleTransactionTrace) -> Dict[str, Any]:
     trace_data["result"] = (
         internal_calls[-1]["result"] if internal_calls else invocation_result
     ) or invocation_result
-
     return trace_data
 
 
@@ -127,38 +154,49 @@ def handle_client_errors(f):
             return result
 
         except Exception as err:
-            raise get_virtual_machine_error(err) from err
+            raise handle_client_error(err) from err
 
     return func
 
 
-def get_virtual_machine_error(err: Exception) -> Optional[Exception]:
+def handle_client_error(err: Exception) -> Optional[Exception]:
     if isinstance(err, ApeException) or not isinstance(
         err, (ClientError, TransactionRejectedError)
     ):
         return err
 
     err_msg = err.message
-
     if "Actual fee exceeded max fee" in err_msg:
         return OutOfGasError()
 
     if isinstance(err, ClientError):
         # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L11 # noqa
-        err_msg = err_msg.split(":", 1)[-1]
+        err_msg = err_msg.split(":", 1)[-1].strip()
 
     if "Error message:" in err_msg:
-        err_msg = err_msg.split("Error message:")[-1].splitlines()[0]
-        return ContractLogicError(revert_message=err_msg.strip())
+        err_msg = err_msg.split("Error message:")[-1].splitlines()[0].strip()
+        return ContractLogicError(revert_message=err_msg)
 
-    if "Error at pc=" in err_msg:
-        return ContractLogicError(revert_message=err_msg.strip())
+    elif "Error at pc=" in err_msg:
+        err_msg = err_msg.strip().replace("\n", " ")
+        return ContractLogicError(revert_message=err_msg)
 
-    return StarknetProviderError(err_msg.strip())
+    err_msg = err_msg.strip()
+
+    # Handle when JSON
+    try:
+        err_msg_dict = loads(err_msg)
+        if "message" in err_msg_dict:
+            err_msg = err_msg_dict["message"]
+
+    except JSONDecodeError:
+        pass
+
+    return StarknetProviderError(err_msg)
 
 
-def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
-    txn_dict = {**asdict(txn_info), **extra_kwargs}
+def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
+    txn_dict = {**asdict(txn_info)}
 
     if isinstance(txn_info, DeployTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
@@ -166,7 +204,6 @@ def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
         txn_dict["type"] = TransactionType.DEPLOY
     elif isinstance(txn_info, InvokeTransaction):
         txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
-        txn_dict["events"] = [vars(e) for e in txn_dict.get("events", [])]
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
     elif isinstance(txn_info, DeclareTransaction):
         txn_dict["sender"] = to_checksum_address(txn_info.sender_address)
@@ -177,7 +214,7 @@ def get_dict_from_tx_info(txn_info: Transaction, **extra_kwargs) -> Dict:
 
 def get_method_abi_from_selector(
     selector: Union[str, int], contract_type: ContractType
-) -> Optional[MethodABI]:
+) -> MethodABI:
     # TODO: Properly integrate with ethpm-types
 
     if isinstance(selector, str):
@@ -189,19 +226,7 @@ def get_method_abi_from_selector(
         if selector == selector_to_check:
             return abi
 
-    return None
-
-
-def convert_contract_class_to_contract_type(contract_class: ContractClass):
-    return ContractType.parse_obj(
-        {
-            "contractName": "Account",
-            "sourceId": "openzeppelin.account.Account.cairo",
-            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
-            "runtimeBytecode": {},
-            "abi": contract_class.abi,
-        }
-    )
+    raise ContractError(f"Method '{selector}' not found in '{contract_type.name}'.")
 
 
 def get_random_private_key() -> str:
@@ -214,3 +239,15 @@ def pad_hex_str(value: str, to_length: int = 66) -> str:
     actual_len = len(val)
     padding = "0" * (to_length - 2 - actual_len)
     return f"0x{padding}{val}"
+
+
+def run_until_complete(coroutine):
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(coroutine)
+
+
+def to_int(val) -> int:
+    if isinstance(val, str):
+        return eth_to_int(text=val)
+
+    return eth_to_int(val)

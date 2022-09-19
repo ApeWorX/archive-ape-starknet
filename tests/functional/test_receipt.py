@@ -11,7 +11,7 @@ def receipt(token_contract, account, second_account):
 
 def test_decode_logs(receipt, token_contract, account, second_account):
     transfer_logs = list(receipt.decode_logs(token_contract.Transfer))
-    assert len(transfer_logs) == 1
+    assert len(transfer_logs) == 1, transfer_logs
     log = transfer_logs[0]
     assert log.from_ == int(account.address, 16)
     assert log.to == int(second_account.address, 16)

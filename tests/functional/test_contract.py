@@ -1,7 +1,8 @@
 import pytest
 from ape import Contract
-from ape.contracts import ContractInstance
 from ape.exceptions import ContractLogicError, OutOfGasError
+
+from ape_starknet.exceptions import StarknetEcosystemError
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -13,30 +14,10 @@ def test_is_token(contract, tokens):
     assert not tokens.is_token(contract.address)
 
 
-def test_deploy(project):
-    assert project.MyContract, "Unable to access contract when needing to compile"
-
-    contract = project.MyContract
-    assert contract, "Unable to access contract when not needing to compile"
-
-    deployment = contract.deploy()
-    assert deployment
-
-
 def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
     # Declare contract type. The result should contain a 'class_hash'.
-    declaration = provider.declare(project.MyContract)
+    declaration = account.declare(project.MyContract)
     assert declaration.class_hash
-
-    # Deploy a ContractInstance from the declaration.
-    contract = declaration.deploy()
-    assert isinstance(contract, ContractInstance)
-
-    # Ensure can interact with deployed contract from declaration.
-    contract.initialize(sender=account)
-    balance_pre_call = contract.get_balance(account)
-    contract.increase_balance(account, 9, sender=account)
-    assert contract.get_balance(account) == balance_pre_call + 9
 
     # Ensure can use class_hash in factory contract
     factory = factory_contract_container.deploy(declaration.class_hash)
@@ -44,8 +25,10 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     logs = list(receipt.decode_logs(factory.contract_deployed))
     new_contract_address = provider.starknet.decode_address(logs[0]["contract_address"])
 
-    # # Ensure can interact with deployed contract from 'class_hash'.
-    new_contract_instance = Contract(new_contract_address, contract_type=contract.contract_type)
+    # Ensure can interact with deployed contract from 'class_hash'.
+    new_contract_instance = Contract(
+        new_contract_address, contract_type=project.MyContract.contract_type
+    )
     assert new_contract_instance
     new_contract_instance.initialize(sender=account)
     balance_pre_call = new_contract_instance.get_balance(account)
@@ -65,7 +48,7 @@ def test_validate_signature_on_chain(contract, account, initial_balance):
 
     signature = account.sign_message(increase_amount)
     contract.increase_balance_signed(
-        account.public_key, account.address, increase_amount, signature
+        account.public_key, account.address, increase_amount, signature, sender=account
     )
 
     actual = contract.get_balance(account)
@@ -94,12 +77,11 @@ def test_contracts_as_arguments(contract, account):
 
 def test_unsigned_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
-    receipt = contract.increase_balance(account.address, increase_amount)
 
-    actual_from_receipt = receipt.return_value
-    actual_from_call = contract.get_balance(account.address)
-    expected = initial_balance + increase_amount
-    assert actual_from_receipt == actual_from_call == expected
+    with pytest.raises(
+        StarknetEcosystemError, match="'sender=<account>' required for invoke transactions"
+    ):
+        contract.increase_balance(account.address, increase_amount)
 
 
 def test_decode_logs(contract, account, ecosystem):
@@ -114,21 +96,21 @@ def test_decode_logs(contract, account, ecosystem):
     assert log_sender_address == contract.address
 
 
-def test_revert_message(contract):
+def test_revert_message(contract, account):
     reason = "Already initialized"
     with pytest.raises(ContractLogicError, match=reason):
         # Already initialized from fixture
-        contract.initialize()
+        contract.initialize(sender=account)
 
 
 def test_revert_no_message(contract, account):
-    contract.reset()
+    contract.reset(sender=account)
     reason = "An ASSERT_EQ instruction failed.*"
     with pytest.raises(ContractLogicError, match=reason):
-        contract.increase_balance(account.address, 123)
+        contract.increase_balance(account.address, 123, sender=account)
 
     # Re-initialize (re-store state)
-    contract.initialize()
+    contract.initialize(sender=account)
 
 
 def test_unable_to_afford_transaction(contract, account, provider):
@@ -136,11 +118,11 @@ def test_unable_to_afford_transaction(contract, account, provider):
         contract.increase_balance(account.address, 1, sender=account, max_fee=1)
 
 
-def test_array_inputs(contract):
+def test_array_inputs(contract, account):
     # This test makes sure we can pass python lists as arguments
     # to Cairo methods that accept arrays.
     # NOTE: Due to a limitation in ape, we have to include the array length argument.
-    contract.store_sum(3, [1, 2, 3])
+    contract.store_sum(3, [1, 2, 3], sender=account)
     assert contract.get_last_sum() == 6
 
 
@@ -272,3 +254,26 @@ def test_external_and_view_method_outputs(
     receipt = getattr(contract, f"{method}_external")(sender=account)
     assert receipt.returndata == returndata_expected
     assert receipt.return_value == return_value
+
+
+def test_estimate_gas_cost_external_method(contract, account, provider):
+    estimated_fee = contract.increase_balance.estimate_gas_cost(account.address, 1, sender=account)
+    assert estimated_fee > 100_000_000_000_000
+
+    receipt = contract.increase_balance(account.address, 1, sender=account)
+    assert receipt.gas_used == estimated_fee
+    assert receipt.max_fee > estimated_fee
+    assert receipt.total_fees_paid == receipt.gas_used
+    assert not receipt.ran_out_of_gas
+    assert provider.gas_price >= 100_000_000_000
+
+
+def test_estimate_gas_cost_view_method(contract, account, provider):
+    estimated_fee = contract.get_balance.estimate_gas_cost(account.address, sender=account)
+    assert estimated_fee > 100_000_000_000_000
+    assert provider.gas_price >= 100_000_000_000
+
+
+def test_estimate_gas_cost_view_method_2(contract, account):
+    estimated_fee = contract.get_balance.estimate_gas_cost(account, sender=account)
+    assert estimated_fee > 100_000_000_000_000
