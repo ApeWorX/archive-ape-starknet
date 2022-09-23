@@ -255,12 +255,22 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             yield self.starknet.create_transaction(**txn_dict)
 
     @handle_client_errors
-    def send_transaction(self, txn: TransactionAPI, token: Optional[str] = None) -> ReceiptAPI:
+    def send_transaction(
+        self,
+        txn: TransactionAPI,
+        raise_on_fail: bool = True,
+        token: Optional[str] = None,
+    ) -> ReceiptAPI:
         response = self._send_transaction(txn, token=token)
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        return self.get_receipt(response.transaction_hash)
+        receipt = self.get_receipt(response.transaction_hash)
+
+        if raise_on_fail:
+            receipt.raise_for_status()
+
+        return receipt
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
