@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import cast
@@ -122,13 +123,47 @@ def contract_address():
 
 
 @pytest.fixture(scope="session")
-def token_contract(config, account, token_initial_supply, project):
-    project_path = projects_directory / "token"
+def token_project_path():
+    return projects_directory / "token"
 
-    with config.using_project(project_path):
-        return project.get_contract("TestToken").deploy(
-            123123, 321321, token_initial_supply, account.address
-        )
+
+@pytest.fixture(scope="session")
+def fresh_token_project(config, project, token_project_path):
+    with config.using_project(token_project_path):
+        if project._project._cache_folder.is_dir():
+            shutil.rmtree(project._project._cache_folder)
+
+        yield project
+
+
+@pytest.fixture
+def token_project(config, project, token_project_path):
+    with config.using_project(token_project_path):
+        yield project
+
+
+# Autouse so guarranteed gets deployed
+@pytest.fixture(autouse=True, scope="session")
+def deployed_token_contract(account, token_initial_supply, fresh_token_project):
+    return fresh_token_project.get_contract("TestToken").deploy(
+        123123, 321321, token_initial_supply, account.address
+    )
+
+
+# Autouse so guarranteed gets deployed
+@pytest.fixture(autouse=True, scope="session")
+def deployed_token_user_contract(account, token_initial_supply, fresh_token_project):
+    return fresh_token_project.get_contract("UseToken").deploy()
+
+
+@pytest.fixture
+def token_contract(token_project):
+    return token_project.TestToken.deployments[-1]
+
+
+@pytest.fixture
+def token_user_contract(token_project):
+    return token_project.UseToken.deployments[-1]
 
 
 @pytest.fixture(scope="session")

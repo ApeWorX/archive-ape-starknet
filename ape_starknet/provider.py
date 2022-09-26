@@ -237,14 +237,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             stop_index = data["calldata"][3] + 1
             data["calldata"] = data["calldata"][4:stop_index]
 
-        if "contract_address" in data:
-            # TODO: Figure out why strange Transfer events show up in receipts sometimes
-            data["events"] = [
-                e
-                for e in data.get("events", [])
-                if e["from_address"] == int(data["contract_address"], 16)
-            ]
-
         transaction = self.starknet.create_transaction(**data)
         return self.starknet.decode_receipt({"provider": self, "transaction": transaction, **data})
 

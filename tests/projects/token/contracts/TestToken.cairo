@@ -19,6 +19,7 @@ from ERC20_base import (
     ERC20_decreaseAllowance,
     ERC20_transfer,
     ERC20_transferFrom,
+    ERC20_fire_event,
 )
 
 @constructor
@@ -133,6 +134,7 @@ func transfer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 func fire_events{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     recipient: felt, amount0: Uint256, amount1: Uint256
 ) -> () {
+    ERC20_fire_event(recipient);
     let (sender) = get_caller_address();
     Transfer.emit(sender, recipient, amount0);
     Mint.emit(sender, amount0, amount1, recipient);

@@ -346,15 +346,18 @@ class InvocationReceipt(StarknetReceipt):
 
         else:
             # If ABI is not provided, decode all events
-            addresses = {self.starknet.decode_address(x["from_address"]) for x in log_data_items}
-            contract_types = self.chain_manager.contracts.get_multiple(addresses)
+            address_map = {
+                x["from_address"]: self.starknet.decode_address(x["from_address"])
+                for x in log_data_items
+            }
+            contract_types = self.chain_manager.contracts.get_multiple(address_map.values())
             # address → selector → abi
             selectors = {
                 address: {get_selector_from_name(e.name): e for e in contract.events}
                 for address, contract in contract_types.items()
             }
             for log in log_data_items:
-                contract_address = self.starknet.decode_address(log["from_address"])
+                contract_address = address_map[log["from_address"]]
                 if contract_address not in selectors:
                     continue
 
