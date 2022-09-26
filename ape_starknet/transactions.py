@@ -87,7 +87,7 @@ class DeclareTransaction(AccountTransaction):
     sender: AddressType
     type: TransactionType = TransactionType.DECLARE
 
-    @property
+    @cached_property
     def starknet_contract(self) -> ContractClass:
         return ContractClass.deserialize(self.data)
 
@@ -126,7 +126,7 @@ class DeployTransaction(StarknetTransaction):
     """Ignored"""
     receiver: Optional[AddressType] = Field(None, exclude=True)
 
-    @property
+    @cached_property
     def starknet_contract(self) -> Optional[ContractClass]:
         return ContractClass.deserialize(self.data)
 
