@@ -55,13 +55,18 @@ def test_decode_logs_when_logs_from_other_contract(token_contract, token_user_co
 
 def test_decode_logs_no_specify_abi(receipt, account, second_account):
     logs = list(receipt.decode_logs())
-    assert len(logs) == 2
-    transfer_log, mint_log = logs
-
-    assert transfer_log.from_ == int(account.address, 16)
-    assert transfer_log.to == int(second_account.address, 16)
+    expected_from = int(account.address, 16)
+    expected_to = int(second_account.address, 16)
+    assert len(logs) >= 2
+    transfer_log = [
+        x
+        for x in logs
+        if x.event_name == "Transfer" and x.from_ == expected_from and x.to == expected_to
+    ][-1]
     assert transfer_log.value == AMOUNT_0
-    assert mint_log.sender == int(account.address, 16)
+
+    mint_log = [x for x in logs if x.event_name == "Mint"][-1]
+    assert mint_log.sender == expected_from
     assert mint_log.amount0 == AMOUNT_0
     assert mint_log.amount1 == AMOUNT_1
-    assert mint_log.to == int(second_account.address, 16)
+    assert mint_log.to == expected_to
