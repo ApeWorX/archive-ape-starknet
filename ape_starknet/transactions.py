@@ -91,12 +91,14 @@ class DeclareTransaction(AccountTransaction):
     def starknet_contract(self) -> ContractClass:
         return ContractClass.deserialize(self.data)
 
-    @property
+    @cached_property
     def txn_hash(self) -> HexBytes:
         return calculate_declare_transaction_hash(
             self.starknet_contract,
             self.provider.chain_id,
             self.sender,
+            self.version,
+            self.nonce,
         )
 
     def as_starknet_object(self) -> Declare:
@@ -128,7 +130,7 @@ class DeployTransaction(StarknetTransaction):
     def starknet_contract(self) -> Optional[ContractClass]:
         return ContractClass.deserialize(self.data)
 
-    @property
+    @cached_property
     def txn_hash(self) -> HexBytes:
         contract_address = calculate_contract_address(
             contract_class=self.starknet_contract,
@@ -186,7 +188,7 @@ class InvokeFunctionTransaction(AccountTransaction):
     def entry_point_selector(self) -> int:
         return get_selector_from_name(self.method_abi.name)
 
-    @property
+    @cached_property
     def txn_hash(self) -> HexBytes:
         hash_int = calculate_transaction_hash_common(
             additional_data=[],
