@@ -5,11 +5,6 @@ from ape.exceptions import ContractLogicError, OutOfGasError
 from ape_starknet.exceptions import StarknetEcosystemError
 
 
-@pytest.fixture(scope="module", autouse=True)
-def connection(provider):
-    yield
-
-
 def test_is_token(contract, tokens):
     assert not tokens.is_token(contract.address)
 

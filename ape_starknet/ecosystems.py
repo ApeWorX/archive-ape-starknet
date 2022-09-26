@@ -277,7 +277,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         )
         starknet_contract = ContractClass.deserialize(HexBytes(code))
         return DeclareTransaction(
-            contract_type=contract_type, data=starknet_contract.dumps(), **kwargs
+            contract_type=contract_type, data=starknet_contract.serialize(), **kwargs
         )
 
     def create_transaction(self, **kwargs) -> TransactionAPI:

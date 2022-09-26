@@ -7,8 +7,11 @@ from ape_starknet.utils import is_hex_address
 
 
 @pytest.fixture
-def isolation():
-    return CliRunner().isolation
+def give_input():
+    def fn(msg):
+        return CliRunner().isolation(input=msg)
+
+    return fn
 
 
 @pytest.fixture
@@ -103,53 +106,53 @@ def test_transfer(account, second_account):
     assert second_account.balance == initial_balance + 10
 
 
-def test_unlock_with_passphrase_and_sign_message(isolation, devnet_keyfile_account):
+def test_unlock_with_passphrase_and_sign_message(give_input, devnet_keyfile_account):
     devnet_keyfile_account.unlock(passphrase="123")
 
-    with isolation(input="y\n"):
+    with give_input("y\n"):
         devnet_keyfile_account.sign_message([1, 2, 3])
 
 
-def test_unlock_from_prompt_and_sign_message(isolation, devnet_keyfile_account):
-    with isolation(input="123\n"):
+def test_unlock_from_prompt_and_sign_message(give_input, devnet_keyfile_account):
+    with give_input("123\n"):
         devnet_keyfile_account.unlock()
 
-    with isolation(input="y\n"):
+    with give_input("y\n"):
         devnet_keyfile_account.sign_message([1, 2, 3])
 
 
-def test_unlock_with_passphrase_and_sign_transaction(isolation, devnet_keyfile_account, contract):
+def test_unlock_with_passphrase_and_sign_transaction(give_input, devnet_keyfile_account, contract):
     devnet_keyfile_account.unlock(passphrase="123")
 
-    with isolation(input="y\n"):
+    with give_input("y\n"):
         contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
 
-def test_unlock_from_prompt_and_sign_transaction(isolation, devnet_keyfile_account, contract):
-    with isolation(input="123\n"):
+def test_unlock_from_prompt_and_sign_transaction(give_input, devnet_keyfile_account, contract):
+    with give_input("123\n"):
         devnet_keyfile_account.unlock()
 
-    with isolation(input="y\n"):
+    with give_input("y\n"):
         contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
 
-def test_set_autosign(isolation, devnet_keyfile_account, contract):
-    with isolation(input="123\n"):
+def test_set_autosign(give_input, devnet_keyfile_account, contract):
+    with give_input("123\n"):
         devnet_keyfile_account.set_autosign(True)
 
     contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
     # Disable and verify we have to sign again
     devnet_keyfile_account.set_autosign(False)
-    with isolation(input="123\ny\n"):
+    with give_input("123\ny\n"):
         contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
 
-def test_set_autosign_and_provide_passphrase(isolation, devnet_keyfile_account, contract):
+def test_set_autosign_and_provide_passphrase(give_input, devnet_keyfile_account, contract):
     devnet_keyfile_account.set_autosign(True, passphrase="123")
     contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
 
     # Disable and verify we have to sign again
     devnet_keyfile_account.set_autosign(False)
-    with isolation(input="123\ny\n"):
+    with give_input("123\ny\n"):
         contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
