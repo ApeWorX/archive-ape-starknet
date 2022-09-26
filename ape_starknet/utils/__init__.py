@@ -251,15 +251,6 @@ def run_until_complete(*coroutine):
 
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(task)
-
-    if isinstance(result, tuple):
-        for res in result:
-            if isinstance(res, Exception):
-                raise res
-
-    elif isinstance(result, Exception):
-        raise result
-
     return result
 
 
