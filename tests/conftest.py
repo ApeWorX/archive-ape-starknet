@@ -7,7 +7,6 @@ from typing import cast
 import ape
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
-from ape.contracts import ContractContainer
 from ethpm_types import ContractType
 
 from ape_starknet import tokens as _tokens
@@ -173,6 +172,11 @@ def explorer(provider):
     return provider.starknet_explorer
 
 
+@pytest.fixture(scope="session")
+def eth_contract_type():
+    return ETH_CONTRACT_TYPE
+
+
 @pytest.fixture(autouse=True, scope="session")
 def clean_projects():
     def clean():
@@ -246,18 +250,8 @@ def proxy_project(config, proxy_project_path):
 
 
 @pytest.fixture
-def contract_container(project):
-    return project.MyContract
-
-
-@pytest.fixture
-def eth_contract_container(project):
-    return ContractContainer(ETH_CONTRACT_TYPE)
-
-
-@pytest.fixture
-def contract(contract_container):
-    return contract_container.deployments[-1]
+def contract(project):
+    return project.MyContract.deployments[-1]
 
 
 @pytest.fixture
