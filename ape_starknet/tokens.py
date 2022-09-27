@@ -169,7 +169,7 @@ class TokenManager(StarknetBase):
     # The 'test_token' refers to the token that comes with Argent-X
     additional_tokens: Dict = {}
     contract_type = ERC20
-    local_balance_cache: Dict[AddressType, int] = {}
+    local_balance_cache: Dict[AddressType, Dict[str, int]] = {}
 
     @property
     def token_address_map(self) -> Dict:
@@ -215,8 +215,8 @@ class TokenManager(StarknetBase):
         self.additional_tokens[name][network] = address
 
     def get_balance(self, account: Union[Address, AddressType], token: str = "eth") -> int:
-        if isinstance(account, Address):
-            address = account.address
+        if hasattr(account, "address"):
+            address = getattr(account, "address")
         else:
             address = account
 
@@ -224,9 +224,12 @@ class TokenManager(StarknetBase):
             return self._get_balance(address, token=token)
 
         if address not in self.local_balance_cache:
-            self.local_balance_cache[address] = self._get_balance(address)
+            self.local_balance_cache[address] = {}
 
-        return self.local_balance_cache[address]
+        if token not in self.local_balance_cache[address]:
+            self.local_balance_cache[address][token] = self._get_balance(address, token=token)
+
+        return self.local_balance_cache[address][token]
 
     def _get_balance(self, account: AddressType, token: str = "eth") -> int:
         result = self[token].balanceOf(account)
@@ -251,6 +254,7 @@ class TokenManager(StarknetBase):
             receiver_address_int = receiver
         elif hasattr(receiver, "address_int"):
             receiver_address_int = receiver.address_int  # type: ignore
+            receiver_address = receiver.address  # type: ignore
         elif isinstance(receiver, str):
             receiver_address_int = self.starknet.encode_address(receiver)
             receiver_address = self.starknet.decode_address(receiver)
@@ -263,9 +267,20 @@ class TokenManager(StarknetBase):
             self.account_contracts[sender] if isinstance(sender, (int, str)) else sender
         )
         result = self[token].transfer(receiver_address_int, amount, sender=sender_account)
+        if self.provider.network.name != LOCAL_NETWORK_NAME:
+            return result
 
         # NOTE: local cache for sender balance is updated in `provider.send_transaction()`.
-        if receiver_address in self.local_balance_cache:
-            self.local_balance_cache[receiver_address] += amount
+        if (
+            receiver_address in self.local_balance_cache
+            and token in self.local_balance_cache[receiver_address]
+        ):
+            if isinstance(amount, dict):
+                if amount.get("high", 0):
+                    amount = (amount["high"] << 128) + amount["low"]
+                else:
+                    amount = amount["low"]
+
+            self.local_balance_cache[receiver_address][token] += amount
 
         return result

@@ -287,7 +287,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.local_nonce_cache[receipt.sender] = 1
 
         if receipt.sender in self.token_manager.local_balance_cache:
-            self.token_manager.local_balance_cache[receipt.sender] -= receipt.total_transfer_value
+            self.token_manager.local_balance_cache[receipt.sender][
+                "eth"
+            ] -= receipt.total_transfer_value
 
         return receipt
 
