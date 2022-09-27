@@ -165,7 +165,10 @@ def test_import_when_local(accounts_runner):
 
 
 def test_list(accounts_runner, key_file_account, existing_key_file_alias):
-    assert existing_key_file_alias in accounts_runner.invoke("list")
+    output = accounts_runner.invoke("list")
+    assert existing_key_file_alias in output
+    assert key_file_account.address in output
+    assert key_file_account.public_key in output
 
 
 def test_core_accounts_list_all(root_accounts_runner, key_file_account, existing_key_file_alias):
