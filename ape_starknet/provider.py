@@ -78,7 +78,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
     local_nonce_cache: Dict[AddressType, int] = {}
-    local_balance_cache: Dict[AddressType, int] = {}
     receipt_cache: Dict[str, ReceiptAPI] = {}
 
     @property
@@ -139,18 +138,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_balance(self, address: AddressType) -> int:
-        if self.network.name != LOCAL_NETWORK_NAME:
-            return self._get_balance(address)
-
-        if address not in self.local_balance_cache:
-            self.local_balance_cache[address] = self._get_balance(address)
-
-        return self.local_balance_cache[address]
-
-    @handle_client_errors
-    def _get_balance(self, address: AddressType) -> int:
-        account = self.account_contracts[address]
-        return self.token_manager.get_balance(account.address)
+        return self.token_manager.get_balance(address)
 
     @handle_client_errors
     def get_code(self, address: str) -> List[int]:
@@ -170,7 +158,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             nonce = self.connected_client.get_contract_nonce_sync(address)
             self.local_nonce_cache[address] = nonce
 
-        return nonce
+        return self.local_nonce_cache[address]
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
@@ -298,7 +286,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         else:
             self.local_nonce_cache[receipt.sender] = 1
 
-        self.local_balance_cache[receipt.sender] = self._get_balance(receipt.sender)
+        if receipt.sender in self.token_manager.local_balance_cache:
+            self.token_manager.local_balance_cache[receipt.sender] -= receipt.total_transfer_value
+
         return receipt
 
     def _send_transaction(
