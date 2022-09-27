@@ -10,7 +10,12 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
-from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
+from ape.utils import (
+    DEFAULT_NUMBER_OF_TEST_ACCOUNTS,
+    cached_property,
+    raises_not_implemented,
+    to_int,
+)
 from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -167,7 +172,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
-        if isinstance(block_id, (int, str)) and len(str(block_id)) == 76:
+        if isinstance(block_id, bytes):
+            block_id = to_int(block_id)
+
+        if isinstance(block_id, (int, str)) and len(str(block_id)) >= 72:
             kwarg = "block_hash"
         elif block_id in ("pending", "latest"):
             kwarg = "block_number"

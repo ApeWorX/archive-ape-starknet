@@ -17,6 +17,15 @@ def test_decode_logs(receipt, token_contract, account, second_account):
     transfer_logs = list(receipt.decode_logs(token_contract.Transfer))
 
     # TODO: Figure out why 1 extra strange Transfer event shows up (as of 0.5)
+    # E
+    # ValueError: [ < Transfer
+    # from_ = 1993587785796585766822351416481332607932359118712773326756533827979105164029
+    # to = 2099020714380279562797454200193598113087692822054877941610931105418932477001
+    # value = 10 >, < Transfer
+    # from_ = 1993587785796585766822351416481332607932359118712773326756533827979105164029
+    # to = 3061382497757462279541465773886495848031317811525138643618478891350337006185
+    # value = 142500000000000 >]
+
     assert transfer_logs
 
     mint_logs = list(receipt.decode_logs(token_contract.Mint))

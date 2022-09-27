@@ -5,12 +5,14 @@ from ape.api import BlockAPI, EcosystemAPI, ReceiptAPI, TransactionAPI
 from ape.api.networks import ProxyInfoAPI
 from ape.contracts import ContractContainer
 from ape.types import AddressType, ContractLog, RawAddress
+from ape.utils import EMPTY_BYTES32, to_int
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
+from pydantic import Field, validator
 from starknet_py.constants import OZ_PROXY_STORAGE_KEY
-from starknet_py.net.client_models import StarknetBlock
+from starknet_py.net.client_models import StarknetBlock as StarknetClientBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
 from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
@@ -57,6 +59,18 @@ class StarknetProxy(ProxyInfoAPI):
     """
 
     type: ProxyType
+
+
+class StarknetBlock(BlockAPI):
+    hash: Optional[int] = None
+    parent_hash: Any = Field(to_int(EMPTY_BYTES32), alias="parentHash")
+
+    @validator("hash", "parent_hash", pre=True)
+    def validate_hexbytes(cls, value):
+        if not isinstance(value, int):
+            return to_int(value)
+
+        return value
 
 
 class Starknet(EcosystemAPI, StarknetBase):
@@ -217,11 +231,11 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         return receipt
 
-    def decode_block(self, block: StarknetBlock) -> BlockAPI:
-        return BlockAPI(
-            hash=HexBytes(block.block_hash),
+    def decode_block(self, block: StarknetClientBlock) -> BlockAPI:
+        return StarknetBlock(
+            hash=block.block_hash,
             number=block.block_number,
-            parentHash=HexBytes(block.parent_block_hash),
+            parentHash=block.parent_block_hash,
             size=len(block.transactions),  # TODO: Figure out size
             timestamp=block.timestamp,
         )
