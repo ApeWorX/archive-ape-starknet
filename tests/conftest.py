@@ -316,7 +316,7 @@ def ecosystem(provider) -> EcosystemAPI:
 @pytest.fixture(scope="session")
 def key_file_account_data():
     return {
-        "address": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
+        "address": PUBLIC_KEY.replace("0x", ""),
         "crypto": {
             "cipher": "aes-128-ctr",
             "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
@@ -352,7 +352,7 @@ def key_file_account_data():
 @pytest.fixture(scope="session")
 def argent_x_key_file_account_data():
     return {
-        "address": "140dfbab0d711a23dd58842be2ee16318e3de1c7",
+        "address": PUBLIC_KEY.replace("0x", ""),
         "crypto": {
             "cipher": "aes-128-ctr",
             "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
