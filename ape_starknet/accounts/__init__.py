@@ -29,6 +29,7 @@ from starkware.starknet.core.os.contract_address.contract_address import (
 )
 
 from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
+from ape_starknet.provider import StarknetProvider
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import AccountTransaction, InvokeFunctionTransaction
 from ape_starknet.utils import (
@@ -123,6 +124,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
     @cached_property
     def _test_accounts(self):
+        if not isinstance(self.provider, StarknetProvider):
+            return []
+
         try:
             predeployed_accounts = self.provider.devnet_client.predeployed_accounts
         except ProviderNotConnectedError:
