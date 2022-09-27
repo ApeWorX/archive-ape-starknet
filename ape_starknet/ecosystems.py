@@ -239,7 +239,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         return DeployTransaction(
             salt=salt,
             constructor_calldata=calldata,
-            contract_code=contract.dumps(),
+            contract_code=contract.serialize(),
             token=kwargs.get("token"),
         )
 
