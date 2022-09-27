@@ -76,6 +76,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
+    local_nonce_cache: Dict[AddressType, int] = {}
+    local_balance_cache: Dict[AddressType, int] = {}
 
     @property
     def connected_client(self) -> GatewayClient:
@@ -135,6 +137,16 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_balance(self, address: AddressType) -> int:
+        if self.network.name != LOCAL_NETWORK_NAME:
+            return self._get_balance(address)
+
+        if address not in self.local_balance_cache:
+            self.local_balance_cache[address] = self._get_balance(address)
+
+        return self.local_balance_cache[address]
+
+    @handle_client_errors
+    def _get_balance(self, address: AddressType) -> int:
         account = self.account_contracts[address]
         return self.token_manager.get_balance(account.address)
 
@@ -149,7 +161,14 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:
-        return self.connected_client.get_contract_nonce_sync(address)
+        if self.network.name != LOCAL_NETWORK_NAME:
+            return self.connected_client.get_contract_nonce_sync(address)
+
+        if address not in self.local_nonce_cache:
+            nonce = self.connected_client.get_contract_nonce_sync(address)
+            self.local_nonce_cache[address] = nonce
+
+        return nonce
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
@@ -260,7 +279,14 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        return self.get_receipt(response.transaction_hash)
+        receipt = self.get_receipt(response.transaction_hash)
+        if receipt.sender in self.local_nonce_cache:
+            self.local_nonce_cache[receipt.sender] += 1
+        else:
+            self.local_nonce_cache[receipt.sender] = 1
+
+        self.local_balance_cache[receipt.sender] = self._get_balance(receipt.sender)
+        return receipt
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
