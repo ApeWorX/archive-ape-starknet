@@ -174,6 +174,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
+        block = self._get_block(block_id)
+        return self.starknet.decode_block(block)
+
+    def _get_block(self, block_id: BlockID) -> StarknetBlock:
         if isinstance(block_id, bytes):
             block_id = to_int(block_id)
 
@@ -194,15 +198,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         else:
             raise StarknetProviderError(f"Unsupported BlockID type '{type(block_id)}'.")
 
-        block = self.starknet_client.get_block_sync(**{kwarg: block_id})
-        return self.starknet.decode_block(block)
-
-    def _get_block(self, block_id: BlockID) -> StarknetBlock:
-        kwarg = (
-            "block_hash"
-            if isinstance(block_id, (int, str)) and len(str(block_id)) == 76
-            else "block_number"
-        )
         return self.starknet_client.get_block_sync(**{kwarg: block_id})
 
     @handle_client_errors
