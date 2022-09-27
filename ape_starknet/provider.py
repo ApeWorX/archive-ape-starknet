@@ -39,6 +39,7 @@ from ape_starknet.utils import (
     get_dict_from_tx_info,
     handle_client_error,
     handle_client_errors,
+    run_until_complete,
 )
 from ape_starknet.utils.basemodel import StarknetBase
 
@@ -78,6 +79,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     cached_code: Dict[int, ContractCode] = {}
     local_nonce_cache: Dict[AddressType, int] = {}
     local_balance_cache: Dict[AddressType, int] = {}
+    receipt_cache: Dict[str, ReceiptAPI] = {}
 
     @property
     def connected_client(self) -> GatewayClient:
@@ -239,9 +241,16 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_receipt(self, txn_hash: str) -> ReceiptAPI:
+        if txn_hash in self.receipt_cache:
+            # TODO: Remove once `chain.get_receipt()` fully implemented and released
+            #  (>= eth-ape 0.5.2)
+            return self.receipt_cache[txn_hash]
+
         self.starknet_client.wait_for_tx_sync(txn_hash)
-        txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
-        receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
+        txn_info, receipt = run_until_complete(
+            self.starknet_client.get_transaction(txn_hash),
+            self.starknet_client.get_transaction_receipt(tx_hash=txn_hash),
+        )
         data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
 
         # Handle __execute__ overhead. User only cares for target ABI.
@@ -265,7 +274,11 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             ]
 
         transaction = self.starknet.create_transaction(**data)
-        return self.starknet.decode_receipt({"provider": self, "transaction": transaction, **data})
+        receipt = self.starknet.decode_receipt(
+            {"provider": self, "transaction": transaction, **data}
+        )
+        self.receipt_cache[txn_hash] = receipt
+        return receipt
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
