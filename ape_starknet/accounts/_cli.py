@@ -76,10 +76,10 @@ def _list(cli_ctx):
 
     for index in range(num_accounts):
         account = starknet_accounts[index]
-        output_dict = {"Alias": account.alias, "Public key": account.address}
+        output_dict = {"Alias": account.alias, "Public key": account.public_key}
         for deployment in account.get_deployments():
             key = f"Contract address ({deployment.network_name})"
-            output_dict[key] = deployment.contract_address
+            output_dict[key] = deployment.address
 
         output_keys = add_padding_to_strings(list(output_dict.keys()))
         output_dict = {k: output_dict[k.rstrip()] for k in output_keys}

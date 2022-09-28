@@ -1,5 +1,5 @@
 import pytest
-from ape.contracts import ContractInstance
+from ape.contracts import ContractContainer, ContractInstance
 
 
 @pytest.fixture(scope="module")
@@ -15,13 +15,24 @@ def in_starknet(networks):
 
 
 @pytest.fixture(scope="module")
-def eth_contract(in_ethereum, eth_account, eth_contract_container):
+def eth_contract_container(eth_contract_type):
+    return ContractContainer(eth_contract_type)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def deploy_eth_contract(in_ethereum, eth_account, eth_contract_container):
     yield eth_account.deploy(eth_contract_container, sender=eth_account)
 
 
 @pytest.fixture(scope="module")
-def stark_contract(in_starknet, contract):
-    yield contract
+def eth_contract(in_ethereum, eth_contract_container):
+    yield eth_contract_container.deployments[-1]
+
+
+@pytest.fixture(scope="module")
+def stark_contract(in_starknet, config, project_path):
+    with config.using_project(project_path) as project:
+        yield project.MyContract.deployments[-1]
 
 
 def test_use_eth_network_from_fixture(eth_contract, eth_account):
@@ -38,9 +49,9 @@ def test_use_starknet_network_from_fixture(account, stark_contract):
 
 
 def test_switch_to_ethereum_mid_test(
-    networks, provider, eth_account, eth_contract_container, contract, account
+    networks, provider, eth_account, eth_contract_container, stark_contract, account
 ):
-    receipt = contract.increase_balance(account.address, 123, sender=account)
+    receipt = stark_contract.increase_balance(account.address, 123, sender=account)
     assert not receipt.failed
 
     # Shows that we can change to Ethereum within an individual test
@@ -58,5 +69,5 @@ def test_switch_to_ethereum_mid_test(
         assert eth_contract.myNumber() == 123
 
     # Switch back to Starknet
-    receipt = contract.increase_balance(account.address, 123, sender=account)
+    receipt = stark_contract.increase_balance(account.address, 123, sender=account)
     assert not receipt.failed
