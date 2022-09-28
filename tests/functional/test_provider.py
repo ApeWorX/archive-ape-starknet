@@ -79,7 +79,7 @@ def test_get_transactions_by_block(provider, account, contract):
 def test_set_timestamp(provider, account, contract):
     start_time = provider.get_block("pending").timestamp
     provider.set_timestamp(start_time + 8600)
-    contract.increase_balance(account.address, 123, sender=account)
+    provider.mine()
     curr_time = time.time()
     assert pytest.approx(curr_time + 8600) == provider.get_block("latest").timestamp
 
