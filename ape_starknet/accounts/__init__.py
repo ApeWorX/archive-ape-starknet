@@ -29,6 +29,7 @@ from starkware.starknet.core.os.contract_address.contract_address import (
 )
 
 from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
+from ape_starknet.provider import StarknetProvider
 from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import AccountTransaction, InvokeFunctionTransaction
 from ape_starknet.utils import (
@@ -116,7 +117,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         if (
             self.network_manager.active_provider
             and self.network_manager.active_provider.network.name != LOCAL_NETWORK_NAME
-        ):
+        ) or not isinstance(self.provider, StarknetProvider):
             return []
 
         return self._test_accounts
