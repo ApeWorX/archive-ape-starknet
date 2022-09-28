@@ -82,3 +82,12 @@ def test_set_timestamp(provider, account, contract):
     contract.increase_balance(account.address, 123, sender=account)
     curr_time = time.time()
     assert pytest.approx(curr_time + 8600) == provider.get_block("latest").timestamp
+
+
+def test_mine(provider):
+    block_num = provider.get_block("latest").number
+    provider.mine()
+    next_block_num = provider.get_block("latest").number
+
+    # NOTE: Uses >= in case of x-dist
+    assert next_block_num >= block_num + 1
