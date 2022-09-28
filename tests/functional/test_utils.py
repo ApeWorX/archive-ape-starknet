@@ -29,10 +29,10 @@ def test_is_checksum_address(account):
 
 
 def test_to_checksum_address(account):
-    address_lowered = account.address.lower()
-    actual = to_checksum_address(address_lowered)
-    assert is_checksum_address(actual)
-    assert actual == account.address
+    # Value from Starknet.js result
+    expected = "0x02F4F57e5948B113Bf3D807B9ABB900EfC689b5b7a8500EBb79F670B3e08AE24"
+    actual = to_checksum_address(expected.lower())
+    assert actual == expected
 
 
 @pytest.mark.parametrize(

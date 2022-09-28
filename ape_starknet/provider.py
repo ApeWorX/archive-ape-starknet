@@ -39,6 +39,7 @@ from ape_starknet.utils import (
     get_dict_from_tx_info,
     handle_client_error,
     handle_client_errors,
+    run_until_complete,
 )
 from ape_starknet.utils.basemodel import StarknetBase
 
@@ -79,6 +80,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     client: Optional[GatewayClient] = None
     token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
+    local_nonce_cache: Dict[AddressType, int] = {}
+    receipt_cache: Dict[str, ReceiptAPI] = {}
 
     @property
     def connected_client(self) -> GatewayClient:
@@ -138,8 +141,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_balance(self, address: AddressType) -> int:
-        account = self.account_contracts[address]
-        return self.token_manager.get_balance(account.address)
+        return self.token_manager.get_balance(address)
 
     @handle_client_errors
     def get_code(self, address: str) -> List[int]:
@@ -152,7 +154,14 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_nonce(self, address: AddressType) -> int:
-        return self.connected_client.get_contract_nonce_sync(address)
+        if self.network.name != LOCAL_NETWORK_NAME:
+            return self.connected_client.get_contract_nonce_sync(address)
+
+        if address not in self.local_nonce_cache:
+            nonce = self.connected_client.get_contract_nonce_sync(address)
+            self.local_nonce_cache[address] = nonce
+
+        return self.local_nonce_cache[address]
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
@@ -223,9 +232,16 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_receipt(self, txn_hash: str) -> ReceiptAPI:
+        if txn_hash in self.receipt_cache:
+            # TODO: Remove once `chain.get_receipt()` fully implemented and released
+            #  (>= eth-ape 0.5.2)
+            return self.receipt_cache[txn_hash]
+
         self.starknet_client.wait_for_tx_sync(txn_hash)
-        txn_info = self.starknet_client.get_transaction_sync(tx_hash=txn_hash)
-        receipt = self.starknet_client.get_transaction_receipt_sync(tx_hash=txn_hash)
+        txn_info, receipt = run_until_complete(
+            self.starknet_client.get_transaction(txn_hash),
+            self.starknet_client.get_transaction_receipt(tx_hash=txn_hash),
+        )
         data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
 
         # Handle __execute__ overhead. User only cares for target ABI.
@@ -249,7 +265,11 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             ]
 
         transaction = self.starknet.create_transaction(**data)
-        return self.starknet.decode_receipt({"provider": self, "transaction": transaction, **data})
+        receipt = self.starknet.decode_receipt(
+            {"provider": self, "transaction": transaction, **data}
+        )
+        self.receipt_cache[txn_hash] = receipt
+        return receipt
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
@@ -263,7 +283,18 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        return self.get_receipt(response.transaction_hash)
+        receipt = self.get_receipt(response.transaction_hash)
+        if receipt.sender in self.local_nonce_cache:
+            self.local_nonce_cache[receipt.sender] += 1
+        else:
+            self.local_nonce_cache[receipt.sender] = 1
+
+        if receipt.sender in self.token_manager.local_balance_cache:
+            self.token_manager.local_balance_cache[receipt.sender][
+                "eth"
+            ] -= receipt.total_transfer_value
+
+        return receipt
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
