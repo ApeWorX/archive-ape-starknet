@@ -1,5 +1,6 @@
 import asyncio
 import re
+from asyncio import gather
 from dataclasses import asdict
 from json import JSONDecodeError, loads
 from typing import Any, Dict, List, Optional, Union, cast
@@ -242,9 +243,16 @@ def pad_hex_str(value: str, to_length: int = 64) -> str:
     return f"0x{padding}{val}"
 
 
-def run_until_complete(coroutine):
+def run_until_complete(*coroutine):
+    coroutines = list(coroutine)
+    if len(coroutines) > 1:
+        task = gather(*coroutine, return_exceptions=True)
+    else:
+        task = coroutines[0]
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(coroutine)
+    result = loop.run_until_complete(task)
+    return result
 
 
 def to_int(val) -> int:
