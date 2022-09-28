@@ -56,6 +56,9 @@ class DevnetClient:
     def increase_time(self, amount: int):
         return self._post("increase_time", json={"time": amount})
 
+    def set_time(self, amount: int):
+        return self._post("set_time", json={"time": amount})
+
     def _get(self, uri: str, **kwargs):
         return self._request("get", uri, **kwargs)
 
@@ -380,10 +383,8 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
         if self.devnet_client is None:
             raise StarknetProviderError("Must be connected to starknet-devnet to use this feature.")
 
-        pending_timestamp = self.get_block("pending").timestamp
-        seconds_to_increase = new_timestamp - pending_timestamp
-        result = self.devnet_client.increase_time(seconds_to_increase)
-        if "timestamp_increased_by" not in result:
+        result = self.devnet_client.set_time(new_timestamp)
+        if "next_block_timestamp" not in result:
             raise StarknetProviderError(result)
 
 
