@@ -153,3 +153,13 @@ def test_set_autosign_and_provide_passphrase(isolation, devnet_keyfile_account, 
     devnet_keyfile_account.set_autosign(False)
     with isolation(input="123\ny\n"):
         contract.increase_balance(devnet_keyfile_account, 100, sender=devnet_keyfile_account)
+
+
+def test_accounts_returns_empty_list_when_connected_to_ethereum(accounts, networks):
+    container = accounts.containers["starknet"]
+    assert container.test_accounts
+
+    with networks.ethereum.local.use_provider("test"):
+        assert not container.test_accounts
+
+    assert container.test_accounts
