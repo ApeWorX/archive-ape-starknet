@@ -50,11 +50,13 @@ ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, C
 OZ_CONTRACT_CLASS = DevnetAccount.get_contract_class()
 
 
-def convert_contract_class_to_contract_type(contract_class: ContractClass):
+def convert_contract_class_to_contract_type(
+    name: str, source_id: str, contract_class: ContractClass
+):
     return ContractType.parse_obj(
         {
-            "contractName": "Account",
-            "sourceId": "openzeppelin.account.Account.cairo",
+            "contractName": name,
+            "sourceId": source_id,
             "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
             "runtimeBytecode": {},
             "abi": contract_class.abi,
@@ -62,7 +64,9 @@ def convert_contract_class_to_contract_type(contract_class: ContractClass):
     )
 
 
-OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(OZ_CONTRACT_CLASS)
+OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
+    "Account", "openzeppelin.account.Account.cairo", OZ_CONTRACT_CLASS
+)
 EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods["__execute__"]  # type: ignore
 
 
