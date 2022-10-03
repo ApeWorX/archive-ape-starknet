@@ -27,7 +27,7 @@ from starknet_py.net.client_models import (
 from starknet_py.net.models import TransactionType
 from starknet_py.net.models.address import parse_address
 from starknet_py.transaction_exceptions import TransactionRejectedError
-from starkware.crypto.signature.fast_pedersen_hash import pedersen_hash
+from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.public.abi import get_selector_from_name
@@ -93,7 +93,7 @@ def _to_checksum_address(address: RawAddress) -> AddressType:
     address_int = parse_address(address)
     address_str = pad_hex_str(HexBytes(address_int).hex().lower())
     chars = [c for c in remove_0x_prefix(HexStr(address_str))]
-    hashed = [b for b in HexBytes(pedersen_hash(0, address_int))]
+    hashed = [b for b in HexBytes(keccak_ints([address_int]))]
 
     for i in range(0, len(chars), 2):
         try:
@@ -104,7 +104,8 @@ def _to_checksum_address(address: RawAddress) -> AddressType:
         except IndexError:
             continue
 
-    return AddressType(HexAddress(add_0x_prefix(HexStr("".join(chars)))))
+    rejoined_address_str = add_0x_prefix(HexStr("".join(chars)))
+    return AddressType(HexAddress(HexStr(rejoined_address_str)))
 
 
 def is_hex_address(value: Any) -> bool:
@@ -235,10 +236,10 @@ def get_random_private_key() -> str:
     return pad_hex_str(private_key)
 
 
-def pad_hex_str(value: str, to_length: int = 66) -> str:
+def pad_hex_str(value: str, to_length: int = 64) -> str:
     val = value.replace("0x", "")
     actual_len = len(val)
-    padding = "0" * (to_length - 2 - actual_len)
+    padding = "0" * (to_length - actual_len)
     return f"0x{padding}{val}"
 
 
