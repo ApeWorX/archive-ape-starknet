@@ -56,6 +56,9 @@ class DevnetClient:
     def increase_time(self, amount: int):
         return self._post("increase_time", json={"time": amount})
 
+    def create_block(self):
+        return self._post("create_block")
+
     def set_time(self, amount: int):
         return self._post("set_time", json={"time": amount})
 
@@ -386,6 +389,10 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
         result = self.devnet_client.set_time(new_timestamp)
         if "next_block_timestamp" not in result:
             raise StarknetProviderError(result)
+
+    def mine(self, num_blocks: int = 1):
+        for index in range(num_blocks):
+            self.devnet_client.create_block()
 
 
 __all__ = ["StarknetProvider", "StarknetDevnetProvider"]
