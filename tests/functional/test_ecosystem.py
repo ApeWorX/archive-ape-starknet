@@ -8,7 +8,7 @@ from hexbytes import HexBytes
 from starkware.starknet.public.abi import get_selector_from_name
 
 INT_ADDRESS = 269168490721327376227480949634158339134330130662514218728945045982440529971
-STR_ADDRESS = "0x0098580e36aB1485C66f0DC95C2c923e734B7Af44D04dD2B5b9d0809Aa672033"
+STR_ADDRESS = "0x0098580E36aB1485C66F0Dc95c2c923E734B7aF44d04Dd2B5B9d0809Aa672033"
 HEXBYTES_ADDRESS = HexBytes(STR_ADDRESS)
 EVENT_NAME = "balance_increased"
 
@@ -32,7 +32,7 @@ def raw_logs():
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def event_abi(contract):
     return contract.balance_increased.abi
 

@@ -76,7 +76,7 @@ def _list(cli_ctx):
 
     for index in range(num_accounts):
         account = starknet_accounts[index]
-        output_dict = {"Alias": account.alias, "Public key": account.address}
+        output_dict = {"Alias": account.alias, "Public key": account.public_key}
         for deployment in account.get_deployments():
             key = f"Contract address ({deployment.network_name})"
             output_dict[key] = deployment.contract_address
