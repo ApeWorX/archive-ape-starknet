@@ -32,7 +32,7 @@ def raw_logs():
     ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def event_abi(contract):
     return contract.balance_increased.abi
 
