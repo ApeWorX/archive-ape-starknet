@@ -9,6 +9,7 @@ import click
 from ape.api import AccountAPI, AccountContainerAPI, ReceiptAPI, TransactionAPI
 from ape.api.address import BaseAddress
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractContainer
 from ape.exceptions import AccountsError, ProviderNotConnectedError, SignatureError
 from ape.logging import LogLevel, logger
 from ape.types import AddressType, SignableMessage, TransactionSignature
@@ -19,7 +20,6 @@ from eth_utils import add_0x_prefix, text_if_str, to_bytes
 from ethpm_types import ContractType
 from hexbytes import HexBytes
 from starknet_py.net import KeyPair
-from starknet_py.net.account.account_client import deploy_account_contract
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
 from starknet_py.utils.crypto.facade import ECSignature, message_signature, pedersen_hash
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
@@ -37,7 +37,6 @@ from ape_starknet.utils import (
     get_chain_id,
     get_random_private_key,
     pad_hex_str,
-    run_until_complete,
 )
 from ape_starknet.utils.basemodel import StarknetBase
 
@@ -297,9 +296,10 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         logger.info(f"Deploying an account to '{network_name}' network ...")
         private_key = private_key or int(get_random_private_key(), 16)
         key_pair = KeyPair.from_private_key(private_key)
-        contract_address = run_until_complete(
-            deploy_account_contract(self.provider.client, key_pair.public_key)
-        )
+        container = ContractContainer(OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE)
+        delpoy_txn = container(key_pair.public_key)
+        result = self.provider.send_transaction(delpoy_txn)
+        contract_address = result.contract_address
         self.import_account(alias, network_name, contract_address, key_pair.private_key)
         return contract_address
 
