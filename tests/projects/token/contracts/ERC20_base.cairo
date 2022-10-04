@@ -40,6 +40,11 @@ func ERC20_balances(account: felt) -> (balance: Uint256) {
 func ERC20_allowances(owner: felt, spender: felt) -> (allowance: Uint256) {
 }
 
+// Event for testing that it shows up in downstream contract
+@event
+func ERC20_ParentEvent(favorite_account: felt) {
+}
+
 //
 // Constructor
 //
@@ -204,6 +209,11 @@ func ERC20_burn{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     let (supply: Uint256) = ERC20_total_supply.read();
     let (new_supply: Uint256) = uint256_sub(supply, amount);
     ERC20_total_supply.write(new_supply);
+    return ();
+}
+
+func ERC20_fire_event{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(person: felt) -> () {
+    ERC20_ParentEvent.emit(person);
     return ();
 }
 

@@ -223,6 +223,7 @@ def deploy_contracts(
         token_contract = project.TestToken.deploy(
             123123, 321321, token_initial_supply, account.address
         )
+        project.UseToken.deploy()
         _tokens.add_token("test_token", LOCAL_NETWORK_NAME, token_contract.address)
 
     with config.using_project(proxy_project_path) as project:
@@ -261,6 +262,11 @@ def factory_contract_container(project):
 @pytest.fixture
 def token_contract(token_project):
     return token_project.TestToken.deployments[-1]
+
+
+@pytest.fixture
+def token_user_contract(token_project):
+    return token_project.UseToken.deployments[-1]
 
 
 @pytest.fixture
