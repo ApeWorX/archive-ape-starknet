@@ -3,9 +3,10 @@ from typing import Iterator, Optional
 from ape.api import ExplorerAPI, ReceiptAPI
 from ape.types import AddressType
 from ape.utils import raises_not_implemented
-from ethpm_types import ContractType
+from ethpm_types import ContractType, HexBytes
 
 from ape_starknet.accounts import BaseStarknetAccount
+from ape_starknet.utils import pad_hex_str
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -38,7 +39,22 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
             return starknet_account.get_account_contract_type()
 
         code_and_abi = self.provider.get_code_and_abi(address)
-        contract_type_dict = {"abi": code_and_abi.abi}
+
+        # Convert list of ints to bytes
+        bytecode_str_list = [HexBytes(x).hex() for x in code_and_abi.bytecode]
+        longest_str = len(max(bytecode_str_list, key=len)) - 2
+        code_parts = [
+            pad_hex_str(x, to_length=longest_str).replace("0x", "") for x in bytecode_str_list
+        ]
+
+        contract_type_dict = {
+            "abi": code_and_abi.abi,
+            "deploymentBytecode": {"bytecode": f"0x{''.join(code_parts)}"},
+        }
+
+        if "__execute__" in [a["name"] for a in code_and_abi.abi]:
+            contract_type_dict["contractName"] = "Account"
+
         return ContractType.parse_obj(contract_type_dict)
 
     @raises_not_implemented

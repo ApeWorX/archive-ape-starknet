@@ -253,7 +253,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         return DeployTransaction(
             salt=salt,
             constructor_calldata=calldata,
-            contract_code=contract.serialize(),
+            contract_code=deployment_bytecode,
             token=kwargs.get("token"),
         )
 
@@ -327,7 +327,7 @@ class Starknet(EcosystemAPI, StarknetBase):
                 bytecode_obj = contract_type.deployment_bytecode
                 if bytecode_obj:
                     bytecode = bytecode_obj.bytecode
-                    txn_data["contract_code"] = bytecode
+                    txn_data["data"] = bytecode
 
         if not invoking:
             return txn_cls(**txn_data)

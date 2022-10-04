@@ -47,11 +47,11 @@ class StarknetBase(ManagerAccessMixin):
         return tokens
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
-        # Have to force explorer in Local networks since Ape turns it off by default
         contract_type = self.chain_manager.contracts.get(address)
         if contract_type:
             return contract_type
 
+        # Have to force explorer in Local networks since Ape turns it off by default
         return self.starknet_explorer.get_contract_type(address)
 
     def get_local_contract_type(self, class_hash: int) -> Optional[ContractType]:
