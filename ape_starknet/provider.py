@@ -10,7 +10,12 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
-from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
+from ape.utils import (
+    DEFAULT_NUMBER_OF_TEST_ACCOUNTS,
+    cached_property,
+    raises_not_implemented,
+    to_int,
+)
 from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -182,7 +187,14 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_block(self, block_id: BlockID) -> BlockAPI:
-        if isinstance(block_id, (int, str)) and len(str(block_id)) == 76:
+        block = self._get_block(block_id)
+        return self.starknet.decode_block(block)
+
+    def _get_block(self, block_id: BlockID) -> StarknetBlock:
+        if isinstance(block_id, bytes):
+            block_id = to_int(block_id)
+
+        if isinstance(block_id, (int, str)) and len(str(block_id)) >= 72:
             kwarg = "block_hash"
         elif block_id in ("pending", "latest"):
             kwarg = "block_number"
@@ -199,15 +211,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         else:
             raise StarknetProviderError(f"Unsupported BlockID type '{type(block_id)}'.")
 
-        block = self.starknet_client.get_block_sync(**{kwarg: block_id})
-        return self.starknet.decode_block(block)
-
-    def _get_block(self, block_id: BlockID) -> StarknetBlock:
-        kwarg = (
-            "block_hash"
-            if isinstance(block_id, (int, str)) and len(str(block_id)) == 76
-            else "block_number"
-        )
         return self.starknet_client.get_block_sync(**{kwarg: block_id})
 
     @handle_client_errors
@@ -258,14 +261,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             data["entry_point_selector"] = data["calldata"][2]
             stop_index = data["calldata"][3] + 1
             data["calldata"] = data["calldata"][4:stop_index]
-
-        if "contract_address" in data:
-            # TODO: Figure out why strange Transfer events show up in receipts sometimes
-            data["events"] = [
-                e
-                for e in data.get("events", [])
-                if e["from_address"] == int(data["contract_address"], 16)
-            ]
 
         transaction = self.starknet.create_transaction(**data)
         receipt = self.starknet.decode_receipt(

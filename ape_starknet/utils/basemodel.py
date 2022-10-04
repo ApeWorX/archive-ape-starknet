@@ -68,7 +68,15 @@ class StarknetBase(ManagerAccessMixin):
                 continue
 
             try:
-                contract_class = ContractClass.deserialize(HexBytes(code))
+                if isinstance(code, str) and code.startswith("0x"):
+                    contract_class = ContractClass.deserialize(HexBytes(code))
+                elif isinstance(code, str):
+                    contract_class = ContractClass.loads(code)
+                elif isinstance(code, bytes):
+                    contract_class = ContractClass.deserialize(code)
+                else:
+                    raise TypeError(f"Unhandled bytecode type '{code}'.")
+
             except UnicodeDecodeError:
                 continue
 
