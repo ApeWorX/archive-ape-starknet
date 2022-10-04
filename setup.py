@@ -65,7 +65,7 @@ setup(
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang==0.10.0",
-        "starknet.py==0.6.0a0",
+        "starknet.py==0.6.2a0",
         "starknet-devnet==0.3.1",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
