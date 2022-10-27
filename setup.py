@@ -12,10 +12,10 @@ extras_require = {
         "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.6.0",  # auto-formatter and linter
-        "mypy>=0.971",  # Static type analyzer
+        "black>=22.10.0",  # auto-formatter and linter
+        "mypy>=0.982",  # Static type analyzer
         "types-requests",  # NOTE: Needed due to mypy typeshed
-        "flake8>=4.0.1",  # Style linter
+        "flake8>=5.0.4",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
         "types-pkg-resources>=0.1.3,<0.2",
     ],
@@ -64,9 +64,9 @@ setup(
         "eth-ape>=0.5.1,<0.6",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
-        "cairo-lang==0.10.0",
-        "starknet.py==0.6.2a0",
-        "starknet-devnet==0.3.1",
+        "cairo-lang==0.10.1",
+        "starknet.py==0.8.0a0",
+        "starknet-devnet==0.3.5",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.10",

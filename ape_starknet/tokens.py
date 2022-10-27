@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Dict, Union
 
-from ape.api import Address
+from ape.api import AccountAPI, Address
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
 from ape.exceptions import ContractError
@@ -216,7 +216,7 @@ class TokenManager(StarknetBase):
 
     def get_balance(self, account: Union[Address, AddressType], token: str = "eth") -> int:
         if hasattr(account, "address"):
-            address = getattr(account, "address")
+            address = account.address  # type: ignore
         else:
             address = account
 
@@ -224,15 +224,16 @@ class TokenManager(StarknetBase):
             return self._get_balance(address, token=token)
 
         if address not in self.local_balance_cache:
-            self.local_balance_cache[address] = {}
+            balance = self._get_balance(address, token=token)
+            self.local_balance_cache[address] = {token: balance}
 
-        if token not in self.local_balance_cache[address]:
+        elif token not in self.local_balance_cache[address]:
             self.local_balance_cache[address][token] = self._get_balance(address, token=token)
 
         return self.local_balance_cache[address][token]
 
     def _get_balance(self, account: AddressType, token: str = "eth") -> int:
-        result = self[token].balanceOf(account)
+        result = self[token].balanceOf(int(account, 16))
         if isinstance(result, (tuple, list)):
             if len(result) == 2:
                 low, high = result
@@ -270,17 +271,56 @@ class TokenManager(StarknetBase):
         if self.provider.network.name != LOCAL_NETWORK_NAME:
             return result
 
-        # NOTE: local cache for sender balance is updated in `provider.send_transaction()`.
-        if (
-            receiver_address in self.local_balance_cache
-            and token in self.local_balance_cache[receiver_address]
-        ):
-            if isinstance(amount, dict):
-                if amount.get("high", 0):
-                    amount = (amount["high"] << 128) + amount["low"]
-                else:
-                    amount = amount["low"]
-
-            self.local_balance_cache[receiver_address][token] += amount
-
+        # NOTE: the fees paid by the sender get updated in `provider.send_transaction()`.
+        amount_int = self._convert_amount_to_int(amount)
+        self.update_cache(sender_account.address, -amount_int, token=token)
+        self.update_cache(receiver_address, amount_int, token=token)
         return result
+
+    def update_cache(
+        self, address: Union[AccountAPI, AddressType], amount: Union[int, Dict], token: str = "eth"
+    ):
+        amount_int = self._convert_amount_to_int(amount)
+        address_str: str
+        if isinstance(address, AccountAPI):
+            address_str = address.address
+        else:
+            address_str = address
+
+        if address_str not in self.local_balance_cache:
+            self.local_balance_cache[address_str] = {
+                token: self._get_balance(address_str, token=token)
+            }
+
+            # Return, as this should include what we were updating to.
+            return
+
+        elif token not in self.local_balance_cache[address_str]:
+            self.local_balance_cache[address_str][token] = self._get_balance(
+                address_str, token=token
+            )
+
+            # Return, as this should include what we were updating to.
+            return
+
+        current_balance: int = self.local_balance_cache[address_str][token]
+        if current_balance + amount_int < 0:
+            raise ValueError(
+                "Unable to set balance to negative value. "
+                f"Current balance={current_balance}, amount={amount_int}"
+            )
+
+        self.local_balance_cache[address_str][token] += amount_int
+
+    def _convert_amount_to_int(self, amount: Union[int, Dict]) -> int:
+        if isinstance(amount, int):
+            return amount
+
+        elif isinstance(amount, dict) and amount.get("high", 0):
+            return (amount["high"] << 128) + amount["low"]
+
+        elif isinstance(amount, dict):
+            return amount["low"]
+
+        else:
+            raise TypeError(f"Unknown amount type: '{amount}'")

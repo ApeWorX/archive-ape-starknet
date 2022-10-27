@@ -45,14 +45,45 @@ owner = container.test_accounts[0]
 
 See the section below about [Testing](#Testing) to learn more about test accounts.
 
-However, when using a live network, you have to deploy the accounts yourself.
-To deploy a new account:
+However, when using a live network, you will have to import or create an account first.
+
+To import an account, use the `import` command:
 
 ```bash
-ape starknet accounts create <ALIAS> --network starknet:testnet
+ape starknet accounts import <ALIAS> --address 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183 --network starknet:testnet
 ```
 
-You can deploy the same account to multiple networks.
+You can also import an account by key-file, including a key-file you exported from your [Argent-X browser wallet](https://www.argent.xyz/argent-x/):
+
+```bash
+ape starknet accounts import <ALIAS> --keyfile path/to/keyfile.json
+```
+
+To create a new account, you will use the `create` command:
+
+```bash
+ape starknet accounts create <NEW-ALIAS> --network starknet:testnet
+```
+
+The `create` command will first generate the public and private key combination and store a local keyfile for the account.
+However, it does not deploy the account automatically.
+The reason it does not deploy automatically is that the account needs funding to pay for its deployment and there are several ways to achieve this.
+See [this section](https://starknet.io/docs/hello_starknet/account_setup.html#transferring-goerli-eth-to-the-account) of the Starknet official guides for more information.
+
+For convenience purposes, if you already have a Starknet account in Ape, you can use that account to fund the creation of new ones.
+To do this, use the `--deployment-funder` flag to specify the funder alias of your other account:
+
+```bash
+ape starknet accounts create <NEW-ALIAS> --network starknet:testnet --deployment-funder <EXISTING-ALIAS>
+```
+
+Otherwise, after you have funder your newly created account an alternative way, you can use the `deploy` command to deploy it:
+
+```bash
+ape starknet accounts deploy <NEW-ALIAS>
+```
+
+You can create the same account in multiple networks by adjusting the `--network` flag:
 
 ```bash
 ape starknet accounts create <ALIAS> --network starknet:mainnet
@@ -71,18 +102,6 @@ Alias                      - <ALIAS>
 Public key                 - 0x123444444d716666dd88882bE2e99991555DE1c7
 Contract address (testnet) - 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183
 Contract address (mainnet) - 0x7873113A4111e5B2229c3332B66696388163440A373333143333B3833332122
-```
-
-Import an existing account:
-
-```bash
-ape starknet accounts import <ALIAS> --address 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183 --network starknet:testnet
-```
-
-You can also import an account by key-file, including a key-file you exported from your [Argent-X browser wallet](https://www.argent.xyz/argent-x/):
-
-```bash
-ape starknet accounts import <ALIAS> --keyfile path/to/keyfile.json
 ```
 
 You can also delete accounts:

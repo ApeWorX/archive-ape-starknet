@@ -1,6 +1,6 @@
 import os
 from dataclasses import asdict
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Union, cast
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -10,12 +10,7 @@ from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
-from ape.utils import (
-    DEFAULT_NUMBER_OF_TEST_ACCOUNTS,
-    cached_property,
-    raises_not_implemented,
-    to_int,
-)
+from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
 from requests import Session
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -29,9 +24,11 @@ from starkware.starkware_utils.error_handling import StarkErrorCode
 
 from ape_starknet.config import DEFAULT_PORT, StarknetConfig
 from ape_starknet.exceptions import StarknetProviderError
-from ape_starknet.tokens import TokenManager
 from ape_starknet.transactions import (
     AccountTransaction,
+    DeclareTransaction,
+    DeployAccountTransaction,
+    DeployTransaction,
     InvokeFunctionTransaction,
     StarknetTransaction,
 )
@@ -45,6 +42,8 @@ from ape_starknet.utils import (
     handle_client_error,
     handle_client_errors,
     run_until_complete,
+    to_checksum_address,
+    to_int,
 )
 from ape_starknet.utils.basemodel import StarknetBase
 
@@ -67,6 +66,9 @@ class DevnetClient:
     def set_time(self, amount: int):
         return self._post("set_time", json={"time": amount})
 
+    def mint(self, address: str, amount: int):
+        return self._post("mint", json={"address": address, "amount": amount})
+
     def _get(self, uri: str, **kwargs):
         return self._request("get", uri, **kwargs)
 
@@ -86,10 +88,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     # Gets set when 'connect()' is called.
     client: Optional[GatewayClient] = None
-    token_manager: TokenManager = TokenManager()
     cached_code: Dict[int, ContractCode] = {}
     local_nonce_cache: Dict[AddressType, int] = {}
-    receipt_cache: Dict[str, ReceiptAPI] = {}
 
     @property
     def connected_client(self) -> GatewayClient:
@@ -149,7 +149,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_balance(self, address: AddressType) -> int:
-        return self.token_manager.get_balance(address)
+        return self.tokens.get_balance(address)
 
     @handle_client_errors
     def get_code(self, address: str) -> List[int]:
@@ -173,6 +173,16 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
+        if isinstance(txn, InvokeFunctionTransaction) and not txn.is_prepared:
+            txn = cast(StarknetTransaction, self.prepare_transaction(txn))
+
+        if isinstance(txn, InvokeFunctionTransaction) and txn.method_abi.name != "__execute__":
+            txn = txn.as_execute()
+
+        if not txn.signature:
+            # Signature is required to estimate gas apparantly, as of 0.10.1
+            txn.signature = self.account_manager[txn.receiver].sign_transaction(txn)
+
         starknet_object = txn.as_starknet_object()
         estimated_fee = self.connected_client.estimate_fee_sync(starknet_object)
         return estimated_fee.overall_fee
@@ -237,19 +247,15 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
 
     @handle_client_errors
-    def get_receipt(self, txn_hash: str) -> ReceiptAPI:
-        if txn_hash in self.receipt_cache:
-            # TODO: Remove once `chain.get_receipt()` fully implemented and released
-            #  (>= eth-ape 0.5.2)
-            return self.receipt_cache[txn_hash]
-
+    def get_receipt(
+        self, txn_hash: str, transaction: Optional[TransactionAPI] = None
+    ) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info, receipt = run_until_complete(
             self.starknet_client.get_transaction(txn_hash),
             self.starknet_client.get_transaction_receipt(tx_hash=txn_hash),
         )
         data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
-
         # Handle __execute__ overhead. User only cares for target ABI.
         if data.get("entry_point_selector") == EXECUTE_SELECTOR:
             num_calls = data["calldata"][0]
@@ -262,11 +268,21 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             stop_index = data["calldata"][3] + 1
             data["calldata"] = data["calldata"][4:stop_index]
 
-        transaction = self.starknet.create_transaction(**data)
+        if not transaction:
+            transaction = self.starknet.create_transaction(**data)
+
+        if isinstance(transaction, DeployAccountTransaction):
+            # The DeployAccountReceipt expects first-hand access to the contract address.
+            data["contract_address"] = transaction.contract_address
+        elif isinstance(transaction, InvokeFunctionTransaction):
+            # Manually remove `contract_address`, as it always confused Pydantic because
+            # of TransactionAPI's `contract_address` attribute, which is required but a different
+            # concept than this.
+            data["receiver"] = data.pop("contract_address")
+
         receipt = self.starknet.decode_receipt(
             {"provider": self, "transaction": transaction, **data}
         )
-        self.receipt_cache[txn_hash] = receipt
         return receipt
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
@@ -281,35 +297,50 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        receipt = self.get_receipt(response.transaction_hash)
-        if receipt.sender in self.local_nonce_cache:
-            self.local_nonce_cache[receipt.sender] += 1
-        else:
-            self.local_nonce_cache[receipt.sender] = 1
+        receipt = self.get_receipt(response.transaction_hash, transaction=txn)
+        if not isinstance(txn, AccountTransaction):
+            return receipt
 
-        if receipt.sender in self.token_manager.local_balance_cache:
-            self.token_manager.local_balance_cache[receipt.sender][
-                "eth"
-            ] -= receipt.total_transfer_value
+        sender_address = None
+        if isinstance(txn, InvokeFunctionTransaction):
+            # The real sender is the account contract address.
+            sender_address = txn.receiver
+            # Replace __execute__ with actual method
+        if isinstance(txn, DeclareTransaction):
+            sender_address = txn.sender
+        elif isinstance(txn, DeployAccountTransaction):
+            sender_address = to_checksum_address(txn.contract_address)
+
+        if sender_address and sender_address in self.local_nonce_cache:
+            self.local_nonce_cache[sender_address] += 1
+        elif sender_address:
+            # Trigger setting nonce via call
+            _ = self.provider.get_nonce(sender_address)
+
+        total_cost = receipt.total_fees_paid + receipt.value
+        if total_cost and sender_address:
+            self.tokens.update_cache(sender_address, -total_cost)
 
         return receipt
 
     def _send_transaction(
         self, txn: TransactionAPI, token: Optional[str] = None
     ) -> SentTransactionResponse:
-        if not token and hasattr(txn, "token") and txn.token:  # type: ignore
-            token = txn.token  # type: ignore
-        else:
-            token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
-
         if not isinstance(txn, StarknetTransaction):
             raise StarknetProviderError(
                 "Unable to send non-Starknet transaction using a Starknet provider "
                 f"(received type '{type(txn)}')."
             )
 
+        env_token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
+        if not token and isinstance(txn, DeployTransaction):
+            token = txn.token or env_token
+        elif not token:
+            token = env_token
+
         starknet_txn = txn.as_starknet_object()
-        return self.starknet_client.send_transaction_sync(starknet_txn, token=token)
+        result = self.starknet_client.send_transaction_sync(starknet_txn, token=token)
+        return result
 
     @raises_not_implemented
     def get_contract_logs(self, log_filter: LogFilter) -> Iterator[ContractLog]:
@@ -388,6 +419,28 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
     def mine(self, num_blocks: int = 1):
         for index in range(num_blocks):
             self.devnet_client.create_block()
+
+    def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
+        if not isinstance(account, str):
+            account = self.conversion_manager.convert(account, AddressType)
+
+        if isinstance(amount, str) and " " in amount:
+            # Convert values like "10 ETH"
+            amount = self.conversion_manager.convert(amount, int)
+        elif not isinstance(amount, int):
+            amount = to_int(amount)
+
+        amount = int(amount)  # for mypy
+        current_balance = self.get_balance(account)
+        difference = amount - current_balance
+        if difference < 0:
+            raise StarknetProviderError(
+                f"Unable to set balance to {amount}, "
+                f"as it is less than the current balance of {current_balance}."
+            )
+
+        self.devnet_client.mint(account, difference)
+        self.tokens.update_cache(account, difference)
 
 
 __all__ = ["StarknetProvider", "StarknetDevnetProvider"]

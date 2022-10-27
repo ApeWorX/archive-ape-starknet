@@ -10,6 +10,7 @@ from ape.cli import (
     network_option,
 )
 from ape.cli.options import ApeCliContextObject
+from ape.logging import logger
 from ape.utils import add_padding_to_strings
 
 from ape_starknet.accounts import (
@@ -33,9 +34,12 @@ def accounts():
 @ape_cli_context()
 @click.argument("alias")
 @network_option(ecosystem=PLUGIN_NAME)
-@click.option("--token", help="Used for deploying contracts in Alpha MainNet.")
-def create(cli_ctx, alias, network, token):
-    """Deploy an account"""
+@click.option("--token", help="Used for deploying contracts in Alpha Mainnet.")
+@click.option(
+    "--deployment-funder", help="Set as an alias to another Starknet account to fund and deploy."
+)
+def create(cli_ctx, alias, network, deployment_funder, token):
+    """Create and/or deploy an account"""
     container = _get_container(cli_ctx)
 
     if alias in container.aliases:
@@ -49,9 +53,53 @@ def create(cli_ctx, alias, network, token):
                 "first to re-deploy."
             )
 
-    contract_address = container.deploy_account(alias, token=token)
-    contract_address = click.style(contract_address, bold=True)
-    cli_ctx.logger.success(f"Account successfully deployed to '{contract_address}'.")
+    new_account = container.create_account(alias)
+    cli_ctx.logger.success(f"Created account data for '{alias}'.")
+    if not deployment_funder:
+        return
+
+    # Transfer money to new account
+    is_local = cli_ctx.provider.network.name == LOCAL_NETWORK_NAME
+    if is_local and not deployment_funder:
+        # Helpful for demonstration purposes.
+        deployment_funder = container.test_accounts[0]
+
+    elif is_local and not deployment_funder.isnumeric():
+        cli_ctx.abort("Use a numeric value (index) for a local devnet funder account.")
+
+    elif is_local:
+        funder_account = container.test_accounts[int(deployment_funder)]
+
+    elif not deployment_funder.startswith("0x"):
+        # Load by alias
+        funder_account = container.load(deployment_funder)
+    else:
+        # Load by address
+        funder_account = container[deployment_funder]
+
+    # Use the funder account to transfer an estimated cost of ETH to the new account
+    # so it can be for its own deployment.
+
+    txn = new_account.deploy_self_transaction
+    txn = new_account.prepare_transaction(txn)
+    funder_account.transfer(new_account, txn.max_fee)
+    txn.signature = new_account.sign_transaction(txn)
+    receipt = cli_ctx.provider.send_transaction(txn)
+    contract_address_styled = click.style(receipt.contract_address, bold=True)
+    logger.success(f"Account successfully deployed to '{contract_address_styled}'.")
+
+
+@accounts.command(cls=NetworkBoundCommand)
+@ape_cli_context()
+@click.argument("alias")
+@network_option(ecosystem=PLUGIN_NAME)
+def deploy(cli_ctx, network, alias):
+    container = _get_container(cli_ctx)
+    account = container.load(alias)
+    account.deploy_self()
+    contract_address = account.contract_address
+    contract_address_styled = click.style(contract_address, bold=True)
+    logger.success(f"Account successfully deployed to '{contract_address_styled}'.")
 
 
 @accounts.command("list")

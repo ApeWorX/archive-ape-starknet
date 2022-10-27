@@ -30,14 +30,16 @@ from ape_starknet.exceptions import (
 from ape_starknet.transactions import (
     ContractDeclaration,
     DeclareTransaction,
+    DeployAccountReceipt,
+    DeployAccountTransaction,
     DeployReceipt,
     DeployTransaction,
-    InvocationReceipt,
+    InvokeFunctionReceipt,
     InvokeFunctionTransaction,
     StarknetReceipt,
     StarknetTransaction,
 )
-from ape_starknet.utils import get_method_abi_from_selector, to_checksum_address
+from ape_starknet.utils import EXECUTE_ABI, get_method_abi_from_selector, to_checksum_address
 from ape_starknet.utils.basemodel import StarknetBase
 
 NETWORKS = {
@@ -217,11 +219,13 @@ class Starknet(EcosystemAPI, StarknetBase):
         txn_type = TransactionType(data["transaction"].type)
         receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
-            receipt_cls = InvocationReceipt
+            receipt_cls = InvokeFunctionReceipt
         elif txn_type == TransactionType.DEPLOY:
             receipt_cls = DeployReceipt
         elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
+        elif txn_type == TransactionType.DEPLOY_ACCOUNT:
+            receipt_cls = DeployAccountReceipt
         else:
             raise StarknetProviderError(f"Unable to handle contract type '{txn_type.value}'.")
 
@@ -271,7 +275,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             raise StarknetEcosystemError("'sender=<account>' required for invoke transactions")
 
         return InvokeFunctionTransaction(
-            contract_address=address,
+            receiver=address,
             method_abi=abi,
             calldata=encoded_calldata,
             sender=kwargs.get("sender"),
@@ -296,9 +300,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
-        txn_cls: Union[
-            Type[InvokeFunctionTransaction], Type[DeployTransaction], Type[DeclareTransaction]
-        ]
+        txn_cls: Type[StarknetTransaction]
         invoking = txn_type == TransactionType.INVOKE_FUNCTION
         if invoking:
             txn_cls = InvokeFunctionTransaction
@@ -306,6 +308,8 @@ class Starknet(EcosystemAPI, StarknetBase):
             txn_cls = DeployTransaction
         elif txn_type == TransactionType.DECLARE:
             txn_cls = DeclareTransaction
+        elif txn_type == TransactionType.DEPLOY_ACCOUNT:
+            txn_cls = DeployAccountTransaction
 
         txn_data: Dict[str, Any] = {**kwargs, "signature": None}
         if "chain_id" not in txn_data and self.network_manager.active_provider:
@@ -334,7 +338,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         """ ~ Invoke transactions ~ """
 
-        if not txn_data.get("method_abi") and "entry_point_selector" in txn_data:
+        if not txn_data.get("method_abi") and txn_data.get("entry_point_selector"):
             target_address = self.decode_address(txn_data["contract_address"])
             target_contract_type = self.chain_manager.contracts.get(target_address)
             if not target_contract_type:
@@ -342,8 +346,10 @@ class Starknet(EcosystemAPI, StarknetBase):
 
             selector = txn_data["entry_point_selector"]
             txn_data["method_abi"] = get_method_abi_from_selector(selector, target_contract_type)
+
         else:
-            raise ValueError("Must provide either 'method_abi' or 'entry_point_selector' kwarg.")
+            # Assume __execute__
+            txn_data["method_abi"] = EXECUTE_ABI
 
         if "calldata" in txn_data and txn_data["calldata"] is not None:
             # Transactions in blocks show calldata as flattened hex-strs
@@ -351,6 +357,9 @@ class Starknet(EcosystemAPI, StarknetBase):
             # consistency and testing purposes.
             encoded_calldata = [self.encode_primitive_value(v) for v in txn_data["calldata"]]
             txn_data["calldata"] = encoded_calldata
+
+        if "contract_address" in txn_data:
+            txn_data["receiver"] = txn_data.pop("contract_address")
 
         return txn_cls(**txn_data)
 

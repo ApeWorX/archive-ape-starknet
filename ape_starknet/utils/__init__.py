@@ -7,7 +7,13 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractEvent
-from ape.exceptions import ApeException, ContractError, ContractLogicError, OutOfGasError
+from ape.exceptions import (
+    ApeException,
+    ContractError,
+    ContractLogicError,
+    OutOfGasError,
+    SignatureError,
+)
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
@@ -15,11 +21,11 @@ from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
-from starknet_devnet.account import Account as DevnetAccount
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     DeclareTransaction,
+    DeployAccountTransaction,
     DeployTransaction,
     InvokeTransaction,
     Transaction,
@@ -29,9 +35,11 @@ from starknet_py.net.models.address import parse_address
 from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
+from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
+from starkware.starknet.third_party.open_zeppelin.starknet_contracts import account_contract
 
 from ape_starknet.exceptions import StarknetProviderError
 
@@ -47,7 +55,6 @@ ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
 EXECUTE_SELECTOR = get_selector_from_name("__execute__")
 DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
 ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, ContractEvent]]
-OZ_CONTRACT_CLASS = DevnetAccount.get_contract_class()
 
 
 def convert_contract_class_to_contract_type(
@@ -65,8 +72,9 @@ def convert_contract_class_to_contract_type(
 
 
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
-    "Account", "openzeppelin.account.Account.cairo", OZ_CONTRACT_CLASS
+    "Account", "openzeppelin.account.Account.cairo", account_contract
 )
+OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_class_hash(account_contract)
 EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods["__execute__"]  # type: ignore
 
 
@@ -175,45 +183,55 @@ def handle_client_error(err: Exception) -> Optional[Exception]:
     if "Actual fee exceeded max fee" in err_msg:
         return OutOfGasError()
 
-    if isinstance(err, ClientError):
+    elif isinstance(err, ClientError):
         # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L11 # noqa
         err_msg = err_msg.split(":", 1)[-1].strip()
 
+    maybe_contract_logic_error = False
     if "Error message:" in err_msg:
-        err_msg = err_msg.split("Error message:")[-1].splitlines()[0].strip()
-        return ContractLogicError(revert_message=err_msg)
+        err_msg = err_msg.split("Error message:")[-1].splitlines()[0].strip().split("\\n")[0]
+        maybe_contract_logic_error = True
 
     elif "Error at pc=" in err_msg:
-        err_msg = err_msg.strip().replace("\n", " ")
+        err_msg = err_msg.strip().replace("\\n", " ")
+        err_msg = _try_extract_message_from_json(err_msg)
+        maybe_contract_logic_error = True
+
+    if "INVALID_SIGNATURE_LENGTH" in err_msg:
+        return SignatureError("Invalid signature length.")
+
+    elif maybe_contract_logic_error:
         return ContractLogicError(revert_message=err_msg)
 
     err_msg = err_msg.strip()
+    err_msg = _try_extract_message_from_json(err_msg)
+    return StarknetProviderError(err_msg)
 
+
+def _try_extract_message_from_json(value: str) -> str:
     # Handle when JSON
     try:
-        err_msg_dict = loads(err_msg)
-        if "message" in err_msg_dict:
-            err_msg = err_msg_dict["message"]
+        msg_dict = loads(value)
+        if "message" in msg_dict:
+            return msg_dict["message"]
+
+        return value
 
     except JSONDecodeError:
-        pass
-
-    return StarknetProviderError(err_msg)
+        return value
 
 
 def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
     txn_dict = {**asdict(txn_info)}
 
     if isinstance(txn_info, DeployTransaction):
-        txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
-        txn_dict["max_fee"] = 0
         txn_dict["type"] = TransactionType.DEPLOY
     elif isinstance(txn_info, InvokeTransaction):
-        txn_dict["contract_address"] = to_checksum_address(txn_info.contract_address)
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
     elif isinstance(txn_info, DeclareTransaction):
-        txn_dict["sender"] = to_checksum_address(txn_info.sender_address)
         txn_dict["type"] = TransactionType.DECLARE
+    elif isinstance(txn_info, DeployAccountTransaction):
+        txn_dict["type"] = TransactionType.DEPLOY_ACCOUNT
 
     return txn_dict
 
