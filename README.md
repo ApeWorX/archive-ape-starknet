@@ -77,7 +77,7 @@ To do this, use the `--deployment-funder` flag to specify the funder alias of yo
 ape starknet accounts create <NEW-ALIAS> --network starknet:testnet --deployment-funder <EXISTING-ALIAS>
 ```
 
-Otherwise, after you have funder your newly created account an alternative way, you can use the `deploy` command to deploy it:
+Otherwise, after you have funded your newly created account an alternative way, you can use the `deploy` command to deploy it:
 
 ```bash
 ape starknet accounts deploy <NEW-ALIAS>
