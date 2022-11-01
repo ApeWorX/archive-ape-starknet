@@ -27,10 +27,12 @@ from starknet_py.net import KeyPair
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
 from starknet_py.utils.crypto.facade import ECSignature, message_signature, pedersen_hash
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
+from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.core.os.contract_address.contract_address import (
     calculate_contract_address_from_hash,
 )
 from starkware.starknet.definitions.fields import ContractAddressSalt
+from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
 from ape_starknet.provider import StarknetProvider
@@ -328,9 +330,14 @@ class StarknetAccountDeployment:
 
 
 class BaseStarknetAccount(AccountAPI, StarknetBase):
-    class_hash: int = OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH
     contract_type: ContractType = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
     salt: Optional[int] = None
+
+    @cached_property
+    def class_hash(self) -> int:
+        contract_cls_bytes = self.contract_type.deployment_bytecode.bytecode
+        contract_cls = ContractClass.deserialize(HexBytes(contract_cls_bytes))
+        return compute_class_hash(contract_cls)
 
     @property
     def public_key(self) -> str:
