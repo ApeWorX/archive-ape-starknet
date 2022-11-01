@@ -339,6 +339,10 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     contract_type: ContractType = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE
     salt: Optional[int] = None
 
+    @property
+    def signer(self) -> StarkCurveSigner:
+        raise APINotImplementedError("Implement 'signer' in base class.")
+
     @cached_property
     def class_hash(self) -> int:
         bytecode_obj = self.contract_type.deployment_bytecode
@@ -355,15 +359,6 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     @property
     def address_int(self) -> int:
         return self.starknet.encode_address(self.address)
-
-    @cached_property
-    def signer(self) -> StarkCurveSigner:
-        key_pair = KeyPair.from_private_key(self._get_private_key())
-        return StarkCurveSigner(
-            account_address=self.address,
-            key_pair=key_pair,
-            chain_id=get_chain_id(self.provider.chain_id),
-        )
 
     @cached_property
     def deploy_self_transaction(self) -> DeployAccountTransaction:
@@ -485,8 +480,13 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn = self.starknet.encode_contract_blueprint(contract_type, sender=self.address)
         return self.call(txn)
 
-    def _get_private_key(self) -> int:
-        raise APINotImplementedError("Base account class must implement this `_get_private_key()`.")
+    def _create_signer(self, private_key: int) -> StarkCurveSigner:
+        key_pair = KeyPair.from_private_key(private_key)
+        return StarkCurveSigner(
+            account_address=self.address,
+            key_pair=key_pair,
+            chain_id=get_chain_id(self.provider.chain_id),
+        )
 
 
 class StarknetDevelopmentAccount(BaseStarknetAccount):
@@ -530,14 +530,15 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
     def address(self) -> AddressType:
         return self.contract_address
 
-    def _get_private_key(self) -> int:
-        return int(self.private_key, 16)
+    @cached_property
+    def signer(self) -> StarkCurveSigner:
+        return self._create_signer(int(self.private_key, 16))
 
     def sign_message(  # type: ignore[override]
         self, msg: StarknetSignableMessage
     ) -> Optional[ECSignature]:
         msg = StarknetSignableMessage(value=msg)
-        return sign_calldata(msg.value, self._get_private_key())
+        return sign_calldata(msg.value, int(self.private_key, 16))
 
 
 class StarknetKeyfileAccount(BaseStarknetAccount):
@@ -545,6 +546,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     locked: bool = True
     __autosign: bool = False
     __cached_key: Optional[int] = None
+
+    @cached_property
+    def signer(self) -> StarkCurveSigner:
+        return self._create_signer(self.__get_private_key())
 
     @property
     def address(self) -> AddressType:
@@ -667,13 +672,13 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         self, msg: StarknetSignableMessage, passphrase: Optional[str] = None
     ) -> Optional[ECSignature]:
         msg = StarknetSignableMessage(value=msg)
-        private_key = self._get_private_key(passphrase=passphrase)
+        private_key = self.__get_private_key(passphrase=passphrase)
         return sign_calldata(msg.value, private_key)
 
     def change_password(self):
         self.locked = True  # force entering passphrase to get key
         original_passphrase = self._get_passphrase_from_prompt()
-        private_key = self._get_private_key(passphrase=original_passphrase)
+        private_key = self.__get_private_key(passphrase=original_passphrase)
         self.write(passphrase=None, private_key=private_key)
 
     def add_deployment(self, network_name: str, contract_address: AddressType):
@@ -689,7 +694,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         self.write(
             passphrase=passphrase,
-            private_key=self._get_private_key(passphrase=passphrase),
+            private_key=self.__get_private_key(passphrase=passphrase),
             deployments=deployments,
         )
 
@@ -697,7 +702,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         passphrase = passphrase or self._get_passphrase_from_prompt(
             f"Enter passphrase to unlock '{self.alias}'"
         )
-        self._get_private_key(passphrase=passphrase)
+        self.__get_private_key(passphrase=passphrase)
         self.locked = False
 
     def set_autosign(self, enabled: bool, passphrase: Optional[str] = None):
@@ -725,7 +730,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             None,
         )
 
-    def _get_private_key(self, passphrase: Optional[str] = None) -> int:
+    def __get_private_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:
             if not self.locked:
                 click.echo(f"Using cached key for '{self.alias}'")
@@ -756,7 +761,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
     def __encrypt_key_file(self, passphrase: str, private_key: Optional[int] = None) -> Dict:
         private_key = (
-            self._get_private_key(passphrase=passphrase) if private_key is None else private_key
+            self.__get_private_key(passphrase=passphrase) if private_key is None else private_key
         )
         key_str = pad_hex_str(HexBytes(private_key).hex())
         passphrase_bytes = text_if_str(to_bytes, passphrase)

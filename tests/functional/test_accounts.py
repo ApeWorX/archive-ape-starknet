@@ -104,17 +104,17 @@ def test_can_access_devnet_accounts(account, second_account, chain):
     assert chain.contracts[second_account.address] == second_account.contract_type
 
 
-def test_import_with_passphrase(account_container, key_file_account, password):
+def test_import_with_passphrase(account_container, account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     account_container.import_account(
         alias,
         LOCAL_NETWORK_NAME,
-        key_file_account.address,
-        key_file_account._get_private_key(password),
+        account.address,
+        account.private_key,
         passphrase="p@55W0rd",
     )
     new_account = account_container.load(alias)
-    assert new_account.address == key_file_account.address
+    assert new_account.address == account.address
 
 
 def test_transfer(account, second_account):
