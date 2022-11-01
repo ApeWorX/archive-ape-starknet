@@ -70,12 +70,12 @@ def create(cli_ctx, alias, network, deployment_funder, token):
     elif is_local:
         funder_account = container.test_accounts[int(deployment_funder)]
 
-    elif not deployment_funder.startswith("0x"):
-        # Load by alias
-        funder_account = container.load(deployment_funder)
-    else:
+    elif deployment_funder.startswith("0x"):
         # Load by address
         funder_account = container[deployment_funder]
+    else:
+        # Load by alias
+        funder_account = container.load(deployment_funder)
 
     # Use the funder account to transfer an estimated cost of ETH to the new account
     # so it can be for its own deployment.

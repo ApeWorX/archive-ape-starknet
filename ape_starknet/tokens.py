@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, Dict, Union, cast
 
 from ape.api import AccountAPI, Address
 from ape.api.networks import LOCAL_NETWORK_NAME
@@ -216,9 +216,9 @@ class TokenManager(StarknetBase):
 
     def get_balance(self, account: Union[Address, AddressType], token: str = "eth") -> int:
         if hasattr(account, "address"):
-            address = account.address  # type: ignore
+            address = cast(Address, account).address
         else:
-            address = account
+            address = cast(AddressType, account)
 
         if self.provider.network.name != LOCAL_NETWORK_NAME:
             return self._get_balance(address, token=token)

@@ -180,7 +180,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             txn = txn.as_execute()
 
         if not txn.signature:
-            # Signature is required to estimate gas apparantly, as of 0.10.1
+            # Signature is required to estimate gas, unfortunately.
+            #  the transaction is typically signed by this point, but not always.
             txn.signature = self.account_manager[txn.receiver].sign_transaction(txn)
 
         starknet_object = txn.as_starknet_object()
@@ -305,8 +306,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if isinstance(txn, InvokeFunctionTransaction):
             # The real sender is the account contract address.
             sender_address = txn.receiver
-            # Replace __execute__ with actual method
-        if isinstance(txn, DeclareTransaction):
+        elif isinstance(txn, DeclareTransaction):
             sender_address = txn.sender
         elif isinstance(txn, DeployAccountTransaction):
             sender_address = to_checksum_address(txn.contract_address)
@@ -421,9 +421,16 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             self.devnet_client.create_block()
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
+        """
+        Mint the difference between the account's current balance and the desired balance
+        and give it to the account.
+        """
+
+        # Convert account
         if not isinstance(account, str):
             account = self.conversion_manager.convert(account, AddressType)
 
+        # Convert amount
         if isinstance(amount, str) and " " in amount:
             # Convert values like "10 ETH"
             amount = self.conversion_manager.convert(amount, int)

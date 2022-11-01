@@ -259,7 +259,9 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
         )
         address_str = to_checksum_address(contract_address)
         logger.info(f"Creating account data for '{address_str}' ...")
-        return self.import_account(alias, network_name, contract_address, private_key, salt=salt)
+        return self.import_account(
+            alias, network_name, contract_address, private_key, class_hash=class_hash, salt=salt
+        )
 
     def import_account(
         self,
@@ -289,6 +291,7 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
                 "private_key": key_pair.private_key,
                 "address": contract_address,
                 "salt": salt or 20,
+                "class_hash": class_hash,
             }
             self.ephemeral_accounts[alias] = account_data
             new_account = StarknetDevelopmentAccount.parse_obj(account_data)
@@ -297,7 +300,10 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
             path = self.data_folder.joinpath(f"{alias}.json")
             new_account = StarknetKeyfileAccount(key_file_path=path)
             new_account.write(
-                passphrase=passphrase, private_key=private_key, deployments=deployments
+                passphrase=passphrase,
+                private_key=private_key,
+                class_hash=class_hash,
+                deployments=deployments,
             )
 
         # Ensure contract gets cached
@@ -335,8 +341,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @cached_property
     def class_hash(self) -> int:
-        contract_cls_bytes = self.contract_type.deployment_bytecode.bytecode
-        contract_cls = ContractClass.deserialize(HexBytes(contract_cls_bytes))
+        bytecode_obj = self.contract_type.deployment_bytecode
+        if not bytecode_obj or not bytecode_obj.bytecode:
+            raise ValueError("Missing ContractClass bytes")
+
+        contract_cls = ContractClass.deserialize(HexBytes(bytecode_obj.bytecode))
         return compute_class_hash(contract_cls)
 
     @property
@@ -495,7 +504,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
     salt: int = 20
     """
     The contract-address salt used when deploying this account.
-    Defaults to `20` because it's the same value `starknet_devnet` uses.
+    Defaults to ``20`` because it's the same value ``starknet_devnet`` uses.
     """
 
     # Alias because base-class needs `public_key` as a @property
@@ -599,6 +608,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         self,
         passphrase: Optional[str] = None,
         private_key: Optional[int] = None,
+        class_hash: int = OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
         deployments: Optional[List[Dict]] = None,
     ):
         passphrase = (
@@ -614,7 +624,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
             account_data[APP_KEY_FILE_KEY]["deployments"] = deployments
 
-        account_data = {**account_data, **key_file_data}
+        account_data = {**account_data, **key_file_data, "class_hash": class_hash}
         self.key_file_path.write_text(json.dumps(account_data))
 
     def get_account_data(self) -> Dict:
@@ -716,7 +726,6 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         )
 
     def _get_private_key(self, passphrase: Optional[str] = None) -> int:
-        # Called in base-class. All accounts that use the base class need to implement this.
         if self.__cached_key is not None:
             if not self.locked:
                 click.echo(f"Using cached key for '{self.alias}'")
