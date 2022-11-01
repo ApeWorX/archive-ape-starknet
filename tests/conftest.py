@@ -27,6 +27,7 @@ EXISTING_EPHEMERAL_ALIAS = f"{ALIAS}existing_ephemeral"
 PASSWORD = "123"
 PUBLIC_KEY = "0x140dfbab0d711a23dd58842be2ee16318e3de1c7"
 CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B387463a183"
+EPHEMERAL_ACCOUNT_START_BALANCE = "1000000 ETH"
 
 # Purposely pick a number larest enough to test Uint256 logic
 TOKEN_INITIAL_SUPPLY = 2 * 2**128
@@ -303,8 +304,10 @@ def eth_account(accounts):
 
 @pytest.fixture(scope="session")
 def ephemeral_account(account_container, provider):
-    _ = provider  # Need connection to deploy account.
-    account_container.deploy_account(ALIAS)
+    new_account = account_container.create_account(ALIAS)
+    funder = account_container.test_accounts[2]
+    funder.transfer(new_account, "1 ETH")
+    new_account.deploy_self()
     return account_container.load(ALIAS)
 
 

@@ -51,9 +51,7 @@ def test_get_transactions_by_block(provider, account, contract):
     transactions = [t for t in provider.get_transactions_by_block("latest")]
 
     expected_chain_id = provider.chain_id
-    expected_abi = [
-        a for a in account.get_account_contract_type().mutable_methods if a.name == "__execute__"
-    ][0]
+    expected_abi = [a for a in account.contract_type.mutable_methods if a.name == "__execute__"][0]
     expected_nonce = account.nonce - 1
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id
@@ -91,3 +89,18 @@ def test_mine(provider):
 
     # NOTE: Uses >= in case of x-dist
     assert next_block_num >= block_num + 1
+
+
+def test_set_balance(provider, account, tokens):
+    current_balance = account.balance
+
+    del tokens.local_balance_cache[account.address]["eth"]
+    assert account.balance == current_balance
+
+    new_balance = current_balance + 23400000000
+    provider.set_balance(account, new_balance)
+    assert account.balance == new_balance
+
+    # Clear cache to ensure recognized on chain
+    del tokens.local_balance_cache[account.address]["eth"]
+    assert account.balance == new_balance

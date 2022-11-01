@@ -26,7 +26,7 @@ def devnet_keyfile_account(account_container, account):
     return account_container.load("__DEV_AS_KEYFILE_ACCOUNT__")
 
 
-def test_public_keys(key_file_account, public_key):
+def test_public_key(key_file_account, public_key):
     actual = key_file_account.public_key
     assert actual == public_key
 
@@ -61,49 +61,69 @@ def test_account_container_contains(account, second_account, key_file_account, a
     assert key_file_account.address in account_container
 
 
-@pytest.mark.parametrize(
-    "get_address",
-    [
-        lambda a, _: a.address,
-        lambda a, e: e.encode_address(a.address),
-        lambda a, _: a.public_key,
-        lambda a, e: e.encode_address(a.public_key),
-    ],
-)
-def test_access_account_by_str_address(account, account_container, ecosystem, get_address):
+CASE_NAME_TO_LAMBDA = {
+    "address_str": lambda a, _: a.address,
+    "address_int": lambda a, e: e.encode_address(a.address),
+    "public_key_str": lambda a, _: a.public_key,
+    "public_key_int": lambda a, e: e.encode_address(a.public_key),
+}
+
+
+@pytest.mark.parametrize("case", [x for x in CASE_NAME_TO_LAMBDA.keys()])
+def test_access_account_by_str_address(account, account_container, ecosystem, case):
+    get_address = CASE_NAME_TO_LAMBDA[case]
     address = get_address(account, ecosystem)
     assert account_container[address] == account
     assert address in account_container
 
 
-def test_balance(account):
+def test_balance(account, ephemeral_account, tokens):
     balance = account.balance
+    assert isinstance(balance, int)
+    assert balance > 0
+
+    balance = ephemeral_account.balance
+    assert isinstance(balance, int)
+    assert balance > 0
+
+    # Clear caches and make sure still works (uses RPC)
+    del tokens.local_balance_cache[account.address]
+    del tokens.local_balance_cache[ephemeral_account.address]
+
+    balance = account.balance
+    assert isinstance(balance, int)
+    assert balance > 0
+
+    balance = ephemeral_account.balance
     assert isinstance(balance, int)
     assert balance > 0
 
 
 def test_can_access_devnet_accounts(account, second_account, chain):
-    assert chain.contracts[account.address] == account.get_account_contract_type()
-    assert chain.contracts[second_account.address] == second_account.get_account_contract_type()
+    assert chain.contracts[account.address] == account.contract_type
+    assert chain.contracts[second_account.address] == second_account.contract_type
 
 
-def test_import_with_passphrase(account_container, key_file_account, password):
+def test_import_with_passphrase(account_container, account):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     account_container.import_account(
         alias,
         LOCAL_NETWORK_NAME,
-        key_file_account.address,
-        key_file_account._get_key(password),
+        account.address,
+        account.private_key,
         passphrase="p@55W0rd",
     )
     new_account = account_container.load(alias)
-    assert new_account.address == key_file_account.address
+    assert new_account.address == account.address
 
 
 def test_transfer(account, second_account):
-    initial_balance = second_account.balance
-    account.transfer(second_account, 10)
-    assert second_account.balance == initial_balance + 10
+    initial_account_balance = account.balance
+    initial_second_account_balance = second_account.balance
+    receipt = account.transfer(second_account, 10)
+    total_cost = receipt.total_fees_paid + 10
+    assert second_account.balance == initial_second_account_balance + 10
+    assert account.balance == initial_account_balance - total_cost
 
 
 def test_unlock_with_passphrase_and_sign_message(give_input, devnet_keyfile_account):

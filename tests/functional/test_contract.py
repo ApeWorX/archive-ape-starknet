@@ -11,12 +11,18 @@ def test_is_token(contract, tokens):
 
 def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
     # Declare contract type. The result should contain a 'class_hash'.
+    balance_before = account.balance
     declaration = account.declare(project.MyContract)
     assert declaration.class_hash
+    assert account.balance == balance_before - declaration.total_fees_paid
 
     # Ensure can use class_hash in factory contract
     factory = factory_contract_container.deploy(declaration.class_hash)
+
+    balance_before = account.balance
     receipt = factory.create_my_contract(sender=account)
+    assert account.balance == balance_before - receipt.total_fees_paid
+
     logs = list(receipt.decode_logs(factory.contract_deployed))
     new_contract_address = provider.starknet.decode_address(logs[0]["contract_address"])
 

@@ -28,15 +28,25 @@ def argent_x_backup(argent_x_key_file_account_data):
         yield key_file_path
 
 
-def test_create(accounts_runner):
-    """
-    Integration test for accounts.
-    It all happens under one test because it is really slow to deploy accounts.
-    """
-
+def test_create_then_deploy(accounts_runner, account_container):
     random_alias = "".join(random.choice(["a", "b", "c", "d", "e", "f"]) for _ in range(6))
     output = accounts_runner.invoke("create", random_alias)
-    assert "Account successfully deployed to" in output
+    assert "Creating account data for" in output
+
+    # Fund the account so it can deploy
+    account = account_container.load(random_alias)
+    funder = account_container.test_accounts[5]
+    funder.transfer(account, "1 ETH")
+
+    output = accounts_runner.invoke("deploy", random_alias)
+    assert "Account successfully deployed to " in output
+
+
+def test_create_and_depoy(accounts_runner):
+    random_alias = "".join(random.choice(["a", "b", "c", "d", "e", "f"]) for _ in range(6))
+    output = accounts_runner.invoke("create", random_alias, "--deployment-funder", "5")
+    assert "Creating account data for" in output
+    assert "Account successfully deployed to " in output
 
 
 def test_delete(

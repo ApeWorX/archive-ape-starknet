@@ -36,7 +36,7 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         elif address in self.account_contracts:
             starknet_account = self.account_contracts[address]
             assert isinstance(starknet_account, BaseStarknetAccount)  # for mypy
-            return starknet_account.get_account_contract_type()
+            return starknet_account.contract_type
 
         code_and_abi = self.provider.get_code_and_abi(address)
 
