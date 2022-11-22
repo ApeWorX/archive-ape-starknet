@@ -6,7 +6,7 @@ from ape.utils import raises_not_implemented
 from ethpm_types import ContractType, HexBytes
 
 from ape_starknet.accounts import BaseStarknetAccount
-from ape_starknet.utils import pad_hex_str
+from ape_starknet.utils import EXECUTE_METHOD_NAME, pad_hex_str
 from ape_starknet.utils.basemodel import StarknetBase
 
 
@@ -52,13 +52,15 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
             "deploymentBytecode": {"bytecode": f"0x{''.join(code_parts)}"},
         }
 
-        if "__execute__" in [a["name"] for a in code_and_abi.abi]:
+        if EXECUTE_METHOD_NAME in [a["name"] for a in code_and_abi.abi]:
             contract_type_dict["contractName"] = "Account"
 
         return ContractType.parse_obj(contract_type_dict)
 
     @raises_not_implemented
-    def get_account_transactions(self, address: AddressType) -> Iterator[ReceiptAPI]:
+    def get_account_transactions(  # type: ignore[empty-body]
+        self, address: AddressType
+    ) -> Iterator[ReceiptAPI]:
         # TODO
         pass
 

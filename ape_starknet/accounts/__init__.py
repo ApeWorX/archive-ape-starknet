@@ -567,7 +567,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return self.key_file_path.stem
 
     @cached_property
-    def class_hash(self) -> int:  # type: ignore
+    def class_hash(self) -> int:
         return self.get_account_data().get("class_hash") or OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH
 
     @property
@@ -721,14 +721,17 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data.get("deployments", [])]
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
-        return next(
-            (
-                deployment
-                for deployment in self.get_deployments()
-                if deployment.network_name in network_name
-            ),
-            None,
-        )
+        try:
+            return next(
+                (
+                    deployment
+                    for deployment in self.get_deployments()
+                    if deployment.network_name in network_name
+                ),
+                None,
+            )
+        except StopIteration:
+            return None
 
     def __get_private_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:

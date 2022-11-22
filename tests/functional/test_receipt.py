@@ -29,7 +29,7 @@ def test_decode_logs(receipt, token_contract, account, second_account):
     assert log.to == expected_receiver
 
     # Verify events emitted from imported function call show up in receipt.
-    lib_event = token_contract.contract_type.events["ERC20_ParentEvent"]
+    lib_event = token_contract.contract_type.events["MyEventLib_ParentEvent"]
     lib_logs = list(receipt.decode_logs(lib_event))
     assert len(lib_logs) == 1
     assert lib_logs[0].favorite_account == expected_receiver
@@ -49,7 +49,7 @@ def test_decode_logs_when_logs_from_other_contract(token_contract, token_user_co
     assert mint_logs[-1].sender == int(token_user_contract.address, 16)
 
     # Verify events emitted from imported function call show up in receipt.
-    lib_event = token_contract.contract_type.events["ERC20_ParentEvent"]
+    lib_event = token_contract.contract_type.events["MyEventLib_ParentEvent"]
     lib_logs = list(receipt.decode_logs(lib_event))
     assert len(lib_logs) == 1
 

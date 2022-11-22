@@ -146,7 +146,21 @@ declaration = account.declare(project.MyContract)
 print(declaration.class_hash)
 ```
 
-Then, you can use the class hash in a deploy system call in a factory contract:
+Then, you can use the `deploy` method to deploy the contracts.
+**NOTE**: The `deploy` method in `ape-starknet` makes an invoke-function call against the Starknet public UDC contract.
+Learn more about UDC contracts [here](https://community.starknet.io/t/universal-deployer-contract-proposal/1864).
+
+```python
+from ape import accounts, project
+
+# This only works if `project.MyContract` was declared previously.
+# The class hash is not necessary as an argument. Ape will look it up.
+account = accounts.load("<MY_STARK_ACCOUNT>")
+account.deploy(project.MyContact)
+```
+
+Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.
+Let's say for example I have the following Cairo factory contract:
 
 ```cairo
 from starkware.cairo.common.alloc import alloc
@@ -171,7 +185,8 @@ func deploy_my_contract{
     salt.write(value=current_salt + 1)
 ```
 
-After deploying the factory contract, you can use it to create contract instances:
+This contract accepts a class hash of a declared contract deploys it.
+The following example shows how to use this factory class to deploy other contracts:
 
 ```python
 from ape import Contract, accounts, networks, project
@@ -185,23 +200,6 @@ factory = project.ContractFactory.deploy(declaration.class_hash)
 call_result = factory.deploy_my_contract()
 contract_address = networks.starknet.decode_address(call_result)
 contract = Contract(contract_address, contract_type=project.MyContract.contract_type)
-```
-
-You can also `deploy()` from the declaration receipt (which uses the legacy deploy transaction):
-
-```python
-from ape import accounts, project
-
-declaration = project.provider.declare(project.MyContract)
-receipt = declaration.deploy(1, 2, sender=accounts.load("MyAccount"))
-```
-
-Otherwise, you can use the legacy deploy system which works the same as Ethereum in ape except no sender is needed:
-
-```python
-from ape import project
-
-contract = project.MyContract.deploy()
 ```
 
 ### Contract Interaction

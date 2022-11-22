@@ -233,7 +233,8 @@ class TokenManager(StarknetBase):
         return self.local_balance_cache[address][token]
 
     def _get_balance(self, account: AddressType, token: str = "eth") -> int:
-        result = self[token].balanceOf(int(account, 16))
+        account_int = int(account, 16)
+        result = self[token].balanceOf(account_int)
         if isinstance(result, (tuple, list)):
             if len(result) == 2:
                 low, high = result

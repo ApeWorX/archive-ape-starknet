@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from setuptools import find_packages, setup  # type: ignore
+from setuptools import find_packages, setup
 
 extras_require = {
     "test": [  # `test` GitHub Action jobs uses this
@@ -13,8 +13,9 @@ extras_require = {
     ],
     "lint": [
         "black>=22.10.0",  # auto-formatter and linter
-        "mypy>=0.982",  # Static type analyzer
-        "types-requests",  # NOTE: Needed due to mypy typeshed
+        "mypy>=0.991",  # Static type analyzer
+        "types-requests",  # Needed due to mypy typeshed
+        "types-setuptools",  # Needed due to mypy typeshed
         "flake8>=5.0.4",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
         "types-pkg-resources>=0.1.3,<0.2",
@@ -65,8 +66,8 @@ setup(
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang==0.10.1",
-        "starknet.py==0.8.0a0",
-        "starknet-devnet==0.3.5",
+        "starknet.py==0.10.0a0",
+        "starknet-devnet==0.4.0",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.10",

@@ -26,7 +26,6 @@ from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     DeclareTransaction,
     DeployAccountTransaction,
-    DeployTransaction,
     InvokeTransaction,
     Transaction,
 )
@@ -52,9 +51,11 @@ NETWORKS = {
 _HEX_ADDRESS_REG_EXP = re.compile("(0x)?[0-9a-f]*", re.IGNORECASE | re.ASCII)
 """Same as from eth-utils except not limited length."""
 ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY = "ALPHA_MAINNET_WL_DEPLOY_TOKEN"
-EXECUTE_SELECTOR = get_selector_from_name("__execute__")
+EXECUTE_METHOD_NAME = "__execute__"
+EXECUTE_SELECTOR = get_selector_from_name(EXECUTE_METHOD_NAME)
 DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
 ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, ContractEvent]]
+_DECLARE_ERROR_PATTERN = re.compile(r"Class with hash (0x[0-9a-fA-F]+) is not declared")
 
 
 def convert_contract_class_to_contract_type(
@@ -75,7 +76,7 @@ OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
     "Account", "openzeppelin.account.Account.cairo", account_contract
 )
 OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_class_hash(account_contract)
-EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods["__execute__"]  # type: ignore
+EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods[EXECUTE_METHOD_NAME]
 
 
 def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
@@ -200,6 +201,11 @@ def handle_client_error(err: Exception) -> Optional[Exception]:
     if "INVALID_SIGNATURE_LENGTH" in err_msg:
         return SignatureError("Invalid signature length.")
 
+    declare_error_search = _DECLARE_ERROR_PATTERN.search(err_msg)
+    if declare_error_search:
+        address = declare_error_search.groups()[0]
+        raise StarknetProviderError(f"Contract with address '{address}' not declared.")
+
     elif maybe_contract_logic_error:
         return ContractLogicError(revert_message=err_msg)
 
@@ -209,24 +215,20 @@ def handle_client_error(err: Exception) -> Optional[Exception]:
 
 
 def _try_extract_message_from_json(value: str) -> str:
-    # Handle when JSON
     try:
         msg_dict = loads(value)
-        if "message" in msg_dict:
-            return msg_dict["message"]
-
-        return value
-
     except JSONDecodeError:
         return value
+
+    if "message" in msg_dict:
+        return msg_dict["message"]
+
+    return value
 
 
 def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
     txn_dict = {**asdict(txn_info)}
-
-    if isinstance(txn_info, DeployTransaction):
-        txn_dict["type"] = TransactionType.DEPLOY
-    elif isinstance(txn_info, InvokeTransaction):
+    if isinstance(txn_info, InvokeTransaction):
         txn_dict["type"] = TransactionType.INVOKE_FUNCTION
     elif isinstance(txn_info, DeclareTransaction):
         txn_dict["type"] = TransactionType.DECLARE

@@ -12,6 +12,7 @@ from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
 from requests import Session
+from starknet_py.net.client_errors import ContractNotFoundError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
     ContractCode,
@@ -28,13 +29,13 @@ from ape_starknet.transactions import (
     AccountTransaction,
     DeclareTransaction,
     DeployAccountTransaction,
-    DeployTransaction,
     InvokeFunctionTransaction,
     StarknetTransaction,
 )
 from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     DEFAULT_ACCOUNT_SEED,
+    EXECUTE_METHOD_NAME,
     EXECUTE_SELECTOR,
     PLUGIN_NAME,
     get_chain_id,
@@ -176,7 +177,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if isinstance(txn, InvokeFunctionTransaction) and not txn.is_prepared:
             txn = cast(StarknetTransaction, self.prepare_transaction(txn))
 
-        if isinstance(txn, InvokeFunctionTransaction) and txn.method_abi.name != "__execute__":
+        if (
+            isinstance(txn, InvokeFunctionTransaction)
+            and txn.method_abi.name != EXECUTE_METHOD_NAME
+        ):
             txn = txn.as_execute()
 
         if not txn.signature:
@@ -233,7 +237,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             )
 
         starknet_obj = txn._as_call()
-        return self.connected_client.call_contract_sync(starknet_obj)  # type: ignore
+        return self.connected_client.call_contract_sync(starknet_obj)
 
     @handle_client_errors
     def _get_traces(self, block_number: int) -> List[BlockSingleTransactionTrace]:
@@ -245,7 +249,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         self, block_number: int, txn_hash: int
     ) -> Optional[BlockSingleTransactionTrace]:
         traces = self._get_traces(block_number)
-        return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
+        try:
+            return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
+        except StopIteration:
+            return None
 
     @handle_client_errors
     def get_receipt(
@@ -257,6 +264,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.starknet_client.get_transaction_receipt(tx_hash=txn_hash),
         )
         data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
+        was_deploy = False
         # Handle __execute__ overhead. User only cares for target ABI.
         if data.get("entry_point_selector") == EXECUTE_SELECTOR:
             num_calls = data["calldata"][0]
@@ -278,12 +286,30 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         elif isinstance(transaction, InvokeFunctionTransaction):
             # Manually remove `contract_address`, as it always confused Pydantic because
             # of TransactionAPI's `contract_address` attribute, which is required but a different
-            # concept than this.
+            # concept than this (for deploys, it is the new contract address but for invoke, it's
+            # the receiver).
             data["receiver"] = data.pop("contract_address")
+            original_tx = transaction.original_transaction
+            was_deploy = (
+                original_tx is not None
+                and original_tx.method_abi.name == "deployContract"
+                and int(original_tx.receiver, 16) == int(self.udc.address, 16)
+            )
 
         receipt = self.starknet.decode_receipt(
             {"provider": self, "transaction": transaction, **data}
         )
+
+        if was_deploy:
+            event_abi = self.udc.contract_type.events["ContractDeployed"]
+            logs = list(receipt.decode_logs(event_abi))
+            if not logs:
+                raise StarknetProviderError("Failed to create contract.")
+
+            # Set the receipt `contract_address` to the newly deployed contract's address,
+            # mimicing how it works in Ethereum.
+            receipt.contract_address = self.starknet.decode_address(logs[-1]["address"])
+
         return receipt
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
@@ -331,22 +357,29 @@ class StarknetProvider(ProviderAPI, StarknetBase):
                 "Unable to send non-Starknet transaction using a Starknet provider "
                 f"(received type '{type(txn)}')."
             )
+        elif (
+            isinstance(txn, InvokeFunctionTransaction)
+            and txn.method_abi.name != EXECUTE_METHOD_NAME
+        ):
+            raise StarknetProviderError(
+                f"Can only send invoke transaction to an account {EXECUTE_METHOD_NAME} method."
+            )
 
         env_token = os.environ.get(ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY)
-        if not token and isinstance(txn, DeployTransaction):
-            token = txn.token or env_token
-        elif not token:
-            token = env_token
-
+        token = token or getattr(txn, "token", env_token)
         starknet_txn = txn.as_starknet_object()
         result = self.starknet_client.send_transaction_sync(starknet_txn, token=token)
         return result
 
     @raises_not_implemented
-    def get_contract_logs(self, log_filter: LogFilter) -> Iterator[ContractLog]:
+    def get_contract_logs(  # type: ignore[empty-body]
+        self, log_filter: LogFilter
+    ) -> Iterator[ContractLog]:
         pass
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        txn.chain_id = self.provider.chain_id
+
         # All preparation happens on the account side.
         if isinstance(txn, AccountTransaction) and not txn.is_prepared and txn.sender:
             account = self.account_contracts[txn.sender]
@@ -362,7 +395,13 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         # Cache code for faster look-up
         if address_int not in self.cached_code:
-            self.cached_code[address_int] = self.starknet_client.get_code_sync(address_int)
+            try:
+                code_and_abi = self.starknet_client.get_code_sync(address_int)
+            except ContractNotFoundError:
+                # Nothing deployed to this address.
+                code_and_abi = ContractCode(bytecode=[], abi=[])
+
+            self.cached_code[address_int] = code_and_abi
 
         return self.cached_code[address_int]
 

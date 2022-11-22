@@ -14,6 +14,8 @@ from ape_starknet.utils import (
     to_checksum_address,
 )
 
+TEST_ADDRESS = 852629284295565304522725188288313475155928521990240236795402253191102056828
+
 
 @pytest.mark.parametrize("iteration", range(10))
 def test_get_random_private_key(iteration):
@@ -75,8 +77,13 @@ def test_to_checksum_address(account):
             ),
         ),
         (
-            ContractNotFoundError(block_hash="pending"),
-            StarknetProviderError("No contract found for identifier: pending"),
+            ContractNotFoundError(
+                address=TEST_ADDRESS,
+                block_hash="pending",
+            ),
+            StarknetProviderError(
+                f"No contract with address {TEST_ADDRESS} found for block with block_hash: pending"
+            ),
         ),
         (
             TransactionRejectedError(message="Actual fee exceeded max fee.\n999800000000000 > 1"),
