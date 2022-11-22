@@ -721,17 +721,13 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return [StarknetAccountDeployment(**d) for d in plugin_key_file_data.get("deployments", [])]
 
     def get_deployment(self, network_name: str) -> Optional[StarknetAccountDeployment]:
-        try:
-            return next(
-                (
-                    deployment
-                    for deployment in self.get_deployments()
-                    if deployment.network_name in network_name
-                ),
-                None,
-            )
-        except StopIteration:
-            return None
+        # NOTE: d is not None check only because mypy is confused
+        return next(
+            filter(
+                lambda d: d is not None and d.network_name in network_name, self.get_deployments()
+            ),
+            None,
+        )
 
     def __get_private_key(self, passphrase: Optional[str] = None) -> int:
         if self.__cached_key is not None:

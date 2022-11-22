@@ -370,21 +370,15 @@ class Starknet(EcosystemAPI, StarknetBase):
             for abi_type in abi_types:
                 if abi_type.type == "Uint256":
                     # Uint256 are stored using 2 slots
-
-                    try:
-                        next_item_1 = next(iter_data)
-                        next_item_2 = next(iter_data)
-                    except StopIteration:
-                        continue
-
-                    decoded.append(from_uint(next_item_1, next_item_2))
+                    next_item_1 = next(iter_data, None)
+                    next_item_2 = next(iter_data, None)
+                    if next_item_1 is not None and next_item_2 is not None:
+                        decoded.append(from_uint(next_item_1, next_item_2))
                 else:
-                    try:
-                        next_item = next(iter_data)
-                    except StopIteration:
-                        continue
+                    next_item = next(iter_data, None)
+                    if next_item:
+                        decoded.append(next_item)
 
-                    decoded.append(next_item)
             return decoded
 
         for index, (selector, logs) in enumerate(log_map.items()):

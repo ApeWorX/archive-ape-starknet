@@ -249,10 +249,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         self, block_number: int, txn_hash: int
     ) -> Optional[BlockSingleTransactionTrace]:
         traces = self._get_traces(block_number)
-        try:
-            return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
-        except StopIteration:
-            return None
+        return next((trace for trace in traces if trace.transaction_hash == txn_hash), None)
 
     @handle_client_errors
     def get_receipt(
