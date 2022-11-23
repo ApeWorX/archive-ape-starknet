@@ -8,4 +8,4 @@ dependencies:
 
 cairo:
   dependencies:
-    - OpenZeppelinCairo@0.5.0
+    - OpenZeppelinCairo@0.5.0  # NOTE: Is already cached from git submodules
