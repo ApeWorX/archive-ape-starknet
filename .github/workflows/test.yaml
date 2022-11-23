@@ -55,6 +55,9 @@ jobs:
                 os: [ubuntu-latest, macos-latest]   # eventually add `windows-latest`
                 python-version: [3.8, 3.9]
 
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
         steps:
         - uses: actions/checkout@v2
 
@@ -70,5 +73,4 @@ jobs:
 
         - name: Run Tests
           run: |
-            echo "DEVNET_PORT=8545" >> $GITHUB_ENV
             pytest -m "not fuzzing" -n 0 -s --cov
