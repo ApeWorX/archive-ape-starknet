@@ -290,7 +290,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             was_deploy = (
                 original_tx is not None
                 and original_tx.method_abi.name == "deployContract"
-                and int(original_tx.receiver, 16) == int(self.udc.address, 16)
+                and int(original_tx.receiver, 16) == int(self.universal_deployer.address, 16)
             )
 
         receipt = self.starknet.decode_receipt(
@@ -298,7 +298,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         )
 
         if was_deploy:
-            event_abi = self.udc.contract_type.events["ContractDeployed"]
+            event_abi = self.universal_deployer.contract_type.events["ContractDeployed"]
             logs = list(receipt.decode_logs(event_abi))
             if not logs:
                 raise StarknetProviderError("Failed to create contract.")

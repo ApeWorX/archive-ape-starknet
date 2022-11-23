@@ -16,7 +16,8 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
 
     1. Declare a contract.
     2. Declare a factory contract.
-    3. Use UDC to deploy factory contract (with other class hash as argument).
+    3. Use the universal deployer contract to deploy factory contract
+       (with other class hash as argument).
     4. Use the factory contract to deploy the other contract.
     """
 

@@ -256,7 +256,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             )
 
         constructor_arguments = self.encode_calldata(contract_type.abi, abi, args)
-        return self.udc.create_deploy(class_hash, constructor_arguments, **kwargs)
+        return self.universal_deployer.create_deploy(class_hash, constructor_arguments, **kwargs)
 
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
@@ -384,7 +384,6 @@ class Starknet(EcosystemAPI, StarknetBase):
         for index, (selector, logs) in enumerate(log_map.items()):
             abi = events_by_selector[selector]
             if not logs:
-                yield from []
                 continue
 
             for log in logs:

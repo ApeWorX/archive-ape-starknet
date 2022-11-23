@@ -43,7 +43,7 @@ DEFAULT_UDC_ABI: List[Dict] = [
 ]
 
 
-class UDC(StarknetBase):
+class UniversalDeployer(StarknetBase):
     @cached_property
     def contract_type(self) -> ContractType:
         return ContractType(
