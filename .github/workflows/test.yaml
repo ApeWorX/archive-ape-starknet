@@ -55,9 +55,6 @@ jobs:
                 os: [ubuntu-latest, macos-latest]   # eventually add `windows-latest`
                 python-version: [3.8, 3.9]
 
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
         steps:
         - uses: actions/checkout@v2
 
