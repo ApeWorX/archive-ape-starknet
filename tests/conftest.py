@@ -19,7 +19,7 @@ ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
 ape.config.PROJECT_FOLDER = Path(mkdtemp()).resolve()
 
 _HERE = Path(__file__).parent
-projects_directory = Path(__file__).parent / "projects"
+projects_directory = _HERE / "projects"
 project_names = [p.stem for p in projects_directory.iterdir() if p.is_dir()]
 ALIAS = "__TEST_ALIAS__"
 SECOND_ALIAS = "__TEST_ALIAS_2__"
@@ -131,7 +131,7 @@ def proxy_project_path():
 
 @pytest.fixture(scope="session")
 def data_folder():
-    return Path(__file__).parent / "data"
+    return _HERE / "data"
 
 
 @pytest.fixture(scope="session")
@@ -180,7 +180,7 @@ def eth_contract_type():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def clean_projects():
+def clean_build_folders():
     def clean():
         for project in projects_directory.iterdir():
             if not project.is_dir() or project.name.startswith("."):
@@ -204,18 +204,44 @@ def connection():
         yield provider
 
 
+@pytest.fixture(autouse=True, scope="session")
+def load_open_zeppelin():
+    """
+    Place open zeppelin cairo contracts in token project's `.cache`.
+    """
+    oz_contracts_dir = _HERE.parent / ".gitsubmodules" / "cairo-contracts" / "src" / "openzeppelin"
+    if not oz_contracts_dir.is_dir():
+        pytest.fail(
+            "OpenZeppelin cairo contracs git submodule missing. "
+            "Did you run `git submodule init`?"
+        )
+
+    cache_dir = (
+        projects_directory
+        / "token"
+        / "contracts"
+        / ".cache"
+        / "OpenZeppelinCairo"
+        / "v0.5.0"
+        / "openzeppelin"
+    )
+    if not cache_dir.is_dir():
+        shutil.copytree(oz_contracts_dir, cache_dir)
+
+
 # Ensures only ever deploy contracts once.
 @pytest.fixture(autouse=True, scope="session")
 def deploy_contracts(
-    clean_projects,
+    clean_build_folders,
     config,
     project_path,
     token_project_path,
     proxy_project_path,
     account,
     token_initial_supply,
+    load_open_zeppelin,
 ):
-    _ = clean_projects  # Ensure no .build folders
+    _ = clean_build_folders  # Ensure no .build folders
 
     with config.using_project(project_path) as project:
         account.declare(project.MyContract)
