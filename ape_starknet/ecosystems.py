@@ -11,14 +11,13 @@ from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field, validator
-from starknet_py.constants import OZ_PROXY_STORAGE_KEY
 from starknet_py.net.client_models import StarknetBlock as StarknetClientBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
 from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
-from starkware.starknet.definitions.fields import ContractAddressSalt
+from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.definitions.transaction_type import TransactionType
-from starkware.starknet.public.abi import get_selector_from_name
+from starkware.starknet.public.abi import get_selector_from_name, get_storage_var_address
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
 from starkware.starknet.services.api.contract_class import ContractClass
 
@@ -32,8 +31,6 @@ from ape_starknet.transactions import (
     DeclareTransaction,
     DeployAccountReceipt,
     DeployAccountTransaction,
-    DeployReceipt,
-    DeployTransaction,
     InvokeFunctionReceipt,
     InvokeFunctionTransaction,
     StarknetReceipt,
@@ -47,6 +44,7 @@ NETWORKS = {
     "mainnet": (StarknetChainId.MAINNET.value, StarknetChainId.MAINNET.value),
     "testnet": (StarknetChainId.TESTNET.value, StarknetChainId.TESTNET.value),
 }
+OZ_PROXY_STORAGE_KEY = get_storage_var_address("Proxy_implementation_hash")
 
 
 class ProxyType(Enum):
@@ -160,7 +158,7 @@ class Starknet(EcosystemAPI, StarknetBase):
                 pre_encoded_arg = self._pre_encode_value(call_arg)
 
                 if isinstance(pre_encoded_arg, int):
-                    # 'arr_len' was provided.
+                    # A '_len' arg was provided.
                     array_index = index + 1
                     pre_encoded_array = self._pre_encode_array(call_args[array_index])
                     pre_encoded_args.append(pre_encoded_array)
@@ -204,7 +202,11 @@ class Starknet(EcosystemAPI, StarknetBase):
         return encoded_struct
 
     def encode_primitive_value(self, value: Any) -> int:
-        if isinstance(value, int):
+        if isinstance(value, bool):
+            # NOTE: bool must come before int.
+            return int(value)
+
+        elif isinstance(value, int):
             return value
 
         elif isinstance(value, str) and is_0x_prefixed(value):
@@ -220,8 +222,6 @@ class Starknet(EcosystemAPI, StarknetBase):
         receipt_cls: Type[StarknetReceipt]
         if txn_type == TransactionType.INVOKE_FUNCTION:
             receipt_cls = InvokeFunctionReceipt
-        elif txn_type == TransactionType.DEPLOY:
-            receipt_cls = DeployReceipt
         elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
         elif txn_type == TransactionType.DEPLOY_ACCOUNT:
@@ -247,33 +247,27 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_deployment(
         self, deployment_bytecode: HexBytes, abi: ConstructorABI, *args, **kwargs
     ) -> TransactionAPI:
-        salt = kwargs.get("salt")
-        if not salt:
-            salt = ContractAddressSalt.get_random_value()
+        contract_class = ContractClass.deserialize(deployment_bytecode)
+        class_hash = compute_class_hash(contract_class)
+        contract_type = abi.contract_type
+        if not contract_type:
+            raise StarknetEcosystemError(
+                "Unable to encode deployment - missing full contract type for constructor."
+            )
 
-        constructor_args = list(args)
-        contract = ContractClass.deserialize(deployment_bytecode)
-        calldata = self.encode_calldata(contract.abi, abi, constructor_args)
-        return DeployTransaction(
-            salt=salt,
-            constructor_calldata=calldata,
-            contract_code=deployment_bytecode,
-            token=kwargs.get("token"),
-        )
+        constructor_arguments = self.encode_calldata(contract_type.abi, abi, args)
+        return self.universal_deployer.create_deploy(class_hash, constructor_arguments, **kwargs)
 
     def encode_transaction(
         self, address: AddressType, abi: MethodABI, *args, **kwargs
     ) -> TransactionAPI:
         # NOTE: This method only works for invoke-transactions
-        contract_type = self.starknet_explorer.get_contract_type(address)
+        contract_type = abi.contract_type or self.starknet_explorer.get_contract_type(address)
         if not contract_type:
             raise ContractTypeNotFoundError(address)
 
-        encoded_calldata = self.encode_calldata(contract_type.abi, abi, list(args))
-
-        if "sender" not in kwargs and abi.is_stateful:
-            raise StarknetEcosystemError("'sender=<account>' required for invoke transactions")
-
+        arguments = list(args)
+        encoded_calldata = self.encode_calldata(contract_type.abi, abi, arguments)
         return InvokeFunctionTransaction(
             receiver=address,
             method_abi=abi,
@@ -304,8 +298,6 @@ class Starknet(EcosystemAPI, StarknetBase):
         invoking = txn_type == TransactionType.INVOKE_FUNCTION
         if invoking:
             txn_cls = InvokeFunctionTransaction
-        elif txn_type == TransactionType.DEPLOY:
-            txn_cls = DeployTransaction
         elif txn_type == TransactionType.DECLARE:
             txn_cls = DeclareTransaction
         elif txn_type == TransactionType.DEPLOY_ACCOUNT:
@@ -378,18 +370,27 @@ class Starknet(EcosystemAPI, StarknetBase):
             for abi_type in abi_types:
                 if abi_type.type == "Uint256":
                     # Uint256 are stored using 2 slots
-                    decoded.append(from_uint(next(iter_data), next(iter_data)))
+                    next_item_1 = next(iter_data, None)
+                    next_item_2 = next(iter_data, None)
+                    if next_item_1 is not None and next_item_2 is not None:
+                        decoded.append(from_uint(next_item_1, next_item_2))
                 else:
-                    decoded.append(next(iter_data))
+                    next_item = next(iter_data, None)
+                    if next_item:
+                        decoded.append(next_item)
+
             return decoded
 
         for index, (selector, logs) in enumerate(log_map.items()):
             abi = events_by_selector[selector]
+            if not logs:
+                continue
+
             for log in logs:
                 event_args = dict(
                     zip([a.name for a in abi.inputs], decode_items(abi.inputs, log["data"]))
                 )
-                yield ContractLog(  # type: ignore
+                yield ContractLog(
                     block_hash=log["block_hash"],
                     block_number=log["block_number"],
                     contract_address=self.decode_address(log["from_address"]),
@@ -413,12 +414,12 @@ class Starknet(EcosystemAPI, StarknetBase):
         instance = self.chain_manager.contracts.instance_at(address, contract_type=contract_type)
         # Legacy proxy check
         if "implementation" in contract_type.view_methods:
-            target = instance.implementation()  # type: ignore
+            target = instance.implementation()
             proxy_type = ProxyType.LEGACY
 
         # Argent-X proxy check
         elif "get_implementation" in contract_type.view_methods:
-            target = instance.get_implementation()  # type: ignore
+            target = instance.get_implementation()
             proxy_type = ProxyType.ARGENT_X
 
         # OpenZeppelin proxy check

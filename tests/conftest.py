@@ -8,6 +8,7 @@ import ape
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
 from ethpm_types import ContractType
+from starkware.cairo.lang.compiler.test_utils import short_string_to_felt
 
 from ape_starknet import tokens as _tokens
 from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
@@ -27,7 +28,7 @@ EXISTING_EPHEMERAL_ALIAS = f"{ALIAS}existing_ephemeral"
 PASSWORD = "123"
 PUBLIC_KEY = "0x140dfbab0d711a23dd58842be2ee16318e3de1c7"
 CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B387463a183"
-EPHEMERAL_ACCOUNT_START_BALANCE = "1000000 ETH"
+START_BALANCE = "1000000 ETH"
 
 # Purposely pick a number larest enough to test Uint256 logic
 TOKEN_INITIAL_SUPPLY = 2 * 2**128
@@ -217,18 +218,24 @@ def deploy_contracts(
     _ = clean_projects  # Ensure no .build folders
 
     with config.using_project(project_path) as project:
-        contract = project.MyContract.deploy()
+        account.declare(project.MyContract)
+        contract = project.MyContract.deploy(sender=account)
         contract.initialize(sender=account)
 
     with config.using_project(token_project_path) as project:
+        account.declare(project.TestToken)
+        account.declare(project.UseToken)
+        name = short_string_to_felt("TestToken")
+        symbol = short_string_to_felt("TEST")
         token_contract = project.TestToken.deploy(
-            123123, 321321, token_initial_supply, account.address
+            name, symbol, 18, token_initial_supply, int(account.address, 16), sender=account
         )
-        project.UseToken.deploy()
+        project.UseToken.deploy(sender=account)
         _tokens.add_token("test_token", LOCAL_NETWORK_NAME, token_contract.address)
 
     with config.using_project(proxy_project_path) as project:
-        proxy_contract = project.Proxy.deploy(token_contract.address)
+        account.declare(project.Proxy)
+        proxy_contract = project.Proxy.deploy(token_contract.address, sender=account)
         _tokens.add_token("proxy_token", LOCAL_NETWORK_NAME, proxy_contract.address)
 
 

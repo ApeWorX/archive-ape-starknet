@@ -4,7 +4,7 @@ import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
 from ape_starknet.exceptions import StarknetProviderError
-from ape_starknet.utils import is_checksum_address
+from ape_starknet.utils import EXECUTE_METHOD_NAME, is_checksum_address
 
 
 def test_get_nonce(provider, account, contract):
@@ -51,7 +51,9 @@ def test_get_transactions_by_block(provider, account, contract):
     transactions = [t for t in provider.get_transactions_by_block("latest")]
 
     expected_chain_id = provider.chain_id
-    expected_abi = [a for a in account.contract_type.mutable_methods if a.name == "__execute__"][0]
+    expected_abi = [
+        a for a in account.contract_type.mutable_methods if a.name == EXECUTE_METHOD_NAME
+    ][0]
     expected_nonce = account.nonce - 1
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id

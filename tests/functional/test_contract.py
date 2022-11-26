@@ -2,7 +2,8 @@ import pytest
 from ape import Contract
 from ape.exceptions import ContractLogicError, OutOfGasError
 
-from ape_starknet.exceptions import StarknetEcosystemError
+from ape_starknet.exceptions import StarknetProviderError
+from ape_starknet.utils import EXECUTE_METHOD_NAME
 
 
 def test_is_token(contract, tokens):
@@ -10,23 +11,49 @@ def test_is_token(contract, tokens):
 
 
 def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
-    # Declare contract type. The result should contain a 'class_hash'.
-    balance_before = account.balance
+    """
+    This test shows a realistic flow.
+
+    1. Declare a contract.
+    2. Declare a factory contract.
+    3. Use the universal deployer contract to deploy factory contract
+       (with other class hash as argument).
+    4. Use the factory contract to deploy the other contract.
+    """
+
+    # Declare the contracts
+    balance_before = account.balance  # Tracked to make sure Declares cost money.
     declaration = account.declare(project.MyContract)
+    factory_declaration = account.declare(factory_contract_container)
     assert declaration.class_hash
-    assert account.balance == balance_before - declaration.total_fees_paid
+    assert factory_declaration.class_hash
 
-    # Ensure can use class_hash in factory contract
-    factory = factory_contract_container.deploy(declaration.class_hash)
+    # Ensure the Declares cost money
+    actual_balance = account.balance
+    total_fees = declaration.total_fees_paid + factory_declaration.total_fees_paid
+    expected_balance = balance_before - total_fees
+    assert actual_balance == expected_balance
 
+    # Deploy the factory contract. It takes the class hash of the other contract as its
+    # argument so it can create instances of it.
+    # NOTE: We would not be able to deploy the factory if we did not declare it above.
+    #  and we don't need to tell ape the factory's class-hash - it can configure it out.
+    factory = factory_contract_container.deploy(declaration.class_hash, sender=account)
+    assert factory.address
+    assert factory.create_my_contract
+
+    # Use custom factory method to create a new contract.
     balance_before = account.balance
     receipt = factory.create_my_contract(sender=account)
-    assert account.balance == balance_before - receipt.total_fees_paid
+    actual_balance = account.balance
+    expected_balance = balance_before - receipt.total_fees_paid
+    assert actual_balance == expected_balance
 
+    # Grab the new contract address from the receipt's logs.
     logs = list(receipt.decode_logs(factory.contract_deployed))
     new_contract_address = provider.starknet.decode_address(logs[0]["contract_address"])
 
-    # Ensure can interact with deployed contract from 'class_hash'.
+    # Interact with deployed contract from 'class_hash'.
     new_contract_instance = Contract(
         new_contract_address, contract_type=project.MyContract.contract_type
     )
@@ -80,7 +107,8 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
     increase_amount = 123456
 
     with pytest.raises(
-        StarknetEcosystemError, match="'sender=<account>' required for invoke transactions"
+        StarknetProviderError,
+        match=f"Can only send invoke transaction to an account {EXECUTE_METHOD_NAME} method.",
     ):
         contract.increase_balance(account.address, increase_amount)
 

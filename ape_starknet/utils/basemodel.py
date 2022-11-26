@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
 from ape.api import PluginConfig
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from ape_starknet.explorer import StarknetExplorer
     from ape_starknet.provider import StarknetProvider
     from ape_starknet.tokens import TokenManager
+    from ape_starknet.udc import UniversalDeployer
 
 
 class StarknetBase(ManagerAccessMixin):
@@ -45,6 +47,12 @@ class StarknetBase(ManagerAccessMixin):
         from ape_starknet import tokens
 
         return tokens
+
+    @cached_property
+    def universal_deployer(self) -> "UniversalDeployer":
+        from ape_starknet.udc import UniversalDeployer
+
+        return UniversalDeployer()
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
         contract_type = self.chain_manager.contracts.get(address)
