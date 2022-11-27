@@ -50,9 +50,6 @@ jobs:
     functional:
         runs-on: ${{ matrix.os }}
 
-        concurrency:
-          group: ${{ github.ref }}
-
         strategy:
             matrix:
                 os: [ubuntu-latest, macos-latest]   # eventually add `windows-latest`
