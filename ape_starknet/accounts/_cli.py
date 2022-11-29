@@ -94,6 +94,7 @@ def create(cli_ctx, alias, network, deployment_funder, token):
 @click.argument("alias")
 @network_option(ecosystem=PLUGIN_NAME)
 def deploy(cli_ctx, network, alias):
+    """Deploy an existing, non-deployed account"""
     container = _get_container(cli_ctx)
     account = container.load(alias)
     account.deploy_self()
