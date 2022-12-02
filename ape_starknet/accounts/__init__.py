@@ -213,30 +213,6 @@ class StarknetAccountContracts(AccountContainerAPI, StarknetBase):
 
         raise AccountsError(f"Starknet account '{alias}' not found.")
 
-    def import_account_from_key_file(self, alias: str, key_file: Path):
-        if not key_file.is_file():
-            raise AccountsError(f"Unknown keyfile '{key_file}'.")
-
-        destination = self.data_folder.joinpath(f"{alias}.json")
-        if destination.exists():
-            raise AccountsError(f"Account already saved with alias '{alias}'.")
-
-        key_file_data = json.loads(key_file.read_text())
-        if "argent" in key_file_data and APP_KEY_FILE_KEY not in key_file_data:
-            # Migrate Argent-X keyfile
-
-            deployments = []
-            for account in key_file_data["argent"]["accounts"]:
-                network = _clean_network_name(account["network"])
-                deployment = StarknetAccountDeployment(
-                    network_name=network, contract_address=account["address"]
-                )
-                deployments.append(vars(deployment))
-
-            key_file_data = {**key_file_data, **_create_key_file_app_data(deployments)}
-
-        destination.write_text(json.dumps(key_file_data))
-
     def create_account(
         self,
         alias: str,

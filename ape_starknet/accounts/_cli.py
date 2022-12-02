@@ -4,7 +4,6 @@ import click
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.cli import (
     NetworkBoundCommand,
-    Path,
     ape_cli_context,
     existing_alias_argument,
     network_option,
@@ -150,7 +149,6 @@ def _list(cli_ctx):
     if value
     else None,
 )
-@click.option("--keyfile", help="Import an existing key-file", type=Path())
 @click.option("--class-hash", help="The class hash of the account contract.")
 @click.option("--salt", help="The contract address salt used when deploying the contract.")
 def _import(cli_ctx, alias, network, address, keyfile, class_hash, salt):
@@ -175,15 +173,13 @@ def _import(cli_ctx, alias, network, address, keyfile, class_hash, salt):
         click.echo(f"Importing existing account to network '{network_name}'.")
         existing_account.add_deployment(network_name, address)
 
-    elif keyfile:
-        container.import_account_from_key_file(alias, keyfile)
     elif address:
         private_key = click.prompt("Enter private key", hide_input=True)
         container.import_account(
             alias, network_name, address, private_key, class_hash=class_hash, salt=salt
         )
     else:
-        cli_ctx.abort("Please provide either --keyfile or --address to import this account.")
+        cli_ctx.abort("Please provide --address to import this account.")
 
     cli_ctx.logger.success(f"Import account '{alias}'.")
 
