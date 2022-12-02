@@ -2,12 +2,7 @@ from typing import List, cast
 
 import click
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.cli import (
-    NetworkBoundCommand,
-    ape_cli_context,
-    existing_alias_argument,
-    network_option,
-)
+from ape.cli import NetworkBoundCommand, ape_cli_context, existing_alias_argument, network_option
 from ape.cli.options import ApeCliContextObject
 from ape.logging import logger
 from ape.utils import add_padding_to_strings
