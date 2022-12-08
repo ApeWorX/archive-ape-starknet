@@ -155,12 +155,13 @@ account = accounts.load("<MY_STARK_ACCOUNT>")
 account.deploy(project.MyContact)
 ```
 
-You can deploy also contracts by doing:
+You can also deploy also contracts by doing:
 
 ```python
-from ape import project
+from ape import accounts, project
 
-my_contract = project.MyContract.deploy()
+account = accounts.load("<MY_STARK_ACCOUNT>")
+my_contract = project.MyContract.deploy(sender=account)
 ```
 
 Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.
