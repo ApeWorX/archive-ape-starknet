@@ -64,7 +64,8 @@ However, it does not deploy the account automatically.
 The reason it does not deploy automatically is that the account needs funding to pay for its deployment and there are several ways to achieve this.
 See [this section](https://starknet.io/docs/hello_starknet/account_setup.html#transferring-goerli-eth-to-the-account) of the Starknet official guides for more information.
 
-**NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly. You must use the [StarkNet L2 bridge](https://goerli.starkgate.starknet.io/) to transfer existing Goerli L1 ETH to and from the L2 account.
+**NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly.
+You must use the [StarkNet L2 bridge](https://goerli.starkgate.starknet.io/) to transfer existing Goerli L1 ETH to and from the L2 account.
 
 For convenience purposes, if you already have a Starknet account in Ape, you can use that account to fund the creation of new ones.
 To do this, use the `--deployment-funder` flag to specify the funder alias of your other account:
