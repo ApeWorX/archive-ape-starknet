@@ -156,7 +156,7 @@ account = accounts.load("<MY_STARK_ACCOUNT>")
 account.deploy(project.MyContact)
 ```
 
-You can also deploy also contracts by doing:
+You can also deploy contracts by doing:
 
 ```python
 from ape import accounts, project
