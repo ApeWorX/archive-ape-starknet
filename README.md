@@ -53,12 +53,6 @@ To import an account, use the `import` command:
 ape starknet accounts import <ALIAS> --address 0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183 --network starknet:testnet
 ```
 
-You can also import an account by key-file, including a key-file you exported from your [Argent-X browser wallet](https://www.argent.xyz/argent-x/):
-
-```bash
-ape starknet accounts import <ALIAS> --keyfile path/to/keyfile.json
-```
-
 To create a new account, you will use the `create` command:
 
 ```bash
@@ -69,6 +63,9 @@ The `create` command will first generate the public and private key combination 
 However, it does not deploy the account automatically.
 The reason it does not deploy automatically is that the account needs funding to pay for its deployment and there are several ways to achieve this.
 See [this section](https://starknet.io/docs/hello_starknet/account_setup.html#transferring-goerli-eth-to-the-account) of the Starknet official guides for more information.
+
+**NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly.
+You must use the [StarkNet L2 bridge](https://goerli.starkgate.starknet.io/) to transfer existing Goerli L1 ETH to and from the L2 account.
 
 For convenience purposes, if you already have a Starknet account in Ape, you can use that account to fund the creation of new ones.
 To do this, use the `--deployment-funder` flag to specify the funder alias of your other account:
@@ -157,6 +154,15 @@ from ape import accounts, project
 # The class hash is not necessary as an argument. Ape will look it up.
 account = accounts.load("<MY_STARK_ACCOUNT>")
 account.deploy(project.MyContact)
+```
+
+You can also deploy contracts by doing:
+
+```python
+from ape import accounts, project
+
+account = accounts.load("<MY_STARK_ACCOUNT>")
+my_contract = project.MyContract.deploy(sender=account)
 ```
 
 Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.
@@ -274,16 +280,6 @@ def ephemeral_account():
 
     # This account only exists in the devnet and is not a key-file account.
     return accounts.load("ALIAS")
-```
-
-### Mainnet Alpha Whitelist Deployment Token
-
-You can deploy contracts by doing:
-
-```python
-from ape import project
-
-my_contract = project.MyContract.deploy()
 ```
 
 ### Paying Fees

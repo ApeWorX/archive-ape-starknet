@@ -1,7 +1,4 @@
-import json
 import random
-import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -18,14 +15,6 @@ def accounts_runner(ape_cli):
 @pytest.fixture(scope="module")
 def root_accounts_runner(ape_cli):
     return ApeStarknetCliRunner(ape_cli, ["accounts"])
-
-
-@pytest.fixture(scope="module")
-def argent_x_backup(argent_x_key_file_account_data):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        key_file_path = Path(temp_dir) / "argent-x-backup.json"
-        key_file_path.write_text(json.dumps(argent_x_key_file_account_data))
-        yield key_file_path
 
 
 def test_create_then_deploy(accounts_runner, account_container):
@@ -140,27 +129,6 @@ def test_import(
         network,
         input=[password, "y"],
     )
-
-
-def test_import_argent_x_key_file(accounts_runner, argent_x_backup, account_container, password):
-    alias = "__TEST_ARGENT_X_BACKUP__"
-    account_path = account_container.data_folder / f"{alias}.json"
-
-    if account_path.is_file():
-        # Corrupted from previous test
-        account_path.unlink()
-
-    output = accounts_runner.invoke(
-        "import",
-        alias,
-        "--keyfile",
-        str(argent_x_backup),
-        "--network",
-        "starknet:testnet",
-        input=password,
-    )
-    assert "SUCCESS" in output
-    account_path.unlink()
 
 
 def test_import_when_local(accounts_runner):
