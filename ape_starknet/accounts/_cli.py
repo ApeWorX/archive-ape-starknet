@@ -147,7 +147,7 @@ def _list(cli_ctx):
 )
 @click.option("--class-hash", help="The class hash of the account contract.")
 @click.option("--salt", help="The contract address salt used when deploying the contract.")
-def _import(cli_ctx, alias, network, address, keyfile, class_hash, salt):
+def _import(cli_ctx, alias, network, address, class_hash, salt):
     """Add an existing account"""
 
     container = _get_container(cli_ctx)
