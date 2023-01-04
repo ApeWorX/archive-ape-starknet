@@ -173,22 +173,35 @@ from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import deploy
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
+@storage_var
+func class_hash() -> (class_hash: felt) {
+}
+
+@storage_var
+func salt() -> (value: felt) {
+}
+
+@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(cls_hash: felt) {
+    class_hash.write(value=cls_hash);
+    return ();
+}
+
 @external
-func deploy_my_contract{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}():
-    let (current_salt) = salt.read()
-    let (class_hash) = ownable_class_hash.read()
-    let (calldata_ptr) = alloc()
-    let (contract_address) = deploy(
-        class_hash=class_hash,
+func deploy_my_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    let (cls_hash) = class_hash.read();
+    let (current_salt) = salt.read();
+    let (ctor_calldata) = alloc();
+    let (contract_addr) = deploy(
+        class_hash=cls_hash,
         contract_address_salt=current_salt,
         constructor_calldata_size=0,
-        constructor_calldata=calldata_ptr,
-    )
-    salt.write(value=current_salt + 1)
+        constructor_calldata=ctor_calldata,
+        deploy_from_zero=FALSE,
+    );
+    salt.write(value=current_salt + 1);
+    return ();
+}
 ```
 
 This contract accepts a class hash of a declared contract deploys it.
@@ -201,7 +214,7 @@ account = accounts.load("<MY_STARK_ACCOUNT>")
 declaration = account.declare(project.MyContract)
 
 # NOTE: Assuming you have a contract named 'ContractFactory'.
-factory = project.ContractFactory.deploy(declaration.class_hash)
+factory = project.ContractFactory.deploy(declaration.class_hash, sender=account)
 
 call_result = factory.deploy_my_contract()
 contract_address = networks.starknet.decode_address(call_result)
@@ -216,7 +229,7 @@ After you have deployed your contracts, you can begin interacting with them.
 ```python
 from ape import project
 
-contract = project.MyContract.deploy()
+contract = project.MyContract.deploy(sender=account)
 
 # Interact with deployed contract
 receipt = contract.my_mutable_method(123)
