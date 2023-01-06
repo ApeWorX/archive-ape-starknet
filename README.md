@@ -4,7 +4,7 @@ Plugins for the [StarkNet Ethereum L2 networks](https://starkware.co/starknet/).
 
 ## Dependencies
 
-* [python3](https://www.python.org/downloads) version 3.8 or greater, python3-dev
+- [python3](https://www.python.org/downloads) version 3.8 or greater, python3-dev
 
 ## Installation
 
@@ -113,7 +113,7 @@ ape starknet accounts delete <ALIAS> --network starknet:testnet
 
 While generally bad practice, sometimes it is necessary to have unlocked keyfile accounts auto-signing messages.
 An example would be during testnet automated deployments.
-To achieve this, use the ``set_autosign()`` method available on the keyfile accounts:
+To achieve this, use the `set_autosign()` method available on the keyfile accounts:
 
 ```python
 import keyring
@@ -224,7 +224,7 @@ contract = Contract(contract_address, contract_type=project.MyContract.contract_
 ### Contract Interaction
 
 After you have deployed your contracts, you can begin interacting with them.
-``deploy`` methods return a contract instance from which you can call methods on:
+`deploy` methods return a contract instance from which you can call methods on:
 
 ```python
 from ape import project
@@ -262,7 +262,7 @@ receipt = contract.store_my_list(3, [1, 2, 3])
 
 #### Accounts
 
-You can use ``starknet-devnet`` accounts in your tests.
+You can use `starknet-devnet` accounts in your tests.
 
 ```python
 import pytest
