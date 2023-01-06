@@ -18,6 +18,9 @@ extras_require = {
         "types-setuptools",  # Needed due to mypy typeshed
         "flake8>=5.0.4",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
+        "mdformat>=0.7.16",  # Auto-formatter for markdown
+        "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
+        "mdformat-frontmatter>=0.4.1",  # Needed for frontmatters-style headers in issue templates
         "types-pkg-resources>=0.1.3,<0.2",
     ],
     "release": [  # `release` GitHub Action job uses this
@@ -62,12 +65,12 @@ setup(
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.5.1,<0.6",
+        "eth-ape>=0.5.9,<0.6",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
-        "cairo-lang==0.10.2",
-        "starknet.py==0.10.2a0",
-        "starknet-devnet==0.4.1",
+        "cairo-lang>=0.10.3,<0.11",
+        "starknet.py>=0.12.a0,<0.13",
+        "starknet-devnet==0.4.3",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.11",

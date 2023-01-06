@@ -15,6 +15,6 @@ def test_console_accounts_object(ape_cli, console_runner, key_file_account, netw
     # NOTE: This console connects to Eth-Tester and makes sure we can still _read_
     # starknet accounts.
     output = console_runner.invoke(
-        input=["accounts", f"accounts['{key_file_account.alias}']", "exit"]
+        input=["accounts", f"accounts['{key_file_account.address}']", "exit"]
     )
-    assert key_file_account.address in output, [e.name for e in networks.ecosystems]
+    assert key_file_account.address in output, output  # [e for e in networks.ecosystems]
