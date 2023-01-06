@@ -70,7 +70,7 @@ setup(
         # ** Starknet Ecosystem **
         "cairo-lang>=0.10.3,<0.11",
         "starknet.py>=0.12.a0,<0.13",
-        "starknet-devnet==0.4.3",
+        "starknet-devnet>=0.4.3,<0.5",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.11",
