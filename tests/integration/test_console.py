@@ -17,4 +17,4 @@ def test_console_accounts_object(ape_cli, console_runner, key_file_account, netw
     output = console_runner.invoke(
         input=["accounts", f"accounts['{key_file_account.address}']", "exit"]
     )
-    assert key_file_account.address in output, output  # [e for e in networks.ecosystems]
+    assert key_file_account.address in output, output
