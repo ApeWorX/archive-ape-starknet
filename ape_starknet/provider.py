@@ -253,7 +253,11 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_receipt(
-        self, txn_hash: str, transaction: Optional[TransactionAPI] = None
+        self, 
+        txn_hash: str, 
+        transaction: Optional[TransactionAPI] = None, 
+        required_confirmations: int = 0,
+        # timeout: Optional[int] = None
     ) -> ReceiptAPI:
         self.starknet_client.wait_for_tx_sync(txn_hash)
         txn_info, receipt = run_until_complete(
@@ -294,9 +298,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             )
 
         receipt = self.starknet.decode_receipt(
-            {"provider": self, "transaction": transaction, **data}
+            {"provider": self,
+            "transaction": transaction,
+            "required_confirmations": required_confirmations, 
+            **data}
         )
-
+        
         if was_deploy:
             event_abi = self.universal_deployer.contract_type.events["ContractDeployed"]
             logs = list(receipt.decode_logs(event_abi))
@@ -307,7 +314,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             # mimicing how it works in Ethereum.
             receipt.contract_address = self.starknet.decode_address(logs[-1]["address"])
 
-        return receipt
+        return receipt.await_confirmations()
 
     def get_transactions_by_block(self, block_id: BlockID) -> Iterator[TransactionAPI]:
         block = self._get_block(block_id)
@@ -401,6 +408,60 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.cached_code[address_int] = code_and_abi
 
         return self.cached_code[address_int]
+
+    # def wait_for_tx_sync(
+    #     self,
+    #     tx_hash: Hash,
+    #     wait_for_accept: Optional[bool] = False,
+    #     check_interval=5,
+    #     timeout: Optional[int] = None
+    # ) -> Tuple[int, TransactionStatus]:
+    #     # pylint: disable=too-many-branches
+    #     """
+    #     Awaits for transaction to get accepted or at least pending by polling its status
+    #     :param tx_hash: Transaction's hash
+    #     :param wait_for_accept: If true waits for at least ACCEPTED_ON_L2 status, otherwise waits for at least PENDING
+    #     :param check_interval: Defines interval between checks
+    #     :param timeout: The amount of time to wait for a receipt
+    #           before timing out. Defaults to ``None``.
+    #     :return: Tuple containing block number and transaction status
+    #     """
+    #     if check_interval <= 0:
+    #         raise ValueError("Argument check_interval has to be greater than 0.")
+
+    #     first_run = True
+    #     try:
+    #         while True:
+    #             result = await self.get_transaction_receipt(tx_hash=tx_hash)
+    #             status = result.status
+
+    #             if status in (
+    #                 TransactionStatus.ACCEPTED_ON_L1,
+    #                 TransactionStatus.ACCEPTED_ON_L2,
+    #             ):
+    #                 assert result.block_number is not None
+    #                 return result.block_number, status
+    #             if status == TransactionStatus.PENDING:
+    #                 if not wait_for_accept:
+    #                     if result.block_number is not None:
+    #                         return result.block_number, status
+    #             elif status == TransactionStatus.REJECTED:
+    #                 raise TransactionRejectedError(
+    #                     message=result.rejection_reason,
+    #                 )
+    #             elif status == TransactionStatus.NOT_RECEIVED:
+    #                 if not first_run:
+    #                     raise TransactionNotReceivedError()
+    #             elif status != TransactionStatus.RECEIVED:
+    #                 # This will never get executed with current possible transactions statuses
+    #                 raise TransactionFailedError(
+    #                     message=result.rejection_reason,
+    #                 )
+
+    #             first_run = False
+    #             await asyncio.sleep(check_interval)
+    #     except asyncio.CancelledError as exc:
+    #         raise TransactionNotReceivedError from exc
 
     def _create_client(self) -> GatewayClient:
         network = self.uri if self.network.name == LOCAL_NETWORK_NAME else self.network.name
