@@ -147,7 +147,7 @@ Contract address (mainnet) - 0x7873113A4111e5B2229c3332B66696388163440A373333143
 You can also delete accounts:
 
 ```bash
-ape starknet accounts delete <ALIAS> --network starknet:testnet
+ape starknet accounts delete <ALIAS> --network testnet,testnet2
 ```
 
 The `delete` command differs based on its values of `--network` and `--address`:
@@ -156,6 +156,8 @@ The `delete` command differs based on its values of `--network` and `--address`:
 - To delete all deployments matching an address (regardless of network), use the `--address` option without `--network`.
 - To delete a deployment on a network with a particular address, use both `--network` and \`--address.
 - Exclude both options to delete the whole account.
+
+Note you can also specify multiple networks, the same as `import`.
 
 #### Auto-Sign Message
 

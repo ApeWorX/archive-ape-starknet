@@ -2,14 +2,7 @@ from typing import List, Optional, Union, cast
 
 import click
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.cli import (
-    Abort,
-    NetworkBoundCommand,
-    ape_cli_context,
-    existing_alias_argument,
-    network_option,
-    non_existing_alias_argument,
-)
+from ape.cli import ape_cli_context, existing_alias_argument, non_existing_alias_argument
 from ape.cli.options import ApeCliContextObject
 from ape.logging import logger
 from ape.utils import add_padding_to_strings
@@ -71,6 +64,40 @@ def address_option():
     )
 
 
+def _network_callback(ctx, param, value, single: bool = False):
+    parse = ctx.obj.network_manager.parse_network_choice
+
+    if single and value == "starknet":
+        raise click.BadOptionUsage("--network", "Must use single network.")
+
+    elif value == "starknet":
+        # Use all live networks.
+        return [_validate_network(parse, n) for n in NETWORKS]
+
+    if single and value is not None:
+        return _validate_network(parse, value)
+
+    elif single:
+        return value
+
+    elif value is not None:
+        return [_validate_network(parse, n.strip()) for n in value.split(",")]
+
+    return []
+
+
+def network_option(required: bool = False, default: Optional[str] = None, single: bool = False):
+    def callback(ctx, param, value):
+        return _network_callback(ctx, param, value, single=single)
+
+    return click.option(
+        "--network",
+        default=default,
+        required=required,
+        callback=callback,
+    )
+
+
 @click.group("accounts")
 def accounts():
     """Manage Starknet accounts"""
@@ -119,29 +146,29 @@ def _funder_callback(ctx, param, value):
     return container.load(value)
 
 
-@accounts.command(cls=NetworkBoundCommand)
+@accounts.command()
 @ape_cli_context()
 @click.argument("alias")
-@network_option(ecosystem=PLUGIN_NAME)
+@network_option(default=LOCAL_NETWORK_NAME, single=True)
 @click.option("--funder", help="Use another an account to help fund", callback=_funder_callback)
 def deploy(cli_ctx, network, alias, funder):
     """Deploy an account"""
-    network = cli_ctx.provider.network.name
-    logger.info(f"Deploying account '{alias}' to network '{network}'.")
-    container = _get_container(cli_ctx)
-    account = container.load(alias)
-    uses_keyfile = isinstance(account, StarknetKeyfileAccount)
+    with cli_ctx.network_manager.parse_network_choice(network):
+        logger.info(f"Deploying account '{alias}' to network '{network}'.")
+        container = _get_container(cli_ctx)
+        account = container.load(alias)
+        uses_keyfile = isinstance(account, StarknetKeyfileAccount)
 
-    if uses_keyfile:
-        account.unlock("Enter passphrase to deploy account")  # type: ignore[attr-defined]
-
-    try:
-        receipt = account.deploy_account(funder=funder)
-        contract_address_styled = click.style(receipt.contract_address, bold=True)
-        logger.success(f"Account successfully deployed to '{contract_address_styled}'.")
-    finally:
         if uses_keyfile:
-            account.lock()  # type: ignore[attr-defined]
+            account.unlock("Enter passphrase to deploy account")  # type: ignore[attr-defined]
+
+        try:
+            receipt = account.deploy_account(funder=funder)
+            contract_address_styled = click.style(receipt.contract_address, bold=True)
+            logger.success(f"Account successfully deployed to '{contract_address_styled}'.")
+        finally:
+            if uses_keyfile:
+                account.lock()  # type: ignore[attr-defined]
 
 
 @accounts.command("list")
@@ -189,33 +216,28 @@ def _list(cli_ctx):
 
 def _validate_network(parse, network: str) -> str:
     # Temporarily connect to extract network name and validate network.
-    with parse(network) as provider:
-        network_name = provider.network.name
-        if network_name == LOCAL_NETWORK_NAME:
-            raise Abort("Unable to use CLI to import local accounts.")
+    live_nets = list(NETWORKS.keys())
+    options = [*live_nets, LOCAL_NETWORK_NAME]
 
-        if not network_name.startswith("starknet:"):
-            network_name = f"starknet:{network}"
+    if network.startswith("starknet:"):
+        network = network.replace("starknet:", "")
 
-        return network_name
+    if network not in options:
+        options_str = ",".join(options)
+        raise click.BadOptionUsage("--network", f"Network '{network}' not one of '{options_str}'.")
+
+    return f"starknet:{network}"
 
 
 @accounts.command(name="import")
 @ape_cli_context()
 @click.argument("alias")
-@network_option(ecosystem=PLUGIN_NAME, required=True, default=None)
+@network_option(required=True)
 @address_option()
 @class_hash_option()
 @click.option("--salt", help="The contract address salt used when deploying the contract.")
 def _import(cli_ctx, alias, network, address, class_hash, salt):
     """Add an existing, deployed account"""
-
-    if network == "starknet":
-        # Use all live networks.
-        network_names = list(NETWORKS.keys())
-    else:
-        parse = cli_ctx.network_manager.parse_network_choice
-        network_names = [_validate_network(parse, n.strip()) for n in network.split(",")]
 
     container = _get_container(cli_ctx)
     if alias in container.aliases:
@@ -236,10 +258,10 @@ def _import(cli_ctx, alias, network, address, class_hash, salt):
                 # It must have used the same salt since the addresses are the same.
                 salt = existing_account.salt
 
-            networks_str = ", ".join(network_names)
-            click.echo(f"Importing existing account on network '{networks_str}'.")
-            for network_name in network_names:
-                existing_account.add_deployment(network_name, address, salt)
+            networks_str = ", ".join(network)
+            click.echo(f"Importing existing account on network(s) '{networks_str}'.")
+            for network_name in network:
+                existing_account.add_deployment(network_name, address, salt, leave_unlocked=False)
 
     elif address and not class_hash:
         cli_ctx.abort("--class-hash is required when importing an account for the first time.")
@@ -249,7 +271,7 @@ def _import(cli_ctx, alias, network, address, class_hash, salt):
         private_key = click.prompt(f"Enter private key for '{alias}'", hide_input=True)
         deployments = [
             StarknetAccountDeployment(contract_address=address, network_name=n, salt=salt)
-            for n in network_names
+            for n in network
         ]
         container.import_account(alias, class_hash, private_key, salt=salt, deployments=deployments)
 
@@ -262,19 +284,20 @@ def _import(cli_ctx, alias, network, address, class_hash, salt):
 @accounts.command()
 @ape_cli_context()
 @existing_alias_argument(account_type=BaseStarknetAccount)
-@network_option(ecosystem=PLUGIN_NAME, default=None)
+@network_option()
 @address_option()
 def delete(cli_ctx, alias, network, address):
     """Delete an existing account deployment"""
     container = _get_container(cli_ctx)
     account = container.load(alias)
     deployments_before = len(account.deployments)
-    container.delete_account(alias, network=network, address=address, leave_unlocked=False)
+    container.delete_account(alias, networks=network, address=address, leave_unlocked=False)
 
     if account.address_int not in container:
         cli_ctx.logger.success(f"Account '{alias}' deleted.")
     elif (len(account.deployments) < deployments_before) and network:
-        cli_ctx.logger.success(f"Account '{alias}' deployments on network '{network}' deleted.")
+        choices_str = ",".join([x.replace("starknet:", "") for x in network])
+        cli_ctx.logger.success(f"Account '{alias}' deployments on network '{choices_str}' deleted.")
 
 
 @accounts.command()

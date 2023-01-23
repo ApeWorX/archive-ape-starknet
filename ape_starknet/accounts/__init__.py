@@ -252,13 +252,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             passphrase = None  # Not used
 
         else:
-            passphrase = click.prompt(
-                f"Create passphrase to encrypt account '{alias}'",
-                hide_input=True,
-                default="",  # Just in case there's no passphrase
-                show_choices=False,
-                confirmation_prompt=True,
-            )
+            passphrase = self._prompt_for_new_passphrase(alias)
 
         logger.info(f"Creating account using class hash '{class_hash_msg}' ...")
 
@@ -335,7 +329,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         salt = salt or ContractAddressSalt.get_random_value()
         path = self.data_folder.joinpath(f"{alias}.json")
         new_account = StarknetKeyfileAccount(key_file_path=path)
-        passphrase = passphrase or click.prompt("Create passphrase to encrypt")
+        passphrase = passphrase or self._prompt_for_new_passphrase(alias)
         new_account.write(
             passphrase=passphrase,
             private_key=key_pair.private_key,
@@ -347,17 +341,23 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         self.cached_accounts[alias] = new_account
         return new_account
 
+    def _prompt_for_new_passphrase(self, alias: str):
+        return click.prompt(
+            f"Create passphrase to encrypt account '{alias}'",
+            hide_input=True,
+            default="",  # Just in case there's no passphrase
+            show_choices=False,
+            confirmation_prompt=True,
+        )
+
     def delete_account(
         self,
         alias: str,
         address: Optional[Union[AddressType, int]] = None,
-        network: Optional[str] = None,
+        networks: Optional[Union[str, List[str]]] = None,
         passphrase: Optional[str] = None,
         leave_unlocked: Optional[bool] = None,
     ):
-        if network:
-            network = _clean_network_name(network)
-
         if alias in self.ephemeral_accounts:
             # Only 1 local deployment for ephemeral accounts.
             del self.ephemeral_accounts[alias]
@@ -366,7 +366,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             # Live network - delegate to account.
             account = self.load_key_file_account(alias)
             account.delete(
-                network=network,
+                networks=networks,
                 address=address,
                 passphrase=passphrase,
                 leave_unlocked=leave_unlocked,
@@ -1040,7 +1040,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def delete(
         self,
         address: Optional[Union[AddressType, int]] = None,
-        network: Optional[str] = None,
+        networks: Optional[Union[str, List[str]]] = None,
         passphrase: Optional[str] = None,
         leave_unlocked: Optional[bool] = None,
     ):
@@ -1058,22 +1058,22 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         )
         self.__decrypt_key_file(passphrase)
         deployments_at_start = len(self.deployments)
-        if not network and not address:
+        if not networks and not address:
             remaining_deployments: List[StarknetAccountDeployment] = []
 
         else:
             address = self.address_int if address is None else to_int(address)
-            network = None if network is None else _clean_network_name(network)
+            networks = None if networks is None else [_clean_network_name(n) for n in networks]
 
             def deployment_filter(deployment: StarknetAccountDeployment) -> bool:
                 deploy_address = to_int(deployment.contract_address)
-                if network and not address:
-                    return deployment.network_name == network
+                if networks and not address:
+                    return deployment.network_name in networks
 
-                elif address and not network:
+                elif address and not networks:
                     return deploy_address == address
 
-                return deploy_address == address and deployment.network_name == network
+                return deploy_address == address and deployment.network_name in (networks or [])
 
             remaining_deployments = [
                 x for x in self.deployments if x not in filter(deployment_filter, self.deployments)
@@ -1090,8 +1090,9 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             err_msg = f"Deletion failed. Deployment(s) not found (alias={self.alias}"
             if address:
                 err_msg = f"{err_msg}, address={address}"
-            if network:
-                err_msg = f"{err_msg}, network={network}"
+            if networks:
+                net_str = ",".join(networks)
+                err_msg = f"{err_msg}, networks={net_str}"
 
             raise StarknetAccountsError(f"{err_msg})")
 
@@ -1113,7 +1114,13 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             private_key=private_key,
         )
 
-    def add_deployment(self, network_name: str, contract_address: int, salt: int):
+    def add_deployment(
+        self,
+        network_name: str,
+        contract_address: int,
+        salt: int,
+        leave_unlocked: Optional[bool] = None,
+    ):
         if any([d == f"{network_name}:{contract_address}" for d in self.deployments]):
             logger.warning("Deployment already added.")
             return
@@ -1122,7 +1129,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             network_name=network_name, contract_address=contract_address, salt=salt
         )
         deployments = [*self.deployments, new_deployment]
-        self.write(deployments=deployments)
+        self.write(deployments=deployments, leave_unlocked=False)
 
     def unlock(self, prompt: Optional[str] = None, passphrase: Optional[str] = None):
         if not self.__cached_key or not self.__cached_passphrase:

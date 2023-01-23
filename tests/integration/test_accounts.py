@@ -16,6 +16,7 @@ def get_random_alias() -> str:
 
 TESTNET_KEY = "Contract address (testnet)"
 TESTNET2_KEY = "Contract address (testnet2)"
+MAINNET_KEY = "Contract address (mainnet)"
 
 
 class ListOutputSection:
@@ -180,18 +181,19 @@ def test_import_then_delete_deployment(
     accounts_runner, key_file_account, password, contract_address
 ):
     """
-    * Delete testnet deployment of an account deployed to testnet and testnet2.
-    * Re-import testnet.
+    * Start with an account with single deployments on testnet
+    * Import deployments to testnet2 and mainnet
+    * Delete deployments testnet2 and mainnet
 
     The account never completely goes away because it has multiple deployments.
     """
 
-    # Import the deployment.
+    # Import the deployments.
     accounts_runner.invoke(
         "import",
         key_file_account.alias,
         "--network",
-        "starknet:testnet2",
+        "testnet2,mainnet",
         "--address",
         contract_address,
         "--class-hash",
@@ -200,26 +202,28 @@ def test_import_then_delete_deployment(
     )
     actual_0 = (TESTNET_KEY, contract_address)
     actual_1 = (TESTNET2_KEY, contract_address)
+    actual_2 = (MAINNET_KEY, contract_address)
 
-    # Ensure testnet deployment shows up in list output.
+    # Ensure new deployments show up in list output.
     output = accounts_runner.invoke_list()
     section = output.get_section(key_file_account.alias)
     assert actual_0 in section, section.fail_msg(*actual_0)
     assert actual_1 in section, section.fail_msg(*actual_1)
+    assert actual_2 in section, section.fail_msg(*actual_2)
 
-    # Delete the testnet deployment.
+    # Delete the new deployments.
     user_input = [password]  # ["123"]
     output = accounts_runner.invoke(
         "delete",
         key_file_account.alias,
         "--network",
-        "starknet:testnet2",
+        "mainnet,testnet2",
         "--address",
         contract_address,
         input=user_input,
     )
     assert (
-        f"Account '{key_file_account.alias}' deployments " f"on network 'starknet:testnet2' deleted"
+        f"Account '{key_file_account.alias}' deployments on network 'mainnet,testnet2' deleted"
     ) in output
 
     # Ensure testnet deployment was deleted but not testnet2.
@@ -237,16 +241,20 @@ def test_import_then_delete_account(
 ):
     # Import a new account (no deployments or keys set at all for this alias).
     alias = get_random_alias()
+
+    # [privkey, new pass, confirm pass]
+    user_input = [str(get_random_private_key()), password, password]
+
     accounts_runner.invoke(
         "import",
         alias,
         "--network",
-        "starknet:testnet",
+        "testnet",
         "--address",
         key_file_account.address,
         "--class-hash",
         key_file_account.class_hash,
-        input=[str(get_random_private_key()), password, password],
+        input=user_input,
     )
 
     # Verify it shows up in list output.
