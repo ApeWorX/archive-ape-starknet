@@ -14,13 +14,15 @@ from ape.exceptions import (
     OutOfGasError,
     SignatureError,
 )
+from ape.logging import logger
 from ape.types import AddressType, RawAddress
 from eth_typing import HexAddress, HexStr
-from eth_utils import add_0x_prefix, is_text, remove_0x_prefix
+from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, is_text, remove_0x_prefix, to_hex
 from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
+from starknet_py.net import KeyPair
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -41,12 +43,14 @@ from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.third_party.open_zeppelin.starknet_contracts import account_contract
 
 from ape_starknet.exceptions import StarknetProviderError
+from ape_starknet.utils.basemodel import create_contract_class
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
     # chain_id, network_id
     "mainnet": (StarknetChainId.MAINNET.value, StarknetChainId.MAINNET.value),
     "testnet": (StarknetChainId.TESTNET.value, StarknetChainId.TESTNET.value),
+    "testnet2": (StarknetChainId.TESTNET2.value, StarknetChainId.TESTNET.value),
 }
 _HEX_ADDRESS_REG_EXP = re.compile("(0x)?[0-9a-f]*", re.IGNORECASE | re.ASCII)
 """Same as from eth-utils except not limited length."""
@@ -55,7 +59,10 @@ EXECUTE_METHOD_NAME = "__execute__"
 EXECUTE_SELECTOR = get_selector_from_name(EXECUTE_METHOD_NAME)
 DEFAULT_ACCOUNT_SEED = 2147483647  # Prime
 ContractEventABI = Union[List[Union[EventABI, ContractEvent]], Union[EventABI, ContractEvent]]
+MAX_FEE = int(1e20)
 _DECLARE_ERROR_PATTERN = re.compile(r"Class with hash (0x[0-9a-fA-F]+) is not declared")
+STARKNET_FEE_TOKEN_SYMBOL = "ETH"
+_CLIENT_FAILED_PREFIX_PATTERN = re.compile(r"Client failed( with code \d+)?: (.*)")
 
 
 def convert_contract_class_to_contract_type(
@@ -72,11 +79,19 @@ def convert_contract_class_to_contract_type(
     )
 
 
+OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID = "openzeppelin/account/Account.cairo"
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
-    "Account", "openzeppelin.account.Account.cairo", account_contract
+    "Account", OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID, account_contract
 )
 OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_class_hash(account_contract)
 EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods[EXECUTE_METHOD_NAME]
+
+# Taken from https://github.com/argentlabs/argent-x/blob/develop/packages/extension/src/background/wallet.ts  # noqa: E501
+ARGENTX_ACCOUNT_CLASS_HASH = int(
+    "0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918", 16
+)
+ARGENTX_ACCOUNT_SOURCE_ID = "account/ArgentAccount.cairo"
+DEVNET_ACCOUNT_START_BALANCE = 1000000000000000000000
 
 
 def get_chain_id(network_id: Union[str, int]) -> StarknetChainId:
@@ -169,7 +184,11 @@ def handle_client_errors(f):
             return result
 
         except Exception as err:
-            raise handle_client_error(err) from err
+            new_err = handle_client_error(err)
+            if new_err:
+                raise new_err from err
+
+            raise  # Original error
 
     return func
 
@@ -184,10 +203,6 @@ def handle_client_error(err: Exception) -> Optional[Exception]:
     if "Actual fee exceeded max fee" in err_msg:
         return OutOfGasError()
 
-    elif isinstance(err, ClientError):
-        # Remove https://github.com/software-mansion/starknet.py/blob/0.4.3-alpha/starknet_py/net/client_errors.py#L11 # noqa
-        err_msg = err_msg.split(":", 1)[-1].strip()
-
     maybe_contract_logic_error = False
     if "Error message:" in err_msg:
         err_msg = err_msg.split("Error message:")[-1].splitlines()[0].strip().split("\\n")[0]
@@ -201,16 +216,47 @@ def handle_client_error(err: Exception) -> Optional[Exception]:
     if "INVALID_SIGNATURE_LENGTH" in err_msg:
         return SignatureError("Invalid signature length.")
 
+    elif "UNINITIALIZED_CONTRACT" in err_msg and "is not deployed" in err_msg:
+        address = err_msg.split("is not deployed")[0].strip().split(" ")[-1]
+        if is_hex(address):
+            return ContractError(f"Contract at address '{address}' not deployed.")
+
+    elif "Signature" in err_msg and "is invalid, with respect to the public key" in err_msg:
+        message = "Invalid signature"
+        parts = err_msg.split("public key ")
+        if len(parts) == 2:
+            key_str = parts[-1].split(" ")[0].rstrip(",")
+            if key_str.isnumeric():
+                key = to_hex(int(key_str))
+                message = f"{message} with respect to public key {key}"
+
+        return SignatureError(f"{message}.")
+
     declare_error_search = _DECLARE_ERROR_PATTERN.search(err_msg)
     if declare_error_search:
         address = declare_error_search.groups()[0]
-        raise StarknetProviderError(f"Contract with address '{address}' not declared.")
+        return StarknetProviderError(f"Contract with address '{address}' not declared.")
 
     elif maybe_contract_logic_error:
         return ContractLogicError(revert_message=err_msg)
 
-    err_msg = err_msg.strip()
+    err_msg = err_msg.strip().rstrip(".")
+    match = _CLIENT_FAILED_PREFIX_PATTERN.match(err_msg)
+    if match:
+        groups = match.groups()
+        if groups:
+            trimmed = groups[-1]
+            if trimmed:
+                err_msg = trimmed
+
+    if err_msg.endswith("\n."):
+        err_msg = "\n.".join(err_msg.split("\n.")[:-1])
+
     err_msg = _try_extract_message_from_json(err_msg)
+
+    if not err_msg.endswith("."):
+        err_msg = f"{err_msg}."
+
     return StarknetProviderError(err_msg)
 
 
@@ -279,8 +325,46 @@ def run_until_complete(*coroutine):
     return result
 
 
-def to_int(val) -> int:
-    if isinstance(val, str):
-        return eth_to_int(text=val)
+def to_int(val: Any) -> int:
+    if isinstance(val, int):
+        return val
+
+    elif isinstance(val, str) and is_0x_prefixed(val):
+        return eth_to_int(hexstr=val)
+
+    elif isinstance(val, str) and val.isnumeric():
+        return int(val)
+
+    elif isinstance(val, str):
+        return eth_to_int(val.encode())
+
+    elif hasattr(val, "address"):
+        return to_int(val.address)
 
     return eth_to_int(val)
+
+
+def get_class_hash(code: Union[str, HexBytes]):
+    contract_class = create_contract_class(code)
+    return compute_class_hash(contract_class)
+
+
+def create_keypair(private_key: Union[str, int]) -> KeyPair:
+    # Validate private key.
+    if isinstance(private_key, str) and is_0x_prefixed(private_key):
+        private_key = to_int(private_key.strip("'\""))
+    elif isinstance(private_key, str):
+        private_key = to_int(private_key)
+
+    return KeyPair.from_private_key(private_key)
+
+
+def get_account_constructor_calldata(key_pair: KeyPair, class_hash: int) -> List[Any]:
+    # Use known ctor data
+    if class_hash == OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH:
+        return [key_pair.public_key]
+    elif class_hash == ARGENTX_ACCOUNT_CLASS_HASH:
+        return []
+    else:
+        logger.warning(f"Constructor calldata for account with class '{class_hash}' not known.")
+        return []

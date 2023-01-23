@@ -4,7 +4,7 @@ import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
 from ape_starknet.exceptions import StarknetProviderError
-from ape_starknet.utils import EXECUTE_METHOD_NAME, is_checksum_address
+from ape_starknet.utils import EXECUTE_ABI, is_checksum_address
 
 
 def test_get_nonce(provider, account, contract):
@@ -46,14 +46,12 @@ def test_get_negative_block_number_out_of_range(provider, contract):
 def test_get_transactions_by_block(provider, account, contract):
     # Transact to create data.
     expected_value = 123
-    contract.increase_balance(account.address, expected_value, sender=account)
+    contract.increase_balance(account, expected_value, sender=account)
 
     transactions = [t for t in provider.get_transactions_by_block("latest")]
 
     expected_chain_id = provider.chain_id
-    expected_abi = [
-        a for a in account.contract_type.mutable_methods if a.name == EXECUTE_METHOD_NAME
-    ][0]
+    expected_abi = EXECUTE_ABI
     expected_nonce = account.nonce - 1
     assert len(transactions) == 1
     assert transactions[0].chain_id == expected_chain_id
@@ -96,7 +94,7 @@ def test_mine(provider):
 def test_set_balance(provider, account, tokens):
     current_balance = account.balance
 
-    del tokens.local_balance_cache[account.address]["eth"]
+    del tokens.balance_cache[account.address_int]["eth"]
     assert account.balance == current_balance
 
     new_balance = current_balance + 23400000000
@@ -104,5 +102,5 @@ def test_set_balance(provider, account, tokens):
     assert account.balance == new_balance
 
     # Clear cache to ensure recognized on chain
-    del tokens.local_balance_cache[account.address]["eth"]
+    del tokens.balance_cache[account.address_int]["eth"]
     assert account.balance == new_balance

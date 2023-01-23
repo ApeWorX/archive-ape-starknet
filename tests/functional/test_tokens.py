@@ -10,6 +10,11 @@ all_tokens = pytest.mark.parametrize(
 )
 
 
+@pytest.fixture(scope="module", autouse=True)
+def ensure_token_deployed(token_contract):
+    _ = token_contract
+
+
 @all_tokens
 def test_get_balance(tokens, account, token_initial_supply, token):
     if token == "eth":
@@ -23,7 +28,9 @@ def test_get_balance(tokens, account, token_initial_supply, token):
 def test_transfer(tokens, account, second_account, token):
     initial_balance = tokens.get_balance(second_account.address, token=token)
     tokens.transfer(account.address, second_account.address, 10, token=token)
-    assert tokens.get_balance(second_account.address, token=token) == initial_balance + 10
+    actual = tokens.get_balance(second_account.address, token=token)
+    expected = initial_balance + 10
+    assert actual == expected
 
 
 @all_tokens
@@ -51,3 +58,7 @@ def test_large_transfer(tokens, account, second_account):
 def test_is_token(tokens, token):
     # Ensure it's recognized as a token
     assert tokens.is_token(tokens[token])
+
+
+def test_is_not_token(contract, tokens):
+    assert not tokens.is_token(contract.address)

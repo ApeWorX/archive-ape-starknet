@@ -5,10 +5,8 @@ AMOUNT_1 = 2**128 + 42
 
 
 @pytest.fixture(scope="module")
-def receipt(config, token_project_path, second_account, account):
-    with config.using_project(token_project_path) as project:
-        contract = project.TestToken.deployments[-1]
-        yield contract.fire_events(second_account.address, AMOUNT_0, AMOUNT_1, sender=account)
+def receipt(token_contract, second_account, account):
+    return token_contract.fire_events(second_account, AMOUNT_0, AMOUNT_1, sender=account)
 
 
 def test_decode_logs(receipt, token_contract, account, second_account):

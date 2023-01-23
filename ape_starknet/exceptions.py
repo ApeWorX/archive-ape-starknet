@@ -1,4 +1,4 @@
-from ape.exceptions import ApeException, ProviderError
+from ape.exceptions import AccountsError, ApeException, ProviderError
 from ape.types import AddressType
 
 
@@ -11,6 +11,18 @@ class StarknetEcosystemError(ApeException):
 class StarknetProviderError(ProviderError):
     """
     An error raised by the Starknet provider.
+    """
+
+
+class StarknetTokensError(ApeException):
+    """
+    An error raised by the Starknet tokens manager.
+    """
+
+
+class StarknetAccountsError(AccountsError):
+    """
+    An error raised by a Starknet account.
     """
 
 

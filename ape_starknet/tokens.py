@@ -4,14 +4,16 @@ from ape.api import AccountAPI, Address
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractInstance
 from ape.exceptions import ContractError
+from ape.logging import logger
 from ape.types import AddressType
 from ape.utils import cached_property
-from eth_typing import HexAddress, HexStr
 from ethpm_types import ContractType
 from starknet_devnet.fee_token import FeeToken
 from starknet_py.constants import FEE_CONTRACT_ADDRESS
 
-from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetProviderError
+from ape_starknet.ecosystems import NETWORKS
+from ape_starknet.exceptions import StarknetTokensError
+from ape_starknet.utils import STARKNET_FEE_TOKEN_SYMBOL, to_int
 from ape_starknet.utils.basemodel import StarknetBase
 
 if TYPE_CHECKING:
@@ -167,9 +169,13 @@ TEST_TOKEN_ADDRESS = "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458c
 
 class TokenManager(StarknetBase):
     # The 'test_token' refers to the token that comes with Argent-X
-    additional_tokens: Dict = {}
+    additional_tokens: Dict[str, Dict[str, int]] = {}
     contract_type = ERC20
-    local_balance_cache: Dict[AddressType, Dict[str, int]] = {}
+
+    # Map of address int to symbols to balance.
+    balance_cache: Dict[int, Dict[str, int]] = {}
+
+    cache_enabled: Dict[str, bool] = {LOCAL_NETWORK_NAME: True, **{n: False for n in NETWORKS}}
 
     @property
     def token_address_map(self) -> Dict:
@@ -179,149 +185,167 @@ class TokenManager(StarknetBase):
         }
 
     @cached_property
-    def _base_token_address_map(self):
-        local_eth = self.starknet.decode_address(FeeToken.ADDRESS)
-        live_eth = self.starknet.decode_address(FEE_CONTRACT_ADDRESS)
-        live_token = self.starknet.decode_address(TEST_TOKEN_ADDRESS)
+    def _base_token_address_map(self) -> Dict[str, Dict[str, int]]:
+        local_eth = FeeToken.ADDRESS
+        live_eth = to_int(FEE_CONTRACT_ADDRESS)
+        live_token = to_int(TEST_TOKEN_ADDRESS)
 
         if self.provider.network.name == LOCAL_NETWORK_NAME:
-            self.chain_manager.contracts[local_eth] = self.contract_type
+            self.chain_manager.contracts[
+                self.starknet.decode_address(local_eth)
+            ] = self.contract_type
         else:
-            self.chain_manager.contracts[live_eth] = self.contract_type
+            self.chain_manager.contracts[
+                self.starknet.decode_address(live_eth)
+            ] = self.contract_type
 
         return {
-            "eth": {"local": local_eth, "mainnet": live_eth, "testnet": live_eth},
-            "test_token": {"testnet": live_token, "mainnet": live_token},
+            "eth": {
+                "local": local_eth,
+                "testnet": live_eth,
+                "testnet2": live_eth,
+                "mainnet": live_eth,
+            },
+            "test_token": {"testnet": live_token, "testnet2": live_token, "mainnet": live_token},
         }
 
     def __getitem__(self, token: str) -> ContractInstance:
         network = self.provider.network.name
-        contract_address = AddressType(
-            HexAddress(HexStr(self.token_address_map[token.lower()].get(network)))
-        )
-        if not contract_address:
-            raise ContractTypeNotFoundError(contract_address)
+        token = token.lower()
+        if token not in self.token_address_map or not self.token_address_map[token]:
+            raise StarknetTokensError(f"Token '{token}' not found.")
 
-        return ContractInstance(contract_address, ERC20)
+        address = self.token_address_map[token].get(network)
+        if not address:
+            available_networks = ",".join(self.token_address_map[token])
+            raise StarknetTokensError(
+                f"Token '{token}' not deployed on network "
+                f"'{network}' (available networks={available_networks})."
+            )
 
-    def is_token(self, address: AddressType) -> bool:
+        address_str = self.starknet.decode_address(address)
+        return ContractInstance(address_str, ERC20)
+
+    def is_token(self, address: Union[AddressType, int, Address]) -> bool:
         network = self.provider.network.name
-        return any(address == networks.get(network) for networks in self.token_address_map.values())
+        address_int = to_int(address)
+        return any(
+            address_int == networks.get(network) for networks in self.token_address_map.values()
+        )
 
-    def add_token(self, name: str, network: str, address: AddressType):
-        if name not in self.additional_tokens:
-            self.additional_tokens[name] = {}
+    def add_token(self, name: str, network: str, address: Union[AddressType, int]):
+        if name in self.additional_tokens:
+            self.additional_tokens[name][network] = to_int(address)
+        else:
+            self.additional_tokens[name] = {network: to_int(address)}
 
-        self.additional_tokens[name][network] = address
-
-    def get_balance(self, account: Union[Address, AddressType], token: str = "eth") -> int:
+    def get_balance(
+        self, account: Union[Address, AddressType], token: str = STARKNET_FEE_TOKEN_SYMBOL.lower()
+    ) -> int:
         if hasattr(account, "address"):
             address = cast(Address, account).address
         else:
             address = cast(AddressType, account)
 
-        if self.provider.network.name != LOCAL_NETWORK_NAME:
-            return self._get_balance(address, token=token)
+        address_int = to_int(address)
 
-        if address not in self.local_balance_cache:
-            balance = self._get_balance(address, token=token)
-            self.local_balance_cache[address] = {token: balance}
+        # Al
 
-        elif token not in self.local_balance_cache[address]:
-            self.local_balance_cache[address][token] = self._get_balance(address, token=token)
+        network = self.provider.network.name
+        if not self.cache_enabled.get(network, False):
+            # Strictly use provider.
+            balance = self.request_balance(address, token=token)
+            self.balance_cache[address_int] = {token: balance}
 
-        return self.local_balance_cache[address][token]
+        elif address_int not in self.balance_cache:
+            balance = self.request_balance(address, token=token)
+            self.balance_cache[address_int] = {token: balance}
 
-    def _get_balance(self, account: AddressType, token: str = "eth") -> int:
-        account_int = int(account, 16)
-        result = self[token].balanceOf(account_int)
-        if isinstance(result, (tuple, list)):
-            if len(result) == 2:
-                low, high = result
-                return (high << 128) + low
+        elif token not in self.balance_cache[address_int]:
+            self.balance_cache[address_int][token] = self.request_balance(address, token=token)
 
-            return result[0]
+        return self.balance_cache[address_int][token]
 
-        return result
+    def request_balance(
+        self, account: Union[AddressType, int], token: str = STARKNET_FEE_TOKEN_SYMBOL.lower()
+    ) -> int:
+        """
+        Get the balance from the provider and update the cache.
+        """
+
+        account_int = to_int(account)
+        amount = self[token].balanceOf(account_int)
+        amount_int = self._convert_amount_to_int(amount)
+
+        # Update cache to save requests (only if caching enabled).
+        if account_int in self.balance_cache:
+            self.balance_cache[account_int][token] = amount_int
+        else:
+            self.balance_cache[account_int] = {token: amount_int}
+
+        return amount_int
 
     def transfer(
         self,
         sender: Union[int, AddressType, "BaseStarknetAccount"],
         receiver: Union[int, AddressType, "BaseStarknetAccount"],
         amount: int,
-        token: str = "eth",
+        token: str = STARKNET_FEE_TOKEN_SYMBOL.lower(),
     ):
-        if isinstance(receiver, int):
-            receiver_address = self.starknet.decode_address(receiver)
-            receiver_address_int = receiver
-        elif hasattr(receiver, "address_int"):
-            receiver_address_int = receiver.address_int  # type: ignore
-            receiver_address = receiver.address  # type: ignore
-        elif isinstance(receiver, str):
-            receiver_address_int = self.starknet.encode_address(receiver)
-            receiver_address = self.starknet.decode_address(receiver)
-        else:
-            raise StarknetProviderError(
-                f"Unhandled type for receiver '{receiver}'. Expects int, str, or account."
-            )
-
-        sender_account = (
-            self.account_contracts[sender] if isinstance(sender, (int, str)) else sender
+        receiver_int = to_int(receiver)
+        sender_account = cast(
+            "BaseStarknetAccount",
+            (self.account_container[sender] if isinstance(sender, (int, str)) else sender),
         )
-        result = self[token].transfer(receiver_address_int, amount, sender=sender_account)
-        if self.provider.network.name != LOCAL_NETWORK_NAME:
-            return result
+        result = self[token].transfer(receiver_int, amount, sender=sender_account)
 
         # NOTE: the fees paid by the sender get updated in `provider.send_transaction()`.
         amount_int = self._convert_amount_to_int(amount)
-        self.update_cache(sender_account.address, -amount_int, token=token)
-        self.update_cache(receiver_address, amount_int, token=token)
+        self.update_cache(sender_account.address_int, -amount_int, token=token)
+        self.update_cache(receiver_int, amount_int, token=token)
         return result
 
     def update_cache(
-        self, address: Union[AccountAPI, AddressType], amount: Union[int, Dict], token: str = "eth"
+        self,
+        address: Union[AccountAPI, AddressType, int],
+        amount: Union[int, Dict],
+        token: str = STARKNET_FEE_TOKEN_SYMBOL.lower(),
     ):
         amount_int = self._convert_amount_to_int(amount)
-        address_str: str
-        if isinstance(address, AccountAPI):
-            address_str = address.address
-        else:
-            address_str = address
-
-        if address_str not in self.local_balance_cache:
-            self.local_balance_cache[address_str] = {
-                token: self._get_balance(address_str, token=token)
-            }
-
-            # Return, as this should include what we were updating to.
+        address_int = to_int(address)
+        if address_int not in self.balance_cache or token not in self.balance_cache[address_int]:
+            # Set the balance from a request to the provider.
+            self.request_balance(address_int, token=token)
             return
 
-        elif token not in self.local_balance_cache[address_str]:
-            self.local_balance_cache[address_str][token] = self._get_balance(
-                address_str, token=token
-            )
-
-            # Return, as this should include what we were updating to.
-            return
-
-        current_balance: int = self.local_balance_cache[address_str][token]
+        current_balance: int = self.balance_cache[address_int][token]
         if current_balance + amount_int < 0:
-            raise ValueError(
-                "Unable to set balance to negative value. "
-                f"Current balance={current_balance}, amount={amount_int}"
+            actual_balance = self.request_balance(address_int, token=token)
+            logger.error(
+                f"Balance cache corrupted - "
+                f"attempted to set as {amount_int} when actual balance is {actual_balance}"
             )
 
-        self.local_balance_cache[address_str][token] += amount_int
+        else:
+            self.balance_cache[address_int][token] += amount_int
 
     def _convert_amount_to_int(self, amount: Union[int, Dict]) -> int:
         if isinstance(amount, int):
             return amount
 
-        elif isinstance(amount, dict) and amount.get("high", 0):
+        elif isinstance(amount, dict) and "low" in amount and "high" in amount:
             return (amount["high"] << 128) + amount["low"]
 
-        elif isinstance(amount, dict):
+        elif isinstance(amount, dict) and "low" in amount:
             return amount["low"]
 
-        else:
-            raise TypeError(f"Unknown amount type: '{amount}'")
+        elif isinstance(amount, (list, tuple)) and len(amount) == 2:
+            return (amount[1] << 128) + amount[0]
+
+        elif isinstance(amount, (list, tuple)) and len(amount) == 1:
+            return amount[0]
+
+        raise StarknetTokensError(f"Unable to handle transfer value '{amount}'.")
+
+
+tokens = TokenManager()

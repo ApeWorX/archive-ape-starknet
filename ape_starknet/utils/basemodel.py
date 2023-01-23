@@ -1,9 +1,9 @@
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union, cast
 
-from ape.api import PluginConfig
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
+from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
 from hexbytes import HexBytes
 from starknet_py.net.client_models import ContractClass
@@ -11,7 +11,8 @@ from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.testing.contract_utils import get_contract_class
 
 if TYPE_CHECKING:
-    from ape_starknet.accounts import StarknetAccountContracts
+    from ape_starknet.accounts import StarknetAccountContainer
+    from ape_starknet.config import StarknetConfig
     from ape_starknet.ecosystems import Starknet
     from ape_starknet.explorer import StarknetExplorer
     from ape_starknet.provider import StarknetProvider
@@ -21,30 +22,30 @@ if TYPE_CHECKING:
 
 class StarknetBase(ManagerAccessMixin):
     @property
-    def starknet_config(self) -> PluginConfig:
-        return self.config_manager.get_config("starknet")
+    def starknet_config(self) -> "StarknetConfig":
+        return cast("StarknetConfig", self.config_manager.get_config("starknet"))
 
     @property
     def starknet(self) -> "Starknet":
-        return self.network_manager.starknet  # type: ignore
+        return cast("Starknet", self.network_manager.starknet)
 
     @property
     def starknet_explorer(self) -> "StarknetExplorer":
         explorer = self.provider.network.explorer
         assert explorer  # For mypy
-        return explorer  # type: ignore
+        return cast("StarknetExplorer", explorer)
 
     @property
     def provider(self) -> "StarknetProvider":
-        return super().provider  # type: ignore
+        return cast("StarknetProvider", super().provider)
 
     @property
-    def account_contracts(self) -> "StarknetAccountContracts":
-        return self.account_manager.containers["starknet"]  # type: ignore
+    def account_container(self) -> "StarknetAccountContainer":
+        return cast("StarknetAccountContainer", self.account_manager.containers["starknet"])
 
     @property
     def tokens(self) -> "TokenManager":
-        from ape_starknet import tokens
+        from ape_starknet.tokens import tokens
 
         return tokens
 
@@ -55,12 +56,10 @@ class StarknetBase(ManagerAccessMixin):
         return UniversalDeployer()
 
     def get_contract_type(self, address: AddressType) -> Optional[ContractType]:
-        contract_type = self.chain_manager.contracts.get(address)
-        if contract_type:
-            return contract_type
-
-        # Have to force explorer in Local networks since Ape turns it off by default
-        return self.starknet_explorer.get_contract_type(address)
+        # Force explorer in Local networks since Ape turns it off by default
+        return self.chain_manager.contracts.get(
+            address
+        ) or self.starknet_explorer.get_contract_type(address)
 
     def get_local_contract_type(self, class_hash: int) -> Optional[ContractType]:
         for contract_name, contract_type in self.project_manager.contracts.items():
@@ -76,15 +75,7 @@ class StarknetBase(ManagerAccessMixin):
                 continue
 
             try:
-                if isinstance(code, str) and code.startswith("0x"):
-                    contract_class = ContractClass.deserialize(HexBytes(code))
-                elif isinstance(code, str):
-                    contract_class = ContractClass.loads(code)
-                elif isinstance(code, bytes):
-                    contract_class = ContractClass.deserialize(code)
-                else:
-                    raise TypeError(f"Unhandled bytecode type '{code}'.")
-
+                contract_class = create_contract_class(code)
             except UnicodeDecodeError:
                 continue
 
@@ -94,3 +85,17 @@ class StarknetBase(ManagerAccessMixin):
                 return contract_type
 
         return None
+
+
+def create_contract_class(code: Union[str, bytes]) -> ContractClass:
+    if isinstance(code, str) and is_0x_prefixed(code):
+        return ContractClass.deserialize(HexBytes(code))
+
+    elif isinstance(code, str):
+        return ContractClass.loads(code)
+
+    elif isinstance(code, bytes):
+        return ContractClass.deserialize(code)
+
+    else:
+        raise TypeError(f"Unhandled bytecode type '{code}'.")

@@ -6,11 +6,7 @@ from ape_starknet.exceptions import StarknetProviderError
 from ape_starknet.utils import EXECUTE_METHOD_NAME
 
 
-def test_is_token(contract, tokens):
-    assert not tokens.is_token(contract.address)
-
-
-def test_declare_then_deploy(account, chain, project, provider, factory_contract_container):
+def test_declare_then_deploy(account, chain, project, provider):
     """
     This test shows a realistic flow.
 
@@ -24,7 +20,7 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     # Declare the contracts
     balance_before = account.balance  # Tracked to make sure Declares cost money.
     declaration = account.declare(project.MyContract)
-    factory_declaration = account.declare(factory_contract_container)
+    factory_declaration = account.declare(project.ContractFactory)
     assert declaration.class_hash
     assert factory_declaration.class_hash
 
@@ -38,7 +34,7 @@ def test_declare_then_deploy(account, chain, project, provider, factory_contract
     # argument so it can create instances of it.
     # NOTE: We would not be able to deploy the factory if we did not declare it above.
     #  and we don't need to tell ape the factory's class-hash - it can configure it out.
-    factory = factory_contract_container.deploy(declaration.class_hash, sender=account)
+    factory = project.ContractFactory.deploy(declaration.class_hash, sender=account)
     assert factory.address
     assert factory.create_my_contract
 
@@ -113,7 +109,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
         contract.increase_balance(account.address, increase_amount)
 
 
-def test_decode_logs(contract, account, ecosystem):
+def test_decode_logs(contract, account, starknet):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
     logs = list(receipt.decode_logs(contract.balance_increased))
@@ -121,7 +117,7 @@ def test_decode_logs(contract, account, ecosystem):
     assert logs[0].amount == increase_amount
 
     from_address = receipt.logs[0]["from_address"]
-    log_sender_address = ecosystem.decode_address(from_address)
+    log_sender_address = starknet.decode_address(from_address)
     assert log_sender_address == contract.address
 
 

@@ -2,22 +2,22 @@ from ape import plugins
 from ape.api.networks import LOCAL_NETWORK_NAME, NetworkAPI, create_network_type
 from ape.types import AddressType
 
-from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
+from ape_starknet.accounts import StarknetAccountContainer, StarknetKeyfileAccount
 from ape_starknet.config import StarknetConfig
-from ape_starknet.conversion import StarknetAddressConverter
+from ape_starknet.conversion import StarknetAccountConverter, StarknetAddressConverter
 from ape_starknet.ecosystems import Starknet
 from ape_starknet.explorer import StarknetExplorer
 from ape_starknet.provider import StarknetDevnetProvider, StarknetProvider
-from ape_starknet.tokens import TokenManager
+from ape_starknet.tokens import tokens
 from ape_starknet.utils import NETWORKS, PLUGIN_NAME
 
-tokens = TokenManager()
 network_names = [LOCAL_NETWORK_NAME] + list(NETWORKS.keys())
 
 
 @plugins.register(plugins.ConversionPlugin)
 def converters():
     yield AddressType, StarknetAddressConverter
+    yield int, StarknetAccountConverter
 
 
 @plugins.register(plugins.Config)
@@ -49,10 +49,15 @@ def providers():
 
 @plugins.register(plugins.AccountPlugin)
 def account_types():
-    return StarknetAccountContracts, StarknetKeyfileAccount
+    return StarknetAccountContainer, StarknetKeyfileAccount
 
 
 @plugins.register(plugins.ExplorerPlugin)
 def explorers():
     for network_name in network_names:
         yield PLUGIN_NAME, network_name, StarknetExplorer
+
+
+__all__ = [
+    "tokens",
+]

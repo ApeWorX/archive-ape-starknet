@@ -16,6 +16,7 @@ class NetworkConfig(PluginConfig):
 class ProviderConfig(PluginConfig):
     mainnet: dict = {"uri": "https://alpha-mainnet.starknet.io"}
     testnet: dict = {"uri": "https://alpha4.starknet.io"}
+    testnet2: dict = {"uri": "https://alpha4-2.starknet.io"}
     local: dict = {
         "uri": f"http://127.0.0.1:{DEFAULT_PORT}",
         "seed": DEFAULT_ACCOUNT_SEED,

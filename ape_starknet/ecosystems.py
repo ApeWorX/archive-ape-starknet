@@ -36,13 +36,19 @@ from ape_starknet.transactions import (
     StarknetReceipt,
     StarknetTransaction,
 )
-from ape_starknet.utils import EXECUTE_ABI, get_method_abi_from_selector, to_checksum_address
+from ape_starknet.utils import (
+    EXECUTE_ABI,
+    STARKNET_FEE_TOKEN_SYMBOL,
+    get_method_abi_from_selector,
+    to_checksum_address,
+)
 from ape_starknet.utils.basemodel import StarknetBase
 
 NETWORKS = {
     # chain_id, network_id
     "mainnet": (StarknetChainId.MAINNET.value, StarknetChainId.MAINNET.value),
     "testnet": (StarknetChainId.TESTNET.value, StarknetChainId.TESTNET.value),
+    "testnet2": (StarknetChainId.TESTNET2.value, StarknetChainId.TESTNET.value),
 }
 OZ_PROXY_STORAGE_KEY = get_storage_var_address("Proxy_implementation_hash")
 
@@ -77,6 +83,8 @@ class Starknet(EcosystemAPI, StarknetBase):
     """
     The Starknet ``EcosystemAPI`` implementation.
     """
+
+    fee_token_symbol: str = STARKNET_FEE_TOKEN_SYMBOL
 
     proxy_info_cache: Dict[AddressType, Optional[StarknetProxy]] = {}
 
@@ -274,6 +282,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             calldata=encoded_calldata,
             sender=kwargs.get("sender"),
             max_fee=kwargs.get("max_fee") or 0,
+            signature=None,
         )
 
     def encode_contract_blueprint(
@@ -438,3 +447,8 @@ class Starknet(EcosystemAPI, StarknetBase):
             if target and proxy_type
             else None
         )
+
+    def decode_primitive_value(  # type: ignore[empty-body]
+        self, value: Any, output_type: Union[str, Tuple, List]
+    ) -> int:
+        return to_int(value)

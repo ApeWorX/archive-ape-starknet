@@ -2,15 +2,15 @@ import pytest
 from ape.contracts import ContractContainer, ContractInstance
 
 
-@pytest.fixture(scope="module")
-def in_ethereum(networks):
-    with networks.parse_network_choice("ethereum:local"):
+@pytest.fixture
+def in_ethereum(use_local_ethereum):
+    with use_local_ethereum:
         yield
 
 
-@pytest.fixture(scope="module")
-def in_starknet(networks):
-    with networks.parse_network_choice("starknet:local"):
+@pytest.fixture
+def in_starknet(use_local_starknet):
+    with use_local_starknet:
         yield
 
 
@@ -20,36 +20,44 @@ def eth_contract_container(eth_contract_type):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def deploy_eth_contract(in_ethereum, eth_account, eth_contract_container):
-    yield eth_account.deploy(eth_contract_container, sender=eth_account)
+def deploy_eth_contract(use_local_ethereum, eth_account, eth_contract_container):
+    with use_local_ethereum:
+        return eth_account.deploy(eth_contract_container, sender=eth_account)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def eth_contract(in_ethereum, eth_contract_container):
-    yield eth_contract_container.deployments[-1]
+    return eth_contract_container.deployments[-1]
 
 
 @pytest.fixture(scope="module")
-def stark_contract(in_starknet, config, project_path):
-    with config.using_project(project_path) as project:
-        yield project.MyContract.deployments[-1]
+def stark_contract(use_local_starknet, config, project_path):
+    with use_local_starknet:
+        with config.using_project(project_path) as project:
+            yield project.MyContract.deployments[-1]
 
 
-def test_use_eth_network_from_fixture(eth_contract, eth_account):
+def test_use_eth_network_from_fixture(eth_contract, eth_account, in_ethereum):
     # Shows that we can write Ethereum-only tests within a multi-chain test module
     # (NOTE: 'starknet' is the default ecosystem for this project)
     eth_contract.setNumber(123, sender=eth_account)
     assert eth_contract.myNumber() == 123
 
 
-def test_use_starknet_network_from_fixture(account, stark_contract):
+def test_use_starknet_network_from_fixture(account, stark_contract, in_starknet):
     # Shows that we can write Starknet-only tests within a multi-chain test module
     receipt = stark_contract.increase_balance(account.address, 123, sender=account)
     assert not receipt.failed
 
 
 def test_switch_to_ethereum_mid_test(
-    networks, provider, eth_account, eth_contract_container, stark_contract, account
+    provider,
+    eth_account,
+    eth_contract_container,
+    stark_contract,
+    account,
+    in_starknet,
+    use_local_ethereum,
 ):
     receipt = stark_contract.increase_balance(account.address, 123, sender=account)
     assert not receipt.failed
@@ -57,7 +65,7 @@ def test_switch_to_ethereum_mid_test(
     # Shows that we can change to Ethereum within an individual test
     starknet_chain_id = provider.chain_id
 
-    with networks.ethereum.local.use_provider("test") as eth_provider:
+    with use_local_ethereum as eth_provider:
         # Verify the chain changed
         assert eth_provider.chain_id != starknet_chain_id
 

@@ -38,17 +38,17 @@ def event_abi(contract):
 
 
 @pytest.mark.parametrize("value", (INT_ADDRESS, STR_ADDRESS, HEXBYTES_ADDRESS))
-def test_encode_and_decode_address(value, ecosystem):
-    decoded_address = ecosystem.decode_address(value)
+def test_encode_and_decode_address(value, starknet):
+    decoded_address = starknet.decode_address(value)
     expected = AddressType(HexAddress(HexStr(STR_ADDRESS)))
     assert decoded_address == expected
 
     # The values should _always_ encode back to the INT_ADDRESS.
-    re_encoded_address = ecosystem.encode_address(decoded_address)
+    re_encoded_address = starknet.encode_address(decoded_address)
     assert re_encoded_address == INT_ADDRESS
 
 
-def test_decode_logs(ecosystem, event_abi, raw_logs):
-    actual = list(ecosystem.decode_logs(raw_logs, event_abi))
+def test_decode_logs(starknet, event_abi, raw_logs):
+    actual = list(starknet.decode_logs(raw_logs, event_abi))
     assert len(actual) == 1
     assert actual[0].amount == "4321"

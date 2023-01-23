@@ -1,5 +1,11 @@
 import pytest
-from ape.exceptions import ApeException, ContractLogicError, OutOfGasError
+from ape.exceptions import (
+    ApeException,
+    ContractError,
+    ContractLogicError,
+    OutOfGasError,
+    SignatureError,
+)
 from hexbytes import HexBytes
 from starknet_py.net.client_errors import ClientError, ContractNotFoundError
 from starknet_py.net.client_models import BlockSingleTransactionTrace
@@ -12,6 +18,7 @@ from ape_starknet.utils import (
     handle_client_error,
     is_checksum_address,
     to_checksum_address,
+    to_int,
 )
 
 TEST_ADDRESS = 852629284295565304522725188288313475155928521990240236795402253191102056828
@@ -82,7 +89,7 @@ def test_to_checksum_address(account):
                 block_hash="pending",
             ),
             StarknetProviderError(
-                f"No contract with address {TEST_ADDRESS} found for block with block_hash: pending"
+                f"No contract with address {TEST_ADDRESS} found for block with block_hash: pending."
             ),
         ),
         (
@@ -98,6 +105,34 @@ def test_to_checksum_address(account):
             ),
         ),
         (ValueError("Foo!"), ValueError("Foo!")),
+        (
+            ClientError(
+                "Client failed with code 500: "
+                '{"code": "StarknetErrorCode.TRANSACTION_FAILED", '
+                '"message": "Error at pc=0:166:\\nSignature '
+                "(3043690392760996823501689233597619912806801642077770433986032017604167509951, "
+                "140932343948720055880187056217327835615175238698469767628052057966817353503), "
+                "is invalid, with respect to the public key "
+                "6835981319243216192375995835136133760276036836, "
+                "and the message hash "
+                "2506859578009568926921040670359334110481328447009243612404313172189339494201."
+                "\\nCairo traceback (most recent call last):\\nUnknown "
+                "location (pc=0:413)\\nUnknown location (pc=0:400)"
+                '\\nUnknown location (pc=0:320)"}.'
+            ),
+            SignatureError(
+                "Invalid signature with respect to public key "
+                "0x13289378ec83a20385758c7ec489853213cfce4."
+            ),
+        ),
+        (
+            ClientError(
+                "Client failed with code 500: "
+                '{{"code":"StarknetErrorCode.UNINITIALIZED_CONTRACT",'
+                f'"message":"Requested contract address {TEST_ADDRESS} is not deployed."}}\n.'
+            ),
+            ContractError(f"Contract at address '{TEST_ADDRESS}' not deployed."),
+        ),
     ],
 )
 def test_handle_client_error(exception, expected):
@@ -113,3 +148,10 @@ def test_extract_trace_data(traces_testnet_243810, traces_testnet_243810_results
 
         expected_result = traces_testnet_243810_results[trace_object.transaction_hash]
         assert trace_data["result"] == expected_result
+
+
+@pytest.mark.parametrize(
+    "val", (1952805748, "1952805748", b"test", "test", HexBytes(1952805748), "0x74657374")
+)
+def test_to_int(val):
+    assert to_int(val) == 1952805748
