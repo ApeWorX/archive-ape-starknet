@@ -109,16 +109,14 @@ See [this section](https://starknet.io/docs/hello_starknet/account_setup.html#tr
 To deploy the new account, use the `deploy` command:
 
 ```bash
-ape starknet accounts deploy <NEW-ALIAS> --network starknet:testnet
+ape starknet accounts deploy <NEW-ALIAS> --network testnet
 ```
 
 This only works if the account has been funded.
 For convenience purposes, if you have another account with funds, you can use that account to fund the deployment of this one using the `--funder` option:
 
 ```bash
-ape starknet account deploy <NEWLY-ALIAS> \
-    --network starknet:testnet \
-    --funder <EXISTING-FUNDED-ALIAS>
+ape starknet account deploy <NEWLY-ALIAS> --network testnet --funder <EXISTING-FUNDED-ALIAS>
 ```
 
 **NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly.

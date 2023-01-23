@@ -92,7 +92,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
 
     @property
     def devnet_account_seed(self) -> int:
-        return self.provider_config.local["seed"]  # type: ignore
+        return self.provider_config.local["seed"]
 
     @property
     def _key_file_paths(self) -> Iterator[Path]:
@@ -663,7 +663,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
         r = to_bytes(sign_result[0])
         s = to_bytes(sign_result[1])
-        txn.signature = TransactionSignature(v=0, r=r, s=s)  # type: ignore
+        txn.signature = TransactionSignature(v=0, r=r, s=s)
         self.check_signature(txn)
         return txn.signature
 

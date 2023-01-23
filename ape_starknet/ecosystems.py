@@ -448,7 +448,5 @@ class Starknet(EcosystemAPI, StarknetBase):
             else None
         )
 
-    def decode_primitive_value(  # type: ignore[empty-body]
-        self, value: Any, output_type: Union[str, Tuple, List]
-    ) -> int:
+    def decode_primitive_value(self, value: Any, output_type: Union[str, Tuple, List]) -> int:
         return to_int(value)
