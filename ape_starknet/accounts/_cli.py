@@ -6,7 +6,8 @@ from ape.cli import ape_cli_context, existing_alias_argument, non_existing_alias
 from ape.cli.options import ApeCliContextObject
 from ape.logging import logger
 from ape.utils import add_padding_to_strings
-from eth_utils import to_hex
+from eth_utils import is_hex, to_hex
+from starkware.crypto.signature.signature import EC_ORDER
 from starkware.starknet.definitions.fields import ContractAddressSalt
 
 from ape_starknet.accounts import (
@@ -268,7 +269,19 @@ def _import(cli_ctx, alias, network, address, class_hash, salt):
 
     elif address:
         # Account is being imported for the first time.
-        private_key = click.prompt(f"Enter private key for '{alias}'", hide_input=True)
+        private_key = click.prompt(f"Enter private key for '{alias}'", hide_input=True).strip()
+
+        if private_key.isnumeric():
+            # NOTE: Check base 10 before 16 because is_hex("123") is True.
+            private_key = int(private_key)
+        elif is_hex(private_key):
+            private_key = int(private_key, 16)
+        else:
+            cli_ctx.abort("Invalid private key. Expecting numeric value.")
+
+        if private_key < 1 or private_key >= EC_ORDER:
+            cli_ctx.abort("Private key not in range [1, EC_ORDER).")
+
         deployments = [
             StarknetAccountDeployment(contract_address=address, network_name=n, salt=salt)
             for n in network

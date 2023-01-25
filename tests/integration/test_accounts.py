@@ -4,6 +4,7 @@ from typing import List, Tuple, Union
 
 import pytest
 from eth_utils import to_hex
+from starkware.crypto.signature.signature import EC_ORDER
 
 from ape_starknet.utils import get_random_private_key, to_int
 
@@ -272,6 +273,45 @@ def test_import_then_delete_account(
     output = accounts_runner.invoke_list()
     section = output.get_section(alias)
     assert not section
+
+
+def test_import_invalid_private_key(accounts_runner, key_file_account):
+    # Import a new account (no deployments or keys set at all for this alias).
+    alias = get_random_alias()
+    user_input = ["This is not a valid private key"]
+    output = accounts_runner.invoke(
+        "import",
+        alias,
+        "--network",
+        "testnet",
+        "--address",
+        key_file_account.address,
+        "--class-hash",
+        key_file_account.class_hash,
+        input=user_input,
+        ensure_successful=False,
+    )
+    assert "Invalid private key. Expecting numeric value." in output
+
+
+@pytest.mark.parametrize("private_key", (0, EC_ORDER))
+def test_import_private_key_out_of_range(accounts_runner, key_file_account, private_key):
+    # Import a new account (no deployments or keys set at all for this alias).
+    alias = get_random_alias()
+    user_input = [private_key]
+    output = accounts_runner.invoke(
+        "import",
+        alias,
+        "--network",
+        "testnet",
+        "--address",
+        key_file_account.address,
+        "--class-hash",
+        key_file_account.class_hash,
+        input=user_input,
+        ensure_successful=False,
+    )
+    assert "Private key not in range [1, EC_ORDER)." in output
 
 
 def test_core_accounts_list_all(root_accounts_runner, key_file_account, existing_key_file_alias):
