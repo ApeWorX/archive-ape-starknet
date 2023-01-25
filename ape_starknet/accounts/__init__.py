@@ -244,25 +244,13 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         else:
             class_hash_msg = str(class_hash)
 
-        if (
-            not allow_local_file_store
-            and self.network_manager.active_provider
-            and self.provider.network.name == LOCAL_NETWORK_NAME
-        ):
-            passphrase = None  # Not used
-
-        else:
-            passphrase = self._prompt_for_new_passphrase(alias)
-
         logger.info(f"Creating account using class hash '{class_hash_msg}' ...")
-
         account = self.import_account(
             alias,
             class_hash,
             private_key,
             salt=salt,
             constructor_calldata=constructor_calldata,
-            passphrase=passphrase,
             allow_local_file_store=allow_local_file_store,
         )
 
@@ -284,7 +272,6 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         private_key: Union[int, str],
         deployments: Optional[List["StarknetAccountDeployment"]] = None,
         constructor_calldata: Optional[List] = None,
-        passphrase: Optional[str] = None,
         salt: Optional[int] = None,
         allow_local_file_store: bool = False,
     ) -> "BaseStarknetAccount":
@@ -328,15 +315,20 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         # The deployments contained an actual live network. Use that as the return account.
         salt = salt or ContractAddressSalt.get_random_value()
         path = self.data_folder.joinpath(f"{alias}.json")
-        new_account = StarknetKeyfileAccount(key_file_path=path)
-        passphrase = passphrase or self._prompt_for_new_passphrase(alias)
-        new_account.write(
-            passphrase=passphrase,
-            private_key=key_pair.private_key,
+        is_local = (
+            self.network_manager.active_provider
+            and self.provider.network.name == LOCAL_NETWORK_NAME
+        )
+        new_account = StarknetKeyfileAccount._from_import(
+            path,
+            is_local=is_local,
+            get_pass=lambda: self._prompt_for_new_passphrase(alias),
+            allow_local_file_store=allow_local_file_store,
             class_hash=class_hash,
-            deployments=live_deployments,
-            salt=salt,
             constructor_calldata=constructor_calldata,
+            deployments=live_deployments,
+            private_key=key_pair.private_key,
+            salt=salt,
         )
         self.cached_accounts[alias] = new_account
         return new_account
@@ -355,7 +347,6 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         alias: str,
         address: Optional[Union[AddressType, int]] = None,
         networks: Optional[Union[str, List[str]]] = None,
-        passphrase: Optional[str] = None,
         leave_unlocked: Optional[bool] = None,
     ):
         if alias in self.ephemeral_accounts:
@@ -368,7 +359,6 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             account.delete(
                 networks=networks,
                 address=address,
-                passphrase=passphrase,
                 leave_unlocked=leave_unlocked,
             )
 
@@ -846,6 +836,25 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         return cls(key_file_path=path, salt=salt)
 
+    @classmethod
+    def _from_import(cls, new_path: Path, **kwargs) -> "StarknetKeyfileAccount":
+        is_local = kwargs.pop("is_local", False)
+        allow_local_file_store = kwargs.pop("allow_local_file_store", False)
+        get_pass = kwargs.pop("get_pass")
+
+        if not allow_local_file_store and is_local:
+            # NOTE: To create a keyfile account on local networks, use `allow_local_filestore`.
+            # Else, it uses a StarknetDevelopmentAccount and no passphrase is necessary.
+            passphrase = None
+
+        else:
+            passphrase = get_pass()
+
+        kwargs["passphrase"] = passphrase
+        new_account = cls(key_file_path=new_path)
+        new_account.write(**kwargs)
+        return new_account
+
     @property
     def address(self) -> AddressType:
         if not self.network_manager.active_provider:
@@ -919,14 +928,14 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         return click.confirm(f"{signable}\n\nSign: ")
 
     def sign_message(  # type: ignore[override]
-        self, msg: StarknetSignableMessage, passphrase: Optional[str] = None
+        self, msg: StarknetSignableMessage
     ) -> Optional[ECSignature]:
         msg = StarknetSignableMessage(message=msg)
 
         if not self.__autosign and not self._prompt_to_sign(msg):
             raise SignatureError("The message was not signed.")
 
-        private_key, _ = self.__get_private_key(passphrase=passphrase)
+        private_key, _ = self.__get_private_key()
         signature = message_signature(msg.hash, private_key)
         return signature if self.check_signature(msg, signature) else None
 
@@ -993,10 +1002,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         passphrase_to_use = (
             new_passphrase
-            or passphrase
-            or self.__cached_passphrase
-            or self._get_passphrase_from_prompt()
+            if new_passphrase is not None
+            else self.__get_passphrase(passphrase=passphrase)
         )
+
         key_file_data = self.__encrypt_key_file(
             passphrase_to_use, private_key=private_key, leave_unlocked=leave_unlocked
         )
@@ -1041,20 +1050,16 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         self,
         address: Optional[Union[AddressType, int]] = None,
         networks: Optional[Union[str, List[str]]] = None,
-        passphrase: Optional[str] = None,
         leave_unlocked: Optional[bool] = None,
     ):
         if not self.key_file_path.is_file():
             logger.warning(f"Keyfile for account '{self.alias}' already deleted.")
             return
 
-        passphrase = (
-            click.prompt(
-                f"Enter passphrase to delete '{self.alias}'",
-                hide_input=True,
-            )
-            if passphrase is None
-            else passphrase
+        passphrase = click.prompt(
+            f"Enter passphrase to delete '{self.alias}'",
+            hide_input=True,
+            default="",  # Allow for empty passphrases.
         )
         self.__decrypt_key_file(passphrase)
         deployments_at_start = len(self.deployments)
@@ -1174,12 +1179,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 self.__cached_key = None
                 self.__cached_passphrase = None
 
-        passphrase = (
-            passphrase
-            or self.__cached_passphrase
-            or self._get_passphrase_from_prompt(message=prompt)
-        )
-
+        passphrase = self.__get_passphrase(prompt=prompt, passphrase=passphrase)
         if self.key_file_path.is_file():
             key_hex_str = self.__decrypt_key_file(passphrase).hex()
             private_key = to_int(key_hex_str)
@@ -1190,17 +1190,8 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 "Either replace or use the `delete` command to get rid of this account."
             )
 
-        self.__set_cached_key(private_key, passphrase=passphrase, leave_unlocked=leave_unlocked)
-        return private_key, passphrase
-
-    def __set_cached_key(
-        self,
-        private_key: int,
-        passphrase: Optional[str] = None,
-        leave_unlocked: Optional[bool] = None,
-    ):
         self.__cached_key = private_key
-        if passphrase:
+        if passphrase is not None:
             self.__cached_passphrase = passphrase
 
         if self.locked:
@@ -1209,6 +1200,18 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 if leave_unlocked is None
                 else leave_unlocked
             )
+
+        return private_key, passphrase
+
+    def __get_passphrase(
+        self, prompt: Optional[str] = None, passphrase: Optional[str] = None
+    ) -> str:
+        passphrase = passphrase if passphrase is not None else self.__cached_passphrase
+        return (
+            passphrase
+            if passphrase is not None
+            else self._get_passphrase_from_prompt(message=prompt)
+        )
 
     def _get_passphrase_from_prompt(self, message: Optional[str] = None) -> str:
         message = message or f"Enter passphrase to unlock '{self.alias}'"

@@ -112,7 +112,7 @@ def test_create_then_list_then_deploy(accounts_runner, account_container, passwo
     output = accounts_runner.invoke("create", alias, input=user_input)
 
     # Ensure output used correct prompt.
-    assert output.splitlines()[0].startswith(f"Create passphrase to encrypt account '{alias}'")
+    assert output.splitlines()[1].startswith(f"Create passphrase to encrypt account '{alias}'")
 
     # Ensure the account was created.
     assert f"Created account key-pair for alias '{alias}'" in output
@@ -131,6 +131,23 @@ def test_create_then_list_then_deploy(accounts_runner, account_container, passwo
     output = accounts_runner.invoke("deploy", alias, "--funder", "0", input=user_input)
     assert "Account successfully deployed to " in output
     assert account.deployments
+
+
+def test_create_then_use_then_delete_account_with_empty_passphrase(
+    accounts_runner, account_container
+):
+    alias = get_random_alias()
+    output = accounts_runner.invoke("create", alias, input=["", ""])
+    assert "SUCCESS" in output
+
+    account = account_container.load(alias)
+
+    # Input meaning: ENTER (no pass).
+    with accounts_runner.runner.isolation(input="\n"):
+        account.unlock()
+
+    output = accounts_runner.invoke("delete", alias, input=["", "y"])
+    assert "SUCCESS" in output
 
 
 @pytest.mark.parametrize(

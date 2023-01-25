@@ -16,24 +16,25 @@ def give_input():
 
 
 @pytest.fixture
-def devnet_keyfile_account(account_container, account, password):
+def devnet_keyfile_account(account_container, account, password, give_input):
     deployments = [
         StarknetAccountDeployment(
             contract_address=account.address, network_name="testnet", salt=DEVNET_CONTRACT_SALT
         )
     ]
-    return account_container.import_account(
-        "__DEV_AS_KEYFILE_ACCOUNT__",
-        OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
-        account.private_key,
-        deployments=deployments,
-        passphrase=password,
-        salt=DEVNET_CONTRACT_SALT,
-    )
+
+    with give_input(f"{password}\n{password}\n"):
+        return account_container.import_account(
+            "__DEV_AS_KEYFILE_ACCOUNT__",
+            OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
+            account.private_key,
+            deployments=deployments,
+            salt=DEVNET_CONTRACT_SALT,
+        )
 
 
 @pytest.fixture
-def txn(devnet_keyfile_account, contract):
+def txn(devnet_keyfile_account):
     return devnet_keyfile_account.get_deploy_account_txn()
 
 
@@ -95,18 +96,19 @@ def test_can_access_devnet_accounts(account, second_account, chain):
     assert chain.contracts[second_account.address] == second_account.contract_type
 
 
-def test_import_with_passphrase(account_container, account):
+def test_import_with_passphrase(account_container, account, give_input):
     alias = "__TEST_IMPORT_WITH_PASSPHRASE__"
     deployment = StarknetAccountDeployment(
         contract_address=account.address, network_name=LOCAL_NETWORK_NAME, salt=DEVNET_CONTRACT_SALT
     )
-    account_container.import_account(
-        alias,
-        OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
-        account.private_key,
-        deployments=[deployment],
-        passphrase="p@55W0rd",
-    )
+
+    with give_input("p@55W0rd\np@55W0rd\n"):
+        account_container.import_account(
+            alias,
+            OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
+            account.private_key,
+            deployments=[deployment],
+        )
     new_account = account_container.load(alias)
     assert new_account.address == account.address
 
@@ -136,7 +138,7 @@ def test_unlock_with_passphrase_and_sign_message(
 
 
 def test_unlock_from_prompt_and_sign_message(
-    in_starknet_testnet, give_input, devnet_keyfile_account, password, testnet
+    in_starknet_testnet, give_input, devnet_keyfile_account, password
 ):
     with give_input(f"{password}\n"):
         devnet_keyfile_account.unlock()

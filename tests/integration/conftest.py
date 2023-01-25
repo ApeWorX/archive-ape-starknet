@@ -21,11 +21,11 @@ class ApeStarknetCliRunner:
         self, *cmd, input: Optional[Union[str, List[str]]] = None, ensure_successful: bool = True
     ):
         if isinstance(input, (list, tuple)):
-            input_str = "\n".join([str(i) for i in input if str(i)])
+            input_str = "\n".join([str(i) for i in input])
         else:
-            input_str = input or ""
+            input_str = input or "\n"
 
-        if input_str and not input_str.endswith("\n"):
+        if not input_str.endswith("\n"):
             input_str = f"{input_str}\n"
 
         ape_cmd = self._get_cmd(*cmd)
