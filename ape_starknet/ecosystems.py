@@ -451,6 +451,5 @@ class Starknet(EcosystemAPI, StarknetBase):
     def decode_primitive_value(self, value: Any, output_type: Union[str, Tuple, List]) -> int:
         return to_int(value)
 
-    def decode_calldata():
-        raise NotImplemented()
-        
+    def decode_calldata(self):
+        raise NotImplementedError
