@@ -1,18 +1,20 @@
 import json
 import shutil
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import cast
 
 import ape
 import pytest
-from ape.api.networks import LOCAL_NETWORK_NAME, EcosystemAPI
+from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractInstance
 from ethpm_types import ContractType
 from starkware.cairo.lang.compiler.test_utils import short_string_to_felt
 
 from ape_starknet import tokens as _tokens
-from ape_starknet.accounts import StarknetAccountContracts, StarknetKeyfileAccount
-from ape_starknet.utils import PLUGIN_NAME
+from ape_starknet.accounts import StarknetAccountContainer, StarknetKeyfileAccount
+from ape_starknet.utils import OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH, PLUGIN_NAME
 
 # NOTE: Ensure that we don't use local paths for these
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
@@ -26,8 +28,11 @@ SECOND_ALIAS = "__TEST_ALIAS_2__"
 EXISTING_KEY_FILE_ALIAS = f"{ALIAS}existing_key_file"
 EXISTING_EPHEMERAL_ALIAS = f"{ALIAS}existing_ephemeral"
 PASSWORD = "123"
-PUBLIC_KEY = "0x140dfbab0d711a23dd58842be2ee16318e3de1c7"
-CONTRACT_ADDRESS = "0x6b7243AA4edbe5BD629c6712B3aC9639B160480A7730A31483F7B387463a183"
+PUBLIC_KEY = 367323783092256132793135877206902311054243182689252847590820585364953599456
+
+# Pre-checksummed
+CONTRACT_ADDRESS = "0x06b7243aA4eDBe5bD629c6712B3ac9639B160480a7730a31483F7b387463A183"
+
 START_BALANCE = "1000000 ETH"
 
 # Purposely pick a number larest enough to test Uint256 logic
@@ -144,7 +149,7 @@ def accounts():
     return ape.accounts
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def networks():
     return ape.networks
 
@@ -160,8 +165,26 @@ def chain():
 
 
 @pytest.fixture(scope="session")
-def provider(chain):
-    return chain.provider
+def project(contracts):
+    with contracts.use_project() as proj:
+        yield proj
+
+
+@pytest.fixture(scope="session")
+def use_local_starknet():
+    choice = f"{PLUGIN_NAME}:{LOCAL_NETWORK_NAME}:{PLUGIN_NAME}"
+    return ape.networks.parse_network_choice(choice)
+
+
+@pytest.fixture(scope="session")
+def use_local_ethereum():
+    return ape.networks.parse_network_choice(f"ethereum:{LOCAL_NETWORK_NAME}")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def connected(use_local_starknet):
+    with use_local_starknet:
+        yield
 
 
 @pytest.fixture(scope="session")
@@ -169,9 +192,15 @@ def tokens():
     return _tokens
 
 
+@pytest.fixture
+def provider(chain):
+    return chain.provider
+
+
 @pytest.fixture(scope="session")
-def explorer(provider):
-    return provider.starknet_explorer
+def explorer(use_local_starknet):
+    with use_local_starknet as provider:
+        return provider
 
 
 @pytest.fixture(scope="session")
@@ -197,89 +226,102 @@ def clean_projects():
     clean()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def connection():
-    network = f"{PLUGIN_NAME}:{LOCAL_NETWORK_NAME}:{PLUGIN_NAME}"
-    with ape.networks.parse_network_choice(network) as provider:
-        yield provider
+@pytest.fixture(scope="session")
+def project_switcher(config, project_path, token_project_path, proxy_project_path):
+    projects = {"project": project_path, "token": token_project_path, "proxy": proxy_project_path}
+
+    class ProjectSwitcher:
+        @contextmanager
+        def use(self, name: str):
+            with config.using_project(projects[name]) as project:
+                yield project
+
+    return ProjectSwitcher()
 
 
-# Ensures only ever deploy contracts once.
-@pytest.fixture(autouse=True, scope="session")
-def deploy_contracts(
+@pytest.fixture(scope="session")
+def contracts(
     clean_projects,
-    config,
-    project_path,
-    token_project_path,
-    proxy_project_path,
+    project_switcher,
     account,
     token_initial_supply,
+    use_local_starknet,
 ):
-    _ = clean_projects  # Ensure no .build folders
+    class ContractsDeployer:
+        """
+        A solution to more lazily deploy session-scoped contracts.
+        This is helpful to speed up tests when not using them.
+        """
 
-    with config.using_project(project_path) as project:
-        account.declare(project.MyContract)
-        contract = project.MyContract.deploy(sender=account)
-        contract.initialize(sender=account)
+        @property
+        def my_contract(self) -> ContractInstance:
+            with self.use_project() as project:
+                if project.MyContract.deployments:
+                    return project.MyContract.deployments[-1]
 
-    with config.using_project(token_project_path) as project:
-        account.declare(project.TestToken)
-        account.declare(project.UseToken)
-        name = short_string_to_felt("TestToken")
-        symbol = short_string_to_felt("TEST")
-        token_contract = project.TestToken.deploy(
-            name, symbol, 18, token_initial_supply, int(account.address, 16), sender=account
-        )
-        project.UseToken.deploy(sender=account)
-        _tokens.add_token("test_token", LOCAL_NETWORK_NAME, token_contract.address)
+                # Declare + Deploy contract only once.
+                account.declare(project.MyContract)
+                contract = project.MyContract.deploy(sender=account)
+                contract.initialize(sender=account)
+                return contract
 
-    with config.using_project(proxy_project_path) as project:
-        account.declare(project.Proxy)
-        proxy_contract = project.Proxy.deploy(token_contract.address, sender=account)
-        _tokens.add_token("proxy_token", LOCAL_NETWORK_NAME, proxy_contract.address)
+        @property
+        def token(self):
+            with self.use_project(name="token") as project:
+                if project.TestToken.deployments:
+                    return project.TestToken.deployments[-1]
 
+                account.declare(project.TestToken)
+                name = short_string_to_felt("TestToken")
+                symbol = short_string_to_felt("TEST")
+                contract = project.TestToken.deploy(
+                    name, symbol, 18, token_initial_supply, int(account.address, 16), sender=account
+                )
+                _tokens.add_token("test_token", LOCAL_NETWORK_NAME, contract.address)
+                return contract
 
-@pytest.fixture
-def project(config, project_path):
-    with config.using_project(project_path) as project:
-        yield project
+        @property
+        def user_token(self):
+            with self.use_project(name="token") as project:
+                if project.UseToken.deployments:
+                    return project.UseToken.deployments[-1]
 
+                account.declare(project.UseToken)
+                return project.UseToken.deploy(sender=account)
 
-@pytest.fixture
-def token_project(config, token_project_path):
-    with config.using_project(token_project_path) as project:
-        yield project
+        @property
+        def proxy(self):
+            with self.use_project(name="proxy") as project:
+                if project.Proxy.deployments:
+                    return project.Proxy.deployments[-1]
 
+                account.declare(project.Proxy)
+                contract = project.Proxy.deploy(self.token.address, sender=account)
+                _tokens.add_token("proxy_token", LOCAL_NETWORK_NAME, contract.address)
+                return contract
 
-@pytest.fixture
-def proxy_project(config, proxy_project_path):
-    with config.using_project(proxy_project_path) as project:
-        yield project
+        @contextmanager
+        def use_project(self, name: str = "project"):
+            with use_local_starknet:
+                with project_switcher.use(name) as proj:
+                    yield proj
 
-
-@pytest.fixture
-def contract(project):
-    return project.MyContract.deployments[-1]
-
-
-@pytest.fixture
-def factory_contract_container(project):
-    return project.ContractFactory
-
-
-@pytest.fixture
-def token_contract(token_project):
-    return token_project.TestToken.deployments[-1]
-
-
-@pytest.fixture
-def token_user_contract(token_project):
-    return token_project.UseToken.deployments[-1]
+    return ContractsDeployer()
 
 
-@pytest.fixture
-def proxy_token_contract(proxy_project):
-    return proxy_project.Proxy.deployments[-1]
+@pytest.fixture(scope="session")
+def contract(contracts):
+    return contracts.my_contract
+
+
+@pytest.fixture(scope="session")
+def token_contract(contracts):
+    return contracts.token
+
+
+@pytest.fixture(scope="session")
+def token_user_contract(contracts):
+    return contracts.user_token
 
 
 @pytest.fixture
@@ -289,19 +331,19 @@ def initial_balance(contract, account):
 
 @pytest.fixture(scope="session")
 def account_container(accounts):
-    return cast(StarknetAccountContracts, accounts.containers[PLUGIN_NAME])
+    return cast(StarknetAccountContainer, accounts.containers[PLUGIN_NAME])
 
 
 @pytest.fixture(scope="session")
-def account(account_container, provider):
-    _ = provider  # Connection required
-    return account_container.test_accounts[0]
+def account(account_container, use_local_starknet):
+    with use_local_starknet:
+        return account_container.test_accounts[0]
 
 
 @pytest.fixture(scope="session")
-def second_account(account_container, provider):
-    _ = provider  # Connection required
-    return account_container.test_accounts[1]
+def second_account(account_container, use_local_starknet):
+    with use_local_starknet:
+        return account_container.test_accounts[1]
 
 
 @pytest.fixture(scope="session")
@@ -310,84 +352,58 @@ def eth_account(accounts):
 
 
 @pytest.fixture(scope="session")
-def ephemeral_account(account_container, provider):
-    new_account = account_container.create_account(ALIAS)
-    funder = account_container.test_accounts[2]
-    funder.transfer(new_account, "1 ETH")
-    new_account.deploy_self()
-    return account_container.load(ALIAS)
+def ephemeral_account(account_container):
+    return create_account(account_container)
+
+
+def create_account(container):
+    return container.create_account(ALIAS)
 
 
 @pytest.fixture(scope="session")
-def ecosystem(provider) -> EcosystemAPI:
-    return provider.network.ecosystem
+def starknet():
+    return ape.networks.starknet
+
+
+@pytest.fixture(scope="session")
+def testnet(starknet):
+    return starknet.testnet
+
+
+@pytest.fixture
+def in_starknet_testnet(testnet):
+    with testnet.use_provider("starknet"):
+        yield
 
 
 @pytest.fixture(scope="session")
 def key_file_account_data():
     return {
-        "address": PUBLIC_KEY.replace("0x", ""),
-        "crypto": {
-            "cipher": "aes-128-ctr",
-            "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
-            "ciphertext": "78789f5d4fc5054c18342f020473ecd7c8f75ff2050cdee548121446b40a8ffb",
-            "kdf": "scrypt",
-            "kdfparams": {
-                "dklen": 32,
-                "n": 262144,
-                "r": 1,
-                "p": 8,
-                "salt": "c1bbae92537eb53d9ffa3790740bcdb4",
-            },
-            "mac": "9684c62113753054fc893ffa1b7ae704c65a454f5f89c3b55cc986798d8d5a58",
-        },
-        "id": "393bb446-55fb-42ec-bd35-ada0b25e17cf",
-        "version": 3,
         "ape-starknet": {
-            "version": "0.1.0",
+            "public_key": 367323783092256132793135877206902311054243182689252847590820585364953599456,  # noqa: E501
+            "class_hash": 3146761231686369291210245479075933162526514193311043598334639064078158562617,  # noqa: E501
+            "salt": 2383401134194309956567840095871463496630094772532838902518655252027359569593,
             "deployments": [
-                {
-                    "network_name": "testnet",
-                    "contract_address": CONTRACT_ADDRESS,
-                },
-                {
-                    "network_name": "mainnet",
-                    "contract_address": CONTRACT_ADDRESS,
-                },
+                {"network_name": "testnet", "contract_address": CONTRACT_ADDRESS},
             ],
         },
-    }
-
-
-@pytest.fixture(scope="session")
-def argent_x_key_file_account_data():
-    return {
-        "address": PUBLIC_KEY.replace("0x", ""),
+        "address": "93920847a9ab3c731562461bb7d0fb95a39df9f9",
         "crypto": {
             "cipher": "aes-128-ctr",
-            "cipherparams": {"iv": "608494faf88e2d2aea2faac844504233"},
-            "ciphertext": "78789f5d4fc5054c18342f020473ecd7c8f75ff2050cdee548121446b40a8ffb",
+            "cipherparams": {"iv": "b279075a04c21ed621e466974c64e6e3"},
+            "ciphertext": "e3fb18fbd034df62963ac776c04fec9a58a71273cbbd236fa6f22f98a7563e5a",
             "kdf": "scrypt",
             "kdfparams": {
                 "dklen": 32,
                 "n": 262144,
                 "r": 1,
                 "p": 8,
-                "salt": "c1bbae92537eb53d9ffa3790740bcdb4",
+                "salt": "810c59cb704d6012ce2002012cbdf735",
             },
-            "mac": "9684c62113753054fc893ffa1b7ae704c65a454f5f89c3b55cc986798d8d5a58",
+            "mac": "f903f6d42efd883e3b402f68c7681857080a889a363e78e7694e143b5a9a9a65",
         },
-        "id": "393bb446-55fb-42ec-bd35-ada0b25e17cf",
+        "id": "2b50ad6b-d136-4981-b09c-08c006e2ae56",
         "version": 3,
-        "argent": {
-            "version": "0.1.0",
-            "accounts": [
-                {
-                    "network": "goerli-alpha",
-                    "address": CONTRACT_ADDRESS,
-                },
-            ],
-        },
     }
 
 
@@ -396,6 +412,7 @@ def ephemeral_account_data():
     return {
         "private_key": 509219664670742235607272813021130138373595301613956902800973975925797957544,
         "public_key": 2068822281043178075870469557539081791152169138879468456959920393634230618024,
+        "class_hash": OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
     }
 
 
@@ -405,14 +422,17 @@ def key_file_account(config, key_file_account_data):
     temp_accounts_dir.mkdir(exist_ok=True, parents=True)
     test_key_file_path = temp_accounts_dir / f"{EXISTING_KEY_FILE_ALIAS}.json"
 
-    if test_key_file_path.exists():
+    if test_key_file_path.is_file():
         test_key_file_path.unlink()
 
     test_key_file_path.write_text(json.dumps(key_file_account_data))
 
-    yield StarknetKeyfileAccount(key_file_path=test_key_file_path)
+    account = StarknetKeyfileAccount(key_file_path=test_key_file_path)
+    account.unlock(passphrase="123")
 
-    if test_key_file_path.exists():
+    yield account
+
+    if test_key_file_path.is_file():
         test_key_file_path.unlink()
 
 

@@ -16,6 +16,7 @@ extras_require = {
         "mypy>=0.991",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
+        "types-PyYAML",  # Needed due to mypy typeshed
         "flake8>=5.0.4",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
         "mdformat>=0.7.16",  # Auto-formatter for markdown
@@ -69,7 +70,7 @@ setup(
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang>=0.10.3,<0.11",
-        "starknet.py>=0.12.a0,<0.13",
+        "starknet.py>=0.13.a0,<0.14",
         "starknet-devnet>=0.4.3,<0.5",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},

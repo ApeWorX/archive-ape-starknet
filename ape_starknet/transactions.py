@@ -26,6 +26,7 @@ from starkware.starknet.core.os.transaction_hash.transaction_hash import (
     calculate_deploy_account_transaction_hash,
     calculate_transaction_hash_common,
 )
+from starkware.starknet.definitions import constants
 from starkware.starknet.definitions.fields import ContractAddressSalt
 from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.services.api.contract_class import ContractClass
@@ -33,6 +34,7 @@ from starkware.starknet.services.api.contract_class import ContractClass
 from ape_starknet.exceptions import ContractTypeNotFoundError
 from ape_starknet.utils import (
     EXECUTE_ABI,
+    EXECUTE_METHOD_NAME,
     OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
     OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
     ContractEventABI,
@@ -48,10 +50,17 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     A base transaction class for all Starknet transactions.
     """
 
-    version: int = 1
+    version: int = constants.TRANSACTION_VERSION
 
     class Config:
         use_enum_values = True
+
+    def __str__(self) -> str:
+        data = self.dict()
+        params = "\n  ".join(
+            f"{k}: {v}" for k, v in data.items() if k not in ("data", "method_abi", "signature")
+        )
+        return f"{self.__class__.__name__}:\n  {params}"
 
     def serialize_transaction(self) -> dict:  # type: ignore
         return self.dict()
@@ -106,12 +115,13 @@ class DeclareTransaction(AccountTransaction):
     def starknet_contract(self) -> ContractClass:
         return ContractClass.deserialize(self.data)
 
-    @cached_property
+    @property
     def txn_hash(self) -> HexBytes:
         return calculate_declare_transaction_hash(
             self.starknet_contract,
             self.provider.chain_id,
-            self.sender,
+            self.max_fee,
+            to_int(self.sender),
             self.version,
             self.nonce,
         )
@@ -148,8 +158,16 @@ class InvokeFunctionTransaction(AccountTransaction):
     ``:meth:`~ape_starknet.transactions.InvokeFunctionTransaction.as_execute`` method.
     """
 
-    data: List[Any] = Field(alias="calldata")  # type: ignore
+    data: List[Any] = Field([], alias="calldata")  # type: ignore
     receiver: AddressType
+
+    def __str__(self) -> str:
+        # Show original transaction in str so it is easier to tell what it is.
+        # (as opposed to the __execute__ call on an account txn that makes a real call).
+        if self.method_abi.name == EXECUTE_METHOD_NAME and self.original_transaction is not None:
+            return str(self.original_transaction).replace("max_fee: 0", f"max_fee: {self.max_fee}")
+
+        return super().__str__()
 
     @validator("receiver", pre=True, allow_reuse=True)
     def validate_receiver(cls, value):
@@ -175,7 +193,7 @@ class InvokeFunctionTransaction(AccountTransaction):
     def entry_point_selector(self) -> int:
         return get_selector_from_name(self.method_abi.name)
 
-    @cached_property
+    @property
     def txn_hash(self) -> HexBytes:
         hash_int = calculate_transaction_hash_common(
             additional_data=[],
@@ -232,7 +250,7 @@ class InvokeFunctionTransaction(AccountTransaction):
 class DeployAccountTransaction(AccountTransaction):
     salt: int = Field(alias="contract_address_salt")
     class_hash: int = OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH
-    constructor_calldata: List[int]
+    constructor_calldata: List[Any]
     nonce: int = 0
     deployer_contract_address: int = 0
     type: TransactionType = TransactionType.DEPLOY_ACCOUNT
@@ -351,7 +369,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
 
     @cached_property
     def trace(self) -> Dict:  # type: ignore
-        trace = self.provider._get_single_trace(self.block_number, int(self.txn_hash, 16))
+        trace = self.provider._get_single_trace(self.block_number, to_int(self.txn_hash))
         return extract_trace_data(trace) if trace else {}
 
     @property

@@ -9,7 +9,7 @@ from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, Trans
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.exceptions import ProviderNotConnectedError, TransactionError
 from ape.logging import logger
-from ape.types import AddressType, BlockID, ContractLog, LogFilter
+from ape.types import AddressType, BlockID, ContractLog, LogFilter, RawAddress
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
 from requests import Session
 from starknet_py.net.client_errors import ContractNotFoundError
@@ -35,10 +35,12 @@ from ape_starknet.transactions import (
 from ape_starknet.utils import (
     ALPHA_MAINNET_WL_DEPLOY_TOKEN_KEY,
     DEFAULT_ACCOUNT_SEED,
+    DEVNET_ACCOUNT_START_BALANCE,
     EXECUTE_METHOD_NAME,
     EXECUTE_SELECTOR,
     PLUGIN_NAME,
     get_chain_id,
+    get_class_hash,
     get_dict_from_tx_info,
     handle_client_error,
     handle_client_errors,
@@ -90,7 +92,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
     # Gets set when 'connect()' is called.
     client: Optional[GatewayClient] = None
     cached_code: Dict[int, ContractCode] = {}
-    local_nonce_cache: Dict[AddressType, int] = {}
+
+    # Use int address to be free from duplicate keys.
+    local_nonce_cache: Dict[int, int] = {}
 
     @property
     def connected_client(self) -> GatewayClient:
@@ -162,30 +166,29 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return self.get_code_and_abi(address).abi
 
     @handle_client_errors
-    def get_nonce(self, address: AddressType) -> int:
+    def get_nonce(self, address: RawAddress) -> int:
         if self.network.name != LOCAL_NETWORK_NAME:
             return self.connected_client.get_contract_nonce_sync(address)
 
-        if address not in self.local_nonce_cache:
+        address_int = int(address) if isinstance(address, int) else int(address, 16)
+        if address_int not in self.local_nonce_cache:
             nonce = self.connected_client.get_contract_nonce_sync(address)
-            self.local_nonce_cache[address] = nonce
+            self.local_nonce_cache[address_int] = nonce
 
-        return self.local_nonce_cache[address]
+        return self.local_nonce_cache[address_int]
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
-        if isinstance(txn, InvokeFunctionTransaction) and not txn.is_prepared:
-            txn = cast(StarknetTransaction, self.prepare_transaction(txn))
+        if isinstance(txn, InvokeFunctionTransaction):
+            if not txn.is_prepared:
+                txn = cast(InvokeFunctionTransaction, self.prepare_transaction(txn))
 
-        if (
-            isinstance(txn, InvokeFunctionTransaction)
-            and txn.method_abi.name != EXECUTE_METHOD_NAME
-        ):
-            txn = txn.as_execute()
+            if txn.method_abi.name != EXECUTE_METHOD_NAME:
+                txn = txn.as_execute()
 
         if not txn.signature:
             # Signature is required to estimate gas, unfortunately.
-            #  the transaction is typically signed by this point, but not always.
+            # the transaction is typically signed by this point, but not always.
             txn.signature = self.account_manager[txn.receiver].sign_transaction(txn)
 
         starknet_object = txn.as_starknet_object()
@@ -334,15 +337,17 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         elif isinstance(txn, DeployAccountTransaction):
             sender_address = to_checksum_address(txn.contract_address)
 
-        if sender_address and sender_address in self.local_nonce_cache:
-            self.local_nonce_cache[sender_address] += 1
-        elif sender_address:
-            # Trigger setting nonce via call
-            _ = self.provider.get_nonce(sender_address)
+        if sender_address:
+            address_int = int(sender_address, 16)
+            if address_int in self.local_nonce_cache:
+                self.local_nonce_cache[address_int] += 1
+            else:
+                # Trigger setting nonce via call
+                _ = self.provider.get_nonce(address_int)
 
-        total_cost = receipt.total_fees_paid + receipt.value
-        if total_cost and sender_address:
-            self.tokens.update_cache(sender_address, -total_cost)
+            total_cost = receipt.total_fees_paid + receipt.value
+            if total_cost:
+                self.tokens.update_cache(address_int, -total_cost)
 
         return receipt
 
@@ -379,7 +384,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         # All preparation happens on the account side.
         if isinstance(txn, AccountTransaction) and not txn.is_prepared and txn.sender:
-            account = self.account_contracts[txn.sender]
+            account = self.account_container[txn.sender]
             return account.prepare_transaction(txn)
 
         return txn
@@ -401,6 +406,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.cached_code[address_int] = code_and_abi
 
         return self.cached_code[address_int]
+
+    def get_class_hash(self, address: AddressType) -> int:
+        code = self.get_code_and_abi(address)
+        return get_class_hash(code)
 
     def _create_client(self) -> GatewayClient:
         network = self.uri if self.network.name == LOCAL_NETWORK_NAME else self.network.name
@@ -428,6 +437,9 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
             self.start()
 
+            # Ensure test accounts get cached so they remain when switching providers.
+            _ = self.account_container.test_accounts
+
         self.client = self._create_client()
 
     def build_command(self) -> List[str]:
@@ -442,6 +454,8 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             str(DEFAULT_NUMBER_OF_TEST_ACCOUNTS),
             "--seed",
             str(DEFAULT_ACCOUNT_SEED),
+            "--initial-balance",
+            str(DEVNET_ACCOUNT_START_BALANCE),
         ]
 
     def set_timestamp(self, new_timestamp: int):
