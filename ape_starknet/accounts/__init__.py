@@ -538,7 +538,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def add_deployment(self, network_name: str, contract_address: int, salt: int):
         pass
 
-    def call(self, txn: TransactionAPI, send_everything: bool = False) -> ReceiptAPI:
+    def call(self, txn: TransactionAPI, send_everything: bool = False, **signer_options) -> ReceiptAPI:
         if send_everything:
             raise NotImplementedError("send_everything currently isn't implemented in Starknet.")
 
@@ -790,7 +790,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
     def constructor_calldata(self) -> List[Any]:
         return self.custom_constructor_calldata or super().constructor_calldata
 
-    def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
+    def sign_transaction(self, txn: TransactionAPI, **signer_options) -> Optional[TransactionAPI]:
         if not isinstance(txn, AccountTransaction):
             raise StarknetAccountsError(
                 f"This account can only sign Starknet transactions (received={type(txn)}."
@@ -908,7 +908,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def nonce(self) -> int:
         return super().nonce if self.deployed else 0
 
-    def sign_transaction(self, txn: TransactionAPI) -> TransactionSignature:
+    def sign_transaction(self, txn: TransactionAPI, **signer_optins: Any) -> Optional[TransactionAPI]:
         if not isinstance(txn, AccountTransaction):
             raise StarknetAccountsError(
                 f"This account can only sign Starknet transactions (received={type(txn)}."

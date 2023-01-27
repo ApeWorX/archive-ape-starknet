@@ -115,7 +115,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         starknet_object = transaction.as_starknet_object()
         return starknet_object.deserialize()
 
-    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> Any:  # type: ignore
+    def decode_returndata(self, abi: MethodABI, raw_data: List[int]) -> Any: # type: ignore
         if not raw_data:
             return raw_data
 
@@ -137,19 +137,20 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_calldata(
         self,
         full_abi: List,
-        method_abi: Union[ConstructorABI, MethodABI],
+        abi: Union[ConstructorABI, MethodABI],
         call_args: Union[List, Tuple],
-    ) -> List:
+        *args: Any,
+    ) -> HexBytes:
         full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
         call_serializer = FunctionCallSerializer(
-            method_abi.dict(), identifier_manager_from_abi(full_abi)
+            abi.dict(), identifier_manager_from_abi(full_abi)
         )
         pre_encoded_args: List[Any] = []
         index = 0
-        last_index = min(len(method_abi.inputs), len(call_args)) - 1
+        last_index = min(len(abi.inputs), len(call_args)) - 1
         did_process_array_during_arr_len = False
 
-        for call_arg, input_type in zip(call_args, method_abi.inputs):
+        for call_arg, input_type in zip(call_args, abi.inputs):
             if str(input_type.type).endswith("*"):
                 if did_process_array_during_arr_len:
                     did_process_array_during_arr_len = False
@@ -161,7 +162,7 @@ class Starknet(EcosystemAPI, StarknetBase):
                 input_type.name is not None
                 and input_type.name.endswith("_len")
                 and index < last_index
-                and str(method_abi.inputs[index + 1].type).endswith("*")
+                and str(abi.inputs[index + 1].type).endswith("*")
             ):
                 pre_encoded_arg = self._pre_encode_value(call_arg)
 
@@ -180,7 +181,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             index += 1
 
         calldata, _ = call_serializer.from_python(*pre_encoded_args)
-        return calldata
+        return HexBytes(calldata)
 
     def _pre_encode_value(self, value: Any) -> Any:
         if isinstance(value, dict):
@@ -451,5 +452,5 @@ class Starknet(EcosystemAPI, StarknetBase):
     def decode_primitive_value(self, value: Any, output_type: Union[str, Tuple, List]) -> int:
         return to_int(value)
 
-    def decode_calldata(self):
-        raise NotImplementedError
+    def decode_calldata(self, abi: Union[ConstructorABI, MethodABI], calldata: bytes) -> Dict:
+        raise NotImplementedError()

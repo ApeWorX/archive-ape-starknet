@@ -391,7 +391,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
     def decode_logs(
         self,
         abi: Optional[ContractEventABI] = None,
-    ) -> Iterator[ContractLog]:
+    ) -> List[ContractLog]:
 
         log_data_items: List[Dict] = []
         for log in self.logs:
@@ -408,7 +408,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
                 abi = [abi]
 
             event_abis: List[EventABI] = [a.abi if not isinstance(a, EventABI) else a for a in abi]
-            yield from self.starknet.decode_logs(log_data_items, *event_abis)
+            return list(self.starknet.decode_logs(log_data_items, *event_abis))
 
         else:
             # If ABI is not provided, decode all events
@@ -429,7 +429,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
 
                 for event_key in log.get("keys", []):
                     event_abi = selectors[contract_address][event_key]
-                    yield from self.starknet.decode_logs([log], event_abi)
+                    return list(self.starknet.decode_logs([log], event_abi))
 
 
 class ContractDeclaration(AccountTransactionReceipt):

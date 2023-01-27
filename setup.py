@@ -12,7 +12,7 @@ extras_require = {
         "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.10.0",  # auto-formatter and linter
+        "black>=22.12",  # auto-formatter and linter
         "mypy>=0.991",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
@@ -81,7 +81,7 @@ setup(
     zip_safe=False,
     keywords="ethereum starknet",
     packages=find_packages(exclude=["tests", "tests.*"]),
-    package_data={"<ape_starknet>": ["py.typed"]},
+    package_data={"ape_starknet": ["py.typed"]},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

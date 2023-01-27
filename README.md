@@ -116,7 +116,7 @@ This only works if the account has been funded.
 For convenience purposes, if you have another account with funds, you can use that account to fund the deployment of this one using the `--funder` option:
 
 ```bash
-ape starknet account deploy <NEWLY-ALIAS> --network testnet --funder <EXISTING-FUNDED-ALIAS>
+ape starknet accounts deploy <NEW-ALIAS> --network testnet --funder <EXISTING-FUNDED-ALIAS>
 ```
 
 **NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly.
@@ -152,7 +152,7 @@ The `delete` command differs based on its values of `--network` and `--address`:
 
 - To delete all deployments on a given network, use the `--network` option without `--address`.
 - To delete all deployments matching an address (regardless of network), use the `--address` option without `--network`.
-- To delete a deployment on a network with a particular address, use both `--network` and \`--address.
+- To delete a deployment on a network with a particular address, use both `--network` and `--address`.
 - Exclude both options to delete the whole account.
 
 Note you can also specify multiple networks, the same as `import`.

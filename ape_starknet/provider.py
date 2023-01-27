@@ -1,13 +1,13 @@
 import os
 from dataclasses import asdict
-from typing import Dict, Iterator, List, Optional, Union, cast
+from typing import Dict, Iterator, List, Optional, Union, cast, Any
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ProviderNotConnectedError, TransactionError
+from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualMachineError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter, RawAddress
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
@@ -389,7 +389,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         return txn
 
-    def get_virtual_machine_error(self, exception: Exception):
+    def get_virtual_machine_error(self, exception: Exception, **kwargs: Any) -> VirtualMachineError:
         return handle_client_error(exception)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
