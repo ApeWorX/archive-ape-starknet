@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional, Union, cast
 
 import click
@@ -6,7 +7,9 @@ from ape.cli import ape_cli_context, existing_alias_argument, non_existing_alias
 from ape.cli.options import ApeCliContextObject
 from ape.logging import logger
 from ape.utils import add_padding_to_strings
-from eth_utils import is_hex, to_hex
+from eth_keyfile import decode_keyfile_json
+from eth_utils import is_hex, text_if_str, to_bytes, to_hex
+from hexbytes import HexBytes
 from starkware.crypto.signature.signature import EC_ORDER
 from starkware.starknet.definitions.fields import ContractAddressSalt
 
@@ -292,6 +295,22 @@ def _import(cli_ctx, alias, network, address, class_hash, salt):
         cli_ctx.abort("--address required when importing and account for the first time.")
 
     cli_ctx.logger.success(f"Imported account '{alias}'.")
+
+
+@accounts.command(short_help="Export an account private key")
+@ape_cli_context()
+@existing_alias_argument(account_type=StarknetKeyfileAccount)
+def export(cli_ctx, alias):
+    account = cast(StarknetKeyfileAccount, _get_container(cli_ctx).load(alias))
+    path = account.key_file_path
+    account_json = json.loads(path.read_text())
+    passphrase = click.prompt("Enter password to decrypt account", hide_input=True)
+    passphrase_bytes = text_if_str(to_bytes, passphrase)
+    decoded_json = HexBytes(decode_keyfile_json(account_json, passphrase_bytes))
+    private_key = to_int(decoded_json.hex())
+    cli_ctx.logger.success(
+        f"Account {account.alias} private key: {click.style(private_key, bold=True)})"
+    )
 
 
 @accounts.command()
