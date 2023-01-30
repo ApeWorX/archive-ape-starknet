@@ -1,6 +1,6 @@
 import os
 from dataclasses import asdict
-from typing import Dict, Iterator, List, Optional, Union, cast, Any
+from typing import Any, Dict, Iterator, List, Optional, Union, cast
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -42,7 +42,6 @@ from ape_starknet.utils import (
     get_chain_id,
     get_class_hash,
     get_dict_from_tx_info,
-    handle_client_error,
     handle_client_errors,
     run_until_complete,
     to_checksum_address,
@@ -189,7 +188,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if not txn.signature:
             # Signature is required to estimate gas, unfortunately.
             # the transaction is typically signed by this point, but not always.
-            txn.signature = self.account_manager[txn.receiver].sign_transaction(txn)
+            signed_txn = self.account_manager[txn.receiver].sign_transaction(txn)
+            if signed_txn is not None:
+                txn = cast(StarknetTransaction, signed_txn)
 
         starknet_object = txn.as_starknet_object()
         estimated_fee = self.connected_client.estimate_fee_sync(starknet_object)
@@ -390,7 +391,8 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return txn
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs: Any) -> VirtualMachineError:
-        return handle_client_error(exception)
+        txn = kwargs.get("txn")
+        return VirtualMachineError(base_err=exception, txn=txn)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         address_int = parse_address(address)

@@ -538,7 +538,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def add_deployment(self, network_name: str, contract_address: int, salt: int):
         pass
 
-    def call(self, txn: TransactionAPI, send_everything: bool = False, **signer_options) -> ReceiptAPI:
+    def call(
+        self, txn: TransactionAPI, send_everything: bool = False, **signer_options
+    ) -> ReceiptAPI:
         if send_everything:
             raise NotImplementedError("send_everything currently isn't implemented in Starknet.")
 
@@ -629,7 +631,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
         txn.max_fee = txn.max_fee or MAX_FEE
         txn = self._prepare_transaction(txn)
-        txn.signature = self.sign_transaction(txn)
+        signed_txn = self.sign_transaction(txn)
+        if signed_txn is not None:
+            txn = cast(TransactionAPI, txn)
         return txn
 
     def _prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
@@ -647,7 +651,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     def get_fee_estimate(self, txn: TransactionAPI) -> int:
         return self.provider.estimate_gas_cost(txn)
 
-    def handle_signature(self, sign_result, txn: TransactionAPI) -> TransactionSignature:
+    def handle_signature(self, sign_result, txn: TransactionAPI) -> TransactionAPI:
         if not sign_result:
             raise SignatureError("Failed to sign transaction.")
 
@@ -655,7 +659,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         s = to_bytes(sign_result[1])
         txn.signature = TransactionSignature(v=0, r=r, s=s)
         self.check_signature(txn)
-        return txn.signature
+        return txn
 
     def transfer(
         self,
@@ -908,7 +912,9 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def nonce(self) -> int:
         return super().nonce if self.deployed else 0
 
-    def sign_transaction(self, txn: TransactionAPI, **signer_optins: Any) -> Optional[TransactionAPI]:
+    def sign_transaction(
+        self, txn: TransactionAPI, **signer_optins: Any
+    ) -> Optional[TransactionAPI]:
         if not isinstance(txn, AccountTransaction):
             raise StarknetAccountsError(
                 f"This account can only sign Starknet transactions (received={type(txn)}."
@@ -972,14 +978,18 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 logger.debug("Fee-estimation related autosign enabled temporarily.")
                 original_value = self.__autosign
                 self.__autosign = True
-                txn.signature = self.sign_transaction(txn)
+                signed_txn = self.sign_transaction(txn)
+                if signed_txn is not None:
+                    txn = cast(TransactionAPI, txn)
                 self.__autosign = original_value
 
             txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
 
         # Only sign the transaction if not aborting.
         # This is the real and final signature.
-        txn.signature = self.sign_transaction(txn)
+        signed_txn = self.sign_transaction(txn)
+        if signed_txn is not None:
+            txn = cast(TransactionAPI, txn)
         return txn
 
     def write(
