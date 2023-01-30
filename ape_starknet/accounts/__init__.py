@@ -633,7 +633,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         txn = self._prepare_transaction(txn)
         signed_txn = self.sign_transaction(txn)
         if signed_txn is not None:
-            txn = cast(TransactionAPI, txn)
+            return cast(TransactionAPI, signed_txn)
         return txn
 
     def _prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
@@ -980,7 +980,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
                 self.__autosign = True
                 signed_txn = self.sign_transaction(txn)
                 if signed_txn is not None:
-                    txn = cast(TransactionAPI, txn)
+                    signed_txn = cast(TransactionAPI, signed_txn)
                 self.__autosign = original_value
 
             txn.max_fee = ceil(self.get_fee_estimate(txn) * FEE_MARGIN_OF_ESTIMATION)
@@ -989,7 +989,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         # This is the real and final signature.
         signed_txn = self.sign_transaction(txn)
         if signed_txn is not None:
-            txn = cast(TransactionAPI, txn)
+            return cast(TransactionAPI, signed_txn)
         return txn
 
     def write(

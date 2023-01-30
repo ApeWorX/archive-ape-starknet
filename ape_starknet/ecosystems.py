@@ -182,7 +182,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             index += 1
 
         calldata, _ = call_serializer.from_python(*pre_encoded_args)
-        return List(calldata)
+        return list(calldata)
 
     def _pre_encode_value(self, value: Any) -> Any:
         if isinstance(value, dict):
