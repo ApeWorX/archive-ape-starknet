@@ -614,7 +614,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
             if balance < txn.max_fee:
                 # Use funder to provide the rest.
-                amount = (txn.max_fee - balance) * FEE_MARGIN_OF_ESTIMATION
+                amount = ceil((txn.max_fee - balance) * FEE_MARGIN_OF_ESTIMATION)
                 self.tokens.transfer(funder, txn.contract_address, amount)
                 logger.success("Account has been funded.")
 

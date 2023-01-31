@@ -11,6 +11,7 @@ from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualM
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter, RawAddress
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
+from hexbytes import HexBytes
 from requests import Session
 from starknet_py.net.client_errors import ContractNotFoundError
 from starknet_py.net.client_models import (
@@ -156,9 +157,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return self.tokens.get_balance(address)
 
     @handle_client_errors
-    def get_code(self, address: str) -> List[int]:
+    def get_code(self, address: str) -> bytes:
         # NOTE: Always return truthy value for code so that Ape core works properly
-        return self.get_code_and_abi(address).bytecode or [ord(c) for c in "PROXY"]
+        code = self.get_code_and_abi(address).bytecode or [ord(c) for c in "PROXY"]
+        return b"".join([HexBytes(x) for x in code])
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
