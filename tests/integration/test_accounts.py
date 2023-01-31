@@ -4,8 +4,10 @@ from typing import List, Tuple, Union
 
 import pytest
 from eth_utils import to_hex
+from starknet_py.utils.crypto.facade import message_signature
 from starkware.crypto.signature.signature import EC_ORDER
 
+from ape_starknet.types import StarknetSignableMessage
 from ape_starknet.utils import get_random_private_key, to_int
 
 from .conftest import ApeStarknetCliRunner
@@ -351,3 +353,19 @@ def test_change_password(accounts_runner, key_file_account, password, existing_k
     assert "SUCCESS" in accounts_runner.invoke(
         "change-password", existing_key_file_alias, input=[new_password, password, password]
     )
+
+
+def test_export(accounts_runner, key_file_account, password):
+    output = accounts_runner.invoke("export", key_file_account.alias, input=[password])
+    key_from_output = int(output.split(" private key: ")[-1].strip(" )\n"))
+
+    # Sign a message using the exported private key.
+    msg = StarknetSignableMessage(message="test test test")
+    actual_signature = message_signature(msg.hash, key_from_output)
+
+    # Sign the same message using the account.
+    with accounts_runner.runner.isolation(f"y\n{password}\n"):
+        expected_signature = key_file_account.sign_message(msg)
+
+    # The signatures should be the same to prove exporting works.
+    assert actual_signature == expected_signature
