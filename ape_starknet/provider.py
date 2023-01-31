@@ -263,6 +263,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.starknet_client.get_transaction(txn_hash),
             self.starknet_client.get_transaction_receipt(tx_hash=txn_hash),
         )
+
         data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
         was_deploy = False
         # Handle __execute__ overhead. User only cares for target ABI.

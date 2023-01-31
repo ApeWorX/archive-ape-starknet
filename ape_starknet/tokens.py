@@ -248,9 +248,6 @@ class TokenManager(StarknetBase):
             address = cast(AddressType, account)
 
         address_int = to_int(address)
-
-        # Al
-
         network = self.provider.network.name
         if not self.cache_enabled.get(network, False):
             # Strictly use provider.
@@ -291,13 +288,14 @@ class TokenManager(StarknetBase):
         receiver: Union[int, AddressType, "BaseStarknetAccount"],
         amount: int,
         token: str = STARKNET_FEE_TOKEN_SYMBOL.lower(),
+        **kwargs,
     ):
         receiver_int = to_int(receiver)
         sender_account = cast(
             "BaseStarknetAccount",
             (self.account_container[sender] if isinstance(sender, (int, str)) else sender),
         )
-        result = self[token].transfer(receiver_int, amount, sender=sender_account)
+        result = self[token].transfer(receiver_int, amount, sender=sender_account, **kwargs)
 
         # NOTE: the fees paid by the sender get updated in `provider.send_transaction()`.
         amount_int = self._convert_amount_to_int(amount)
