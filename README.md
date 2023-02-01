@@ -385,12 +385,6 @@ Via an Environment Variable:
 export ALPHA_MAINNET_WL_DEPLOY_TOKEN="MY_TOKEN"
 ```
 
-Or, via the `--token` flag when deploying an account:
-
-```bash
-ape starknet accounts create MY_ACCOUNT --token MY_TOKEN
-```
-
 ## Development
 
 This project is in development and should be considered a beta.
