@@ -12,7 +12,7 @@ extras_require = {
         "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.10.0",  # auto-formatter and linter
+        "black>=22.12",  # auto-formatter and linter
         "mypy>=0.991",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
@@ -30,7 +30,7 @@ extras_require = {
         "twine",  # Package upload tool
     ],
     "dev": [
-        "commitizen>=2.19,<2.20",  # Manage commits and publishing releases
+        "commitizen",  # Manage commits and publishing releases
         "pre-commit",  # Ensure that linters are run prior to committing
         "pytest-watch",  # `ptw` test watcher/runner
         "IPython",  # Console for interacting
@@ -66,12 +66,12 @@ setup(
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.5.9,<0.6",
+        "eth-ape>=0.6.1,<0.7",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang>=0.10.3,<0.11",
-        "starknet.py>=0.13.a0,<0.14",
-        "starknet-devnet>=0.4.3,<0.5",
+        "starknet_py>=0.14.0a0,<0.15",
+        "starknet-devnet>=0.4.4,<0.5",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.11",
@@ -81,7 +81,7 @@ setup(
     zip_safe=False,
     keywords="ethereum starknet",
     packages=find_packages(exclude=["tests", "tests.*"]),
-    package_data={"<ape_starknet>": ["py.typed"]},
+    package_data={"ape_starknet": ["py.typed"]},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

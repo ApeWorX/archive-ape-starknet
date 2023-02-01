@@ -1,5 +1,3 @@
-.DS_Store
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -125,3 +123,6 @@ version.py
 # IDEs stuff
 .vscode
 
+**/.DS_Store
+*.swp
+*.swo

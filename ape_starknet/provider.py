@@ -1,16 +1,17 @@
 import os
 from dataclasses import asdict
-from typing import Dict, Iterator, List, Optional, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Union, cast
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ProviderNotConnectedError, TransactionError
+from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualMachineError
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter, RawAddress
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
+from hexbytes import HexBytes
 from requests import Session
 from starknet_py.net.client_errors import ContractNotFoundError
 from starknet_py.net.client_models import (
@@ -42,7 +43,6 @@ from ape_starknet.utils import (
     get_chain_id,
     get_class_hash,
     get_dict_from_tx_info,
-    handle_client_error,
     handle_client_errors,
     run_until_complete,
     to_checksum_address,
@@ -157,9 +157,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return self.tokens.get_balance(address)
 
     @handle_client_errors
-    def get_code(self, address: str) -> List[int]:
+    def get_code(self, address: str) -> bytes:
         # NOTE: Always return truthy value for code so that Ape core works properly
-        return self.get_code_and_abi(address).bytecode or [ord(c) for c in "PROXY"]
+        code = self.get_code_and_abi(address).bytecode or [ord(c) for c in "PROXY"]
+        return b"".join([HexBytes(x) for x in code])
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
@@ -189,7 +190,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if not txn.signature:
             # Signature is required to estimate gas, unfortunately.
             # the transaction is typically signed by this point, but not always.
-            txn.signature = self.account_manager[txn.receiver].sign_transaction(txn)
+            signed_txn = self.account_manager[txn.receiver].sign_transaction(txn)
+            if signed_txn is not None:
+                txn = cast(StarknetTransaction, signed_txn)
 
         starknet_object = txn.as_starknet_object()
         estimated_fee = self.connected_client.estimate_fee_sync(starknet_object)
@@ -263,6 +266,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             self.starknet_client.get_transaction(txn_hash),
             self.starknet_client.get_transaction_receipt(tx_hash=txn_hash),
         )
+
         data = {**asdict(receipt), **get_dict_from_tx_info(txn_info)}
         was_deploy = False
         # Handle __execute__ overhead. User only cares for target ABI.
@@ -389,8 +393,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         return txn
 
-    def get_virtual_machine_error(self, exception: Exception):
-        return handle_client_error(exception)
+    def get_virtual_machine_error(self, exception: Exception, **kwargs: Any) -> VirtualMachineError:
+        txn = kwargs.get("txn")
+        return VirtualMachineError(base_err=exception, txn=txn)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         address_int = parse_address(address)

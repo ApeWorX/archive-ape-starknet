@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.exceptions import APINotImplementedError, TransactionError
@@ -236,7 +236,7 @@ class InvokeFunctionTransaction(AccountTransaction):
         }
         full_abi = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.abi
         entire_call_data = [[account_call], stark_tx.calldata]
-        new_tx.data = new_tx.starknet.encode_calldata(full_abi, EXECUTE_ABI, entire_call_data)
+        new_tx.data = new_tx.starknet._encode_calldata(full_abi, EXECUTE_ABI, entire_call_data)
 
         if new_tx.sender:
             new_tx.receiver = new_tx.sender
@@ -330,7 +330,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     @raises_not_implemented
     def decode_logs(  # type: ignore[empty-body]
         self, abi: Optional[ContractEventABI] = None
-    ) -> Iterator[ContractLog]:
+    ) -> List[ContractLog]:
         # Overriden in InvocationReceipt
         pass
 
@@ -391,7 +391,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
     def decode_logs(
         self,
         abi: Optional[ContractEventABI] = None,
-    ) -> Iterator[ContractLog]:
+    ) -> List[ContractLog]:
 
         log_data_items: List[Dict] = []
         for log in self.logs:
@@ -408,7 +408,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
                 abi = [abi]
 
             event_abis: List[EventABI] = [a.abi if not isinstance(a, EventABI) else a for a in abi]
-            yield from self.starknet.decode_logs(log_data_items, *event_abis)
+            return list(self.starknet.decode_logs(log_data_items, *event_abis))
 
         else:
             # If ABI is not provided, decode all events
@@ -422,6 +422,8 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
                 address: {get_selector_from_name(e.name): e for e in contract.events}
                 for address, contract in contract_types.items()
             }
+
+            decoded_logs: List[ContractLog] = []
             for log in log_data_items:
                 contract_address = address_map[log["from_address"]]
                 if contract_address not in selectors:
@@ -429,7 +431,8 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
 
                 for event_key in log.get("keys", []):
                     event_abi = selectors[contract_address][event_key]
-                    yield from self.starknet.decode_logs([log], event_abi)
+                    decoded_logs.extend(list(self.starknet.decode_logs([log], event_abi)))
+            return decoded_logs
 
 
 class ContractDeclaration(AccountTransactionReceipt):
