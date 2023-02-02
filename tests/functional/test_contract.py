@@ -46,7 +46,7 @@ def test_declare_then_deploy(account, chain, project, provider):
     assert actual_balance == expected_balance
 
     # Grab the new contract address from the receipt's logs.
-    logs = list(receipt.decode_logs(factory.contract_deployed))
+    logs = receipt.decode_logs(factory.contract_deployed)
     new_contract_address = provider.starknet.decode_address(logs[0]["contract_address"])
 
     # Interact with deployed contract from 'class_hash'.
@@ -112,7 +112,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
 def test_decode_logs(contract, account, starknet):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    logs = list(receipt.decode_logs(contract.balance_increased))
+    logs = receipt.decode_logs(contract.balance_increased)
     assert len(logs) == 1
     assert logs[0].amount == increase_amount
 
