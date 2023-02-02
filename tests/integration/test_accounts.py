@@ -135,6 +135,23 @@ def test_create_then_list_then_deploy(accounts_runner, account_container, passwo
     assert account.deployments
 
 
+def test_deploy_with_custom_calldata(accounts_runner, account_container, password):
+    alias = get_random_alias()
+    accounts_runner.invoke("create", alias, input=[password, password])
+    account = account_container.load(alias)
+
+    # Deploy and verify.
+    user_input = [password, "y"]  # ["123", yes to sign].
+    calldata = account.public_key  # Have to use real public key or will get other signature errors.
+    output = accounts_runner.invoke(
+        "deploy", alias, "--funder", "0", "--constructor-calldata", calldata, input=user_input
+    )
+    assert "Account successfully deployed to " in output
+    assert account.deployments
+    assert accounts_runner
+    assert account.constructor_calldata == [account.public_key_int]
+
+
 def test_create_then_use_then_delete_account_with_empty_passphrase(
     accounts_runner, account_container
 ):
@@ -159,18 +176,30 @@ def test_create_then_use_then_delete_account_with_empty_passphrase(
         str(int("0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918", 16)),
     ),
 )
-def test_create_with_class_hash(accounts_runner, account_container, class_hash, password):
+def test_create_with_class_hash_and_calldata(
+    accounts_runner, account_container, class_hash, password
+):
     """
     Create a keypair with a custom class hash.
     """
 
     # Create the account with a custom class hash.
     alias = get_random_alias()
+    calldata = "0x223"
     user_input = [password, password]  # ["123", confirm]
-    output = accounts_runner.invoke("create", alias, "--class-hash", class_hash, input=user_input)
+    output = accounts_runner.invoke(
+        "create",
+        alias,
+        "--class-hash",
+        class_hash,
+        "--constructor-calldata",
+        calldata,
+        input=user_input,
+    )
     assert f"Created account key-pair for alias '{alias}'" in output
     account = account_container.load(alias)
     assert account.class_hash == to_int(class_hash)
+    assert account.constructor_calldata == [0x223]
 
     # Ensure the custom class hash gets displayed.
     output = accounts_runner.invoke_list()

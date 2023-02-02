@@ -284,9 +284,10 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             "private_key": key_pair.private_key,
             "class_hash": class_hash,
         }
-        account_data[
-            "constructor_calldata"
-        ] = constructor_calldata or get_account_constructor_calldata(key_pair, class_hash)
+        constructor_calldata = constructor_calldata or get_account_constructor_calldata(
+            key_pair, class_hash
+        )
+        account_data["constructor_calldata"] = constructor_calldata
 
         if (
             not allow_local_file_store
@@ -509,11 +510,13 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
             salt=salt or self.salt,
         )
 
-    def get_deploy_account_txn(self, salt: Optional[int] = None) -> DeployAccountTransaction:
+    def get_deploy_account_txn(
+        self, salt: Optional[int] = None, calldata: Optional[List] = None
+    ) -> DeployAccountTransaction:
         txn = DeployAccountTransaction(
             salt=salt or self.salt,
             class_hash=self.class_hash,
-            constructor_calldata=self.constructor_calldata,
+            constructor_calldata=calldata or self.constructor_calldata,
             signature=None,
         )
 
@@ -574,7 +577,10 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         raise ValueError(f"Unable to deploy '{contract}'.")
 
     def deploy_account(
-        self, funder: Optional["BaseStarknetAccount"] = None, salt: Optional[int] = None
+        self,
+        funder: Optional["BaseStarknetAccount"] = None,
+        salt: Optional[int] = None,
+        calldata: Optional[List] = None,
     ) -> ReceiptAPI:
         """
         Deploys this account.
@@ -585,12 +591,15 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
               transfer if needed.
             salt (Optional[int]): Contract address salt. Needed if wanting to deploy
               to a different address.
+            calldata (Optional[List]): Custom calldata to provide. Defaults to the
+              calldata in the keyfile, if found. Else, uses what is expected per the
+              class hash, such as the public key.
 
         Returns:
             :class:`~ape.api.transactions.ReceiptAPI`: The receipt from the
             :class:`~ape_starknet.transactions.DeployAccountTransaction`.
         """
-        txn = self.get_deploy_account_txn(salt)
+        txn = self.get_deploy_account_txn(salt=salt, calldata=calldata)
 
         # NOTE: Because of error handling Ape core, need to trick Ape into thinking
         # the account balance is actually the funder's.
@@ -1042,6 +1051,8 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             account_data["class_hash"] = class_hash
         if salt:
             account_data["salt"] = salt
+        if constructor_calldata:
+            account_data["constructor_calldata"] = constructor_calldata
 
         data = {**key_file_data, APP_KEY_FILE_KEY: account_data}
         self.key_file_path.write_text(json.dumps(data))
