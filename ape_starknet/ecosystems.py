@@ -450,7 +450,9 @@ class Starknet(EcosystemAPI, StarknetBase):
             else None
         )
 
-    def decode_primitive_value(self, value: Any, output_type: Union[str, Tuple, List]) -> int:
+    def decode_primitive_value(
+        self, value: Any, output_type: Union[str, Tuple, List] = "felt"
+    ) -> int:
         return to_int(value)
 
     def decode_calldata(self, abi: Union[ConstructorABI, MethodABI], calldata: bytes) -> Dict:

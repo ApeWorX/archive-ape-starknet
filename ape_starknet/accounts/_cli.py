@@ -68,6 +68,13 @@ def address_option():
     )
 
 
+def constructor_calldata_option():
+    return click.option(
+        "--constructor-calldata",
+        help="Comma separated list of calldata, default tries to be smart.",
+    )
+
+
 def _network_callback(ctx, param, value, single: bool = False):
     parse = ctx.obj.network_manager.parse_network_choice
 
@@ -115,16 +122,15 @@ def _salt_callback(ctx, param, value):
 @ape_cli_context()
 @non_existing_alias_argument()
 @class_hash_option(default=OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH)
-@click.option(
-    "--constructor-calldata", help="Comma separated list of calldata, default tries to be smart."
-)
+@constructor_calldata_option()
 @click.option(
     "--salt", help="The default address salt to use when deploying.", callback=_salt_callback
 )
 def create(cli_ctx, alias, class_hash, constructor_calldata, salt):
     """Create an account keypair"""
+    starknet = cli_ctx.provider.starknet
     calldata = (
-        [cli_ctx.starknet.decode_primitive_value(x) for x in constructor_calldata.split(",")]
+        [starknet.decode_primitive_value(x) for x in constructor_calldata.split(",")]
         if constructor_calldata is not None
         else None
     )
@@ -155,7 +161,8 @@ def _funder_callback(ctx, param, value):
 @click.argument("alias")
 @network_option(default=LOCAL_NETWORK_NAME, single=True)
 @click.option("--funder", help="Use another an account to help fund", callback=_funder_callback)
-def deploy(cli_ctx, network, alias, funder):
+@constructor_calldata_option()
+def deploy(cli_ctx, network, alias, funder, constructor_calldata):
     """Deploy an account"""
     with cli_ctx.network_manager.parse_network_choice(network):
         logger.info(f"Deploying account '{alias}' to network '{network}'.")
@@ -167,7 +174,13 @@ def deploy(cli_ctx, network, alias, funder):
             account.unlock("Enter passphrase to deploy account")  # type: ignore[attr-defined]
 
         try:
-            receipt = account.deploy_account(funder=funder)
+            starknet = cli_ctx.provider.starknet
+            calldata = (
+                [starknet.decode_primitive_value(x) for x in constructor_calldata.split(",")]
+                if constructor_calldata is not None
+                else None
+            )
+            receipt = account.deploy_account(funder=funder, calldata=calldata)
             contract_address_styled = click.style(receipt.contract_address, bold=True)
             logger.success(f"Account successfully deployed to '{contract_address_styled}'.")
         finally:
