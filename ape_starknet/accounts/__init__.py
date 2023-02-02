@@ -591,10 +591,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
               transfer if needed.
             salt (Optional[int]): Contract address salt. Needed if wanting to deploy
               to a different address.
-            calldata (Optional[List]): Will default to the account to handle calldata
-              if not given here. Default accounts will check the keyfile for calldata
-              specified on create. Else, will use the default calldata known for common
-              class hashes.
+            calldata (Optional[List]): Custom calldata to provide. Defaults to the
+              calldata in the keyfile, if found. Else, uses what is expected per the
+              class hash, such as the public key.
 
         Returns:
             :class:`~ape.api.transactions.ReceiptAPI`: The receipt from the

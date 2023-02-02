@@ -71,7 +71,7 @@ def address_option():
 def constructor_calldata_option():
     return click.option(
         "--constructor-calldata",
-        help="Comma separated list of calldata, default tries to be smart.",
+        help="Comma separated list of calldata, default uses keyfile or known inputs.",
     )
 
 
