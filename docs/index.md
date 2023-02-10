@@ -5,7 +5,18 @@
    :caption: User Guides
    :maxdepth: 1
    userguides/quickstart
-   
+   userguides/accounts
+   userguides/contracts
+   userguides/contract_interaction
+   userguides/testing
+```
+
+```{eval-rst}
+.. toctree::
+   :caption: CLI Reference
+   :maxdepth: 1
+
+   commands/accounts.rst
 ```
 
 ```{eval-rst}

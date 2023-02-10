@@ -24,9 +24,9 @@ extras_require = {
         "mdformat-frontmatter>=0.4.1",  # Needed for frontmatters-style headers in issue templates
         "types-pkg-resources>=0.1.3,<0.2",
     ],
-    "docs":[
-         # Tools for parsing markdown files in the docs
-        "myst-parser @ git+https://github.com/executablebooks/MyST-Parser.git",
+    "docs": [
+        # Tools for parsing markdown files in the docs
+        # "myst-parser",  # TODO: Uncomment/re-pin once Sphinx 6 support is released
         "sphinx-click>=4.4.0,<5.0",  # For documenting CLI
         "Sphinx>=6.1.3,<7.0",  # Documentation generator
         "sphinx_rtd_theme>=1.2.0rc3,<2",  # Readthedocs.org theme
