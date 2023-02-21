@@ -41,6 +41,12 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         return self.get_contract_type_from_provider(address)
 
     def get_contract_type_from_provider(self, address: Union[int, AddressType]):
+        """
+        Get contract type from provider for a given address. 
+
+        Args:
+            address(Union[int, AddressType]): The contract address.
+        """
         code_and_abi = self.provider.get_code_and_abi(address)
 
         # Convert list of ints to bytes

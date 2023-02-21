@@ -7,8 +7,6 @@
    userguides/quickstart
    userguides/accounts
    userguides/contracts
-   userguides/contract_interaction
-   userguides/testing
 ```
 
 ```{eval-rst}

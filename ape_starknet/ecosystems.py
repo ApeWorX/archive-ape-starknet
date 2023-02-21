@@ -212,6 +212,12 @@ class Starknet(EcosystemAPI, StarknetBase):
         return encoded_struct
 
     def encode_primitive_value(self, value: Any) -> int:
+        """
+        Encodes the given value to int.
+
+        Args:
+            value(Any): The given value to be changed to int.
+        """
         if isinstance(value, bool):
             # NOTE: bool must come before int.
             return int(value)
@@ -290,6 +296,15 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_contract_blueprint(
         self, contract: Union[ContractContainer, ContractType], *args, **kwargs
     ) -> DeclareTransaction:
+        """
+        encode contract blueprint
+
+        Args:
+            contract(Union[ContractContainer, ContractType]):
+
+        Returns:
+            DeclareTransaction
+        """
         contract_type = (
             contract.contract_type if isinstance(contract, ContractContainer) else contract
         )
@@ -453,6 +468,12 @@ class Starknet(EcosystemAPI, StarknetBase):
     def decode_primitive_value(
         self, value: Any, output_type: Union[str, Tuple, List] = "felt"
     ) -> int:
+        """
+        Decodes the value to given to int.
+        
+        Args:
+            value(Any): The given value to be changed.
+        """
         return to_int(value)
 
     def decode_calldata(self, abi: Union[ConstructorABI, MethodABI], calldata: bytes) -> Dict:

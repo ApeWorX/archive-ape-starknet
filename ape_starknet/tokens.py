@@ -168,6 +168,9 @@ TEST_TOKEN_ADDRESS = "0x07394cbe418daa16e42b87ba67372d4ab4a5df0b05c6e554d158458c
 
 
 class TokenManager(StarknetBase):
+    """
+    Token Manager for Starknet ERC20 tokens.
+    """
     # The 'test_token' refers to the token that comes with Argent-X
     additional_tokens: Dict[str, Dict[str, int]] = {}
     contract_type = ERC20
@@ -242,6 +245,13 @@ class TokenManager(StarknetBase):
     def get_balance(
         self, account: Union[Address, AddressType], token: str = STARKNET_FEE_TOKEN_SYMBOL.lower()
     ) -> int:
+        """
+        Get token balance of an account.
+
+        Args:
+            account(Union[Address, AddressType]): The contract address of the account.
+            token(str): The fee token name.
+        """
         if hasattr(account, "address"):
             address = cast(Address, account).address
         else:
@@ -268,6 +278,10 @@ class TokenManager(StarknetBase):
     ) -> int:
         """
         Get the balance from the provider and update the cache.
+
+        Args:
+            account(Union[AddressType, int]): The contract address of the account.
+            token(str): The fee token name.
         """
 
         account_int = to_int(account)
@@ -290,6 +304,17 @@ class TokenManager(StarknetBase):
         token: str = STARKNET_FEE_TOKEN_SYMBOL.lower(),
         **kwargs,
     ):
+        """
+        Transfer an amount of tokens from one account to another.
+
+        Args:
+            sender(Union[int, AddressType, BaseStarknetAccount]): The account to transfer tokens
+                from.
+            receiver(Union[int, AddressType, BaseStarknetAccount]): The account to transfer tokens
+                to.
+            amount(int): The amount of tokens to be transferred.
+            token(str): The fee token name.
+        """
         receiver_int = to_int(receiver)
         sender_account = cast(
             "BaseStarknetAccount",
@@ -309,6 +334,14 @@ class TokenManager(StarknetBase):
         amount: Union[int, Dict],
         token: str = STARKNET_FEE_TOKEN_SYMBOL.lower(),
     ):
+        """
+        Update cache.
+
+        Args:
+            address(Union[AccountAPI, AddressType, int]): The contract address of the account.
+            amount(Union[int, Dict]): The amount of tokens to be updated to the account balance.
+            token(str): The fee token name.
+        """
         amount_int = self._convert_amount_to_int(amount)
         address_int = to_int(address)
         if address_int not in self.balance_cache or token not in self.balance_cache[address_int]:
