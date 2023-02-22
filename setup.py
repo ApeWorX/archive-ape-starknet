@@ -74,7 +74,7 @@ setup(
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.6.1,<0.7",
+        "eth-ape>=0.6.3,<0.7",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang>=0.10.3,<0.11",

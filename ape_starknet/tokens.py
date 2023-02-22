@@ -171,6 +171,7 @@ class TokenManager(StarknetBase):
     """
     Token Manager for Starknet ERC20 tokens.
     """
+
     # The 'test_token' refers to the token that comes with Argent-X
     additional_tokens: Dict[str, Dict[str, int]] = {}
     contract_type = ERC20
@@ -250,7 +251,7 @@ class TokenManager(StarknetBase):
 
         Args:
             account(Union[Address, AddressType]): The contract address of the account.
-            token(str): The fee token name.
+            token(str): The fee token symbol. Defaults to `ETH`.
         """
         if hasattr(account, "address"):
             address = cast(Address, account).address
@@ -281,7 +282,7 @@ class TokenManager(StarknetBase):
 
         Args:
             account(Union[AddressType, int]): The contract address of the account.
-            token(str): The fee token name.
+            token(str): The fee token symbol. Defaults to ``ETH``.
         """
 
         account_int = to_int(account)
@@ -313,7 +314,7 @@ class TokenManager(StarknetBase):
             receiver(Union[int, AddressType, BaseStarknetAccount]): The account to transfer tokens
                 to.
             amount(int): The amount of tokens to be transferred.
-            token(str): The fee token name.
+            token(str): The fee token symbol. Defaults to ``ETH``.
         """
         receiver_int = to_int(receiver)
         sender_account = cast(
@@ -340,7 +341,7 @@ class TokenManager(StarknetBase):
         Args:
             address(Union[AccountAPI, AddressType, int]): The contract address of the account.
             amount(Union[int, Dict]): The amount of tokens to be updated to the account balance.
-            token(str): The fee token name.
+            token(str): The fee token symbol. Defaults to ``ETH``.
         """
         amount_int = self._convert_amount_to_int(amount)
         address_int = to_int(address)

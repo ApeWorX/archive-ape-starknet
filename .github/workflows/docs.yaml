@@ -31,7 +31,7 @@ jobs:
           uses: actions/upload-artifact@v1
           with:
               name: DocumentationHTML
-              path: docs/_build/ape-alchemy
+              path: docs/_build/ape-starknet
 
         - name: Commit and publish documentation changes to gh-pages branch
           run: |
@@ -54,3 +54,4 @@ jobs:
               branch: gh-pages
               directory: gh-pages
               github_token: ${{ secrets.GITHUB_TOKEN }}
+              

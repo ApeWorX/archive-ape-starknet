@@ -42,7 +42,7 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
 
     def get_contract_type_from_provider(self, address: Union[int, AddressType]):
         """
-        Get contract type from provider for a given address. 
+        Get contract type from provider for a given address.
 
         Args:
             address(Union[int, AddressType]): The contract address.

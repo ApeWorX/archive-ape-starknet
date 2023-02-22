@@ -1,6 +1,6 @@
 # Contracts
 
-#### Factory Contracts
+## Factory Contracts
 
 Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.
 Let's say for example I have the following Cairo factory contract:

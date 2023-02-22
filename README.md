@@ -45,7 +45,7 @@ owner = container.test_accounts[0]
 
 See the section below about [Testing](#Testing) to learn more about test accounts.
 
-Learn more about accounts by following the [accounts guide]().
+Learn more about accounts by following the [accounts guide](docs/userguides/accounts.md).
 
 ### Declare and Deploy Contracts
 
@@ -83,7 +83,8 @@ from ape import accounts, project
 account = accounts.load("<MY_STARK_ACCOUNT>")
 my_contract = project.MyContract.deploy(sender=account)
 ```
-Learn more about deploying contracts like factory contracts by following the [contracts guide]()
+
+Learn more about deploying contracts like factory contracts by following the [contracts guide](docs/userguides/contracts.md)
 
 ### Contract Interaction
 

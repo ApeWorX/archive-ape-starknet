@@ -2,7 +2,7 @@
 
 When using a live network, you will have to import or create an account first.
 
-#### Importing an Account
+## Importing an Account
 
 To import an account, use the `import` command:
 
@@ -36,7 +36,7 @@ ape starknet accounts import <ArgentX-Alias> \
 And then export your Argent-X private key from the app and paste it in the CLI prompt.
 Now, you can use your argent-x account to fund and create other accounts!
 
-#### Creating an Account
+## Creating an Account
 
 To create a new account, you can use the `create` command:
 
@@ -59,7 +59,7 @@ However, it does not deploy the account.
 The reason it does not deploy is that the account needs funding to pay for its deployment and there are several ways to achieve this.
 See [this section](https://starknet.io/docs/hello_starknet/account_setup.html#transferring-goerli-eth-to-the-account) of the Starknet official guides for more information.
 
-#### Deploying an Account
+## Deploying an Account
 
 To deploy the new account, use the `deploy` command:
 
@@ -77,7 +77,7 @@ ape starknet accounts deploy <NEW-ALIAS> --network testnet --funder <EXISTING-FU
 **NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly.
 You must use the [StarkNet L2 bridge](https://goerli.starkgate.starknet.io/) to transfer existing Goerli L1 ETH to and from the L2 account.
 
-#### Listing Accounts
+## Listing Accounts
 
 See your accounts and all of their deployment addresses:
 
@@ -95,7 +95,7 @@ Contract address (testnet) - 0x6b7111AA4111e5B2229c3332B66696888164440A773333143
 Contract address (mainnet) - 0x7873113A4111e5B2229c3332B66696388163440A373333143333B3833332122
 ```
 
-#### Deleting an Account
+## Deleting an Account
 
 You can also delete accounts:
 
@@ -112,7 +112,7 @@ The `delete` command differs based on its values of `--network` and `--address`:
 
 Note you can also specify multiple networks, the same as `import`.
 
-#### Auto-Sign Message
+## Auto-Sign Message
 
 While generally bad practice, sometimes it is necessary to have unlocked keyfile accounts auto-signing messages.
 An example would be during testnet automated deployments.

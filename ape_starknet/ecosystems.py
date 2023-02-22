@@ -297,10 +297,10 @@ class Starknet(EcosystemAPI, StarknetBase):
         self, contract: Union[ContractContainer, ContractType], *args, **kwargs
     ) -> DeclareTransaction:
         """
-        encode contract blueprint
+        Encodes the contract blueprint
 
         Args:
-            contract(Union[ContractContainer, ContractType]):
+            contract(Union[ContractContainer, ContractType]): The contract to be encoded.
 
         Returns:
             DeclareTransaction
@@ -470,9 +470,12 @@ class Starknet(EcosystemAPI, StarknetBase):
     ) -> int:
         """
         Decodes the value to given to int.
-        
+
         Args:
             value(Any): The given value to be changed.
+
+        Returns:
+            int: The integer value of the value given.
         """
         return to_int(value)
 

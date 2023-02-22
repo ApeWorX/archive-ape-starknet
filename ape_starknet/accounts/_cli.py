@@ -151,7 +151,7 @@ def _funder_callback(ctx, param, value):
 
     if value.isnumeric():
         # Useful for testing / local but not realistic.
-        return container.genesis_test_accounts[int(value)]
+        return container._genesis_test_accounts[int(value)]
 
     return container.load(value)
 

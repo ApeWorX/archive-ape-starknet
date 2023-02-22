@@ -55,6 +55,7 @@ class DevnetClient:
     """
     A Devnet Client session
     """
+
     def __init__(self, host_address: str):
         self.session = Session()
         self.host_address = host_address
@@ -101,7 +102,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @property
     def connected_client(self) -> GatewayClient:
-        """Connect to client or raises a `ProviderNotConnectedError` otherwise."""
+        """
+        Connect to client or raises a :class:`~ape_starknet.exceptions.ProviderNotConnectedError`
+        otherwise.
+        """
         if not self.client:
             raise ProviderNotConnectedError()
 
@@ -125,7 +129,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @property
     def starknet_client(self) -> GatewayClient:
-        """Check if client is connected to Starknet"""
+        """An HTTP client for Starknet."""
         if not self.is_connected:
             raise StarknetProviderError("Provider is not connected to Starknet.")
 
@@ -171,7 +175,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
-        """Get abi"""
+        """Get the ABI of a contract."""
         return self.get_code_and_abi(address).abi
 
     @handle_client_errors
@@ -411,7 +415,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
         Args:
             address(Union[str, AddressType, int]):
-        
+
         Returns:
             ContractCode
         """
@@ -431,10 +435,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     def get_class_hash(self, address: AddressType) -> int:
         """
-        Get class has of address
+        Get class hash of address
 
         Args:
-            address(AddressType):
+            address(AddressType): The address to get the class hash from.
         """
         code = self.get_code_and_abi(address)
         return get_class_hash(code)
@@ -502,7 +506,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
     def mine(self, num_blocks: int = 1):
         """
-        Mine the a number of blocks.
+        Mine a number of blocks.
 
         Args:
             num_blocks(int): The number of blocks to mine.
@@ -517,7 +521,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
         Args:
             account(``AddressType``): The contract account.
-            amount(Union[int, float, str, bytes]): The amount of tokens to mint and add to the 
+            amount(Union[int, float, str, bytes]): The amount of tokens to mint and add to the
                 account.
         """
 

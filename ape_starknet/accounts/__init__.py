@@ -27,7 +27,7 @@ from starkware.starknet.core.os.contract_address.contract_address import (
 )
 from starkware.starknet.definitions.fields import ContractAddressSalt
 
-from ape_starknet.config import NetworkConfig
+from ape_starknet.config import ProviderConfig
 from ape_starknet.exceptions import ContractTypeNotFoundError, StarknetAccountsError
 from ape_starknet.provider import StarknetDevnetProvider, StarknetProvider
 from ape_starknet.transactions import (
@@ -78,40 +78,14 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
     """Accounts created in a live network that persist in key-files."""
 
     @property
-    def provider_config(self) -> NetworkConfig:
+    def provider_config(self) -> ProviderConfig:
         """
         Provider network configuration
 
         Returns:
-            :class:`~ape_starknet.config.NetworkConfig`
+            :class:`~ape_starknet.config.ProviderConfig`
         """
         return self.starknet_config["provider"]
-
-    @property
-    def number_of_devnet_accounts(self) -> int:
-        """
-        Returns the number of how many devnet accounts are currently available.
-
-        Returns:
-            int: The number of accounts in the local network.
-        """
-        if not self.network_manager.active_provider:
-            return 0
-
-        if self.provider.network.name != LOCAL_NETWORK_NAME:
-            return 0
-
-        return int(self.provider_config.local["number_of_accounts"])
-
-    @property
-    def devnet_account_seed(self) -> int:
-        """
-        Specify the seed for randomness of accounts to be predeployed.
-
-        Returns:
-            int: The seed from the local network configuration.
-        """
-        return self.provider_config.local["seed"]
 
     @property
     def _key_file_paths(self) -> Iterator[Path]:
@@ -126,26 +100,15 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             yield key_file.stem
 
     @property
-    def public_key_addresses(self) -> Iterator[AddressType]:
-        """
-        Iterate over all available public key addresses.
-
-        Returns:
-            Iterator[``AddressType``]: Yields all account addresses in accounts.
-        """
-        for account in self.accounts:
-            yield account.address
-
-    @property
     def test_accounts(self) -> List["StarknetDevelopmentAccount"]:
         """
         Makes a list of test accounts.
 
         Returns:
-            List[:class:`StarknetDevelopmentAccount`]
+            List[:class:`~ape_starknet.accounts.StarknetDevelopmentAccount`]
         """
         if "genesis_test_accounts" in self.__dict__:
-            return self.genesis_test_accounts
+            return self._genesis_test_accounts
 
         if (
             self.network_manager.active_provider is None
@@ -154,16 +117,10 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         ):
             return []
 
-        return self.genesis_test_accounts
+        return self._genesis_test_accounts
 
     @cached_property
-    def genesis_test_accounts(self) -> List:
-        """
-        Generate and cache a list of test devnet accounts.
-
-        Returns:
-            List: The list of devnet accounts.
-        """
+    def _genesis_test_accounts(self) -> List:
         provider = self.provider
         if not isinstance(provider, StarknetDevnetProvider):
             return []
@@ -187,6 +144,12 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
 
     @property
     def accounts(self) -> Iterator[AccountAPI]:
+        """
+        Iterate over available accounts.
+
+        Returns:
+            Iterator[``AccountAPI``]
+        """
         for test_account in self.test_accounts:
             yield test_account
 
@@ -246,7 +209,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             address (Union[``AddressType``, int]): Address of the account.
 
         Returns:
-            :class:`BaseStarknetAccount`
+            :class:`~ape_starknet.accounts.BaseStarknetAccount`
         """
         return self[address]  # type: ignore
 
@@ -258,23 +221,14 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
             alias (str): A shortened-name for quicker access to the account.
 
         Return:
-            :class:`BaseStarknetAccount`
+            :class:`~ape_starknet.accounts.BaseStarknetAccount`
         """
         if alias in self.ephemeral_accounts:
             return StarknetDevelopmentAccount(**self.ephemeral_accounts[alias])
 
-        return self.load_key_file_account(alias)
+        return self._load_key_file_account(alias)
 
-    def load_key_file_account(self, alias: str) -> "StarknetKeyfileAccount":
-        """
-        Loads keyfile account based on alias.
-
-        Args:
-            alias (str): A shortened-name for quicker access to the account.
-
-        Return:
-            :class:`~ape_starknet.accounts.StarknetKeyfileAccount`
-        """
+    def _load_key_file_account(self, alias: str) -> "StarknetKeyfileAccount":
         if alias in self.cached_accounts:
             return self.cached_accounts[alias]
 
@@ -298,6 +252,8 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         """
         Create an account within the parameters given or generated.
 
+        **NOTE**: Defaults to ``True`` for all non-local networks and ``False`` for local networks.
+
         Args:
             alias (str): A shortened-name for quicker access to the account.
             class_hash (int): A hash chain of the definition of the class.
@@ -305,11 +261,11 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
                 Contract address salt. Needed if wanting to deploy to a different address.
             private_key (Optional[str]):
                 Set private key manually or leave blank to generate one randomly.
-            constructor_calldata (Optional[List[int]]): List representing the function parameters
+            constructor_calldata (Optional[List[int]]): List representing the function parameters.
             allow_local_file_store (bool): Allow for account to be stored on local file.
 
         Returns:
-            :class:`BaseStarknetAccount`
+            :class:`~ape_starknet.accounts.BaseStarknetAccount`
         """
         if alias in self.aliases:
             raise StarknetAccountsError(f"Account with alias '{alias}' already exists.")
@@ -360,16 +316,17 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
 
         Args:
             alias (str): A shortened-name for quicker access to the account.
-            class_hash (int): Class hash of contract
+            class_hash (int): Class hash of contract.
             private_key (Union[int, str]): Private key for account.
-            deployments(Optional[List[:class:`StarknetAccountDeployment`]]):
-            constructor_calldata (Optional[List[int]]):
+            deployments(Optional[List[:class:`~ape_starknet.accounts.StarknetAccountDeployment`]]):
+                The network deployment status of the account.
+            constructor_calldata (Optional[List[int]]): List representing the function parameters.
             salt (Optional[int]):
                 Contract address salt. Needed if wanting to deploy to a different address.
             allow_local_file_store (bool): Allows to store in local file store.
 
         Returns:
-            :class:`BaseStarknetAccount`
+            :class:`~ape_starknet.accounts.BaseStarknetAccount`
         """
         deployments = deployments or []
         key_pair = create_keypair(private_key)
@@ -452,11 +409,11 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         Args:
             alias (str): A shortened-name for quicker access to the account.
             address (Optional[Union[AddressType, int]]):
-                The address of the account to be deleted Defaults to `None`.
+                The address of the account to be deleted Defaults to ``None``.
             networks (Optional[Union[str, List[str]]]):
-                The network(s) for the accounts to be deleted from. Defaults to `None`.
+                The network(s) for the accounts to be deleted from. Defaults to ``None``.
             leave_unlocked (bool):
-                Option to leave account unlocked for future interactions. Defaults to `None`.
+                Option to leave account unlocked for future interactions. Defaults to ``None``.
         """
         if alias in self.ephemeral_accounts:
             # Only 1 local deployment for ephemeral accounts.
@@ -464,7 +421,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
 
         else:
             # Live network - delegate to account.
-            account = self.load_key_file_account(alias)
+            account = self._load_key_file_account(alias)
             account.delete(
                 networks=networks,
                 address=address,
@@ -562,7 +519,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     @property
     def public_key(self) -> str:
         """
-        Set public key of the account.
+        The public key of the account.
         """
         raise APINotImplementedError("Implement `public_key` in a base class.")
 
@@ -572,6 +529,9 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @property
     def address_int(self) -> int:
+        """
+        The account's address to as an integer.
+        """
         return self.starknet.encode_address(self.address)
 
     @property
@@ -580,17 +540,14 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         List of deployments
 
         Returns:
-            List[:class:`ape_starknet.accounts.StarknetAccountDeployment`]
+            List[:class:`~ape_starknet.accounts.StarknetAccountDeployment`]
         """
         return []  # Overriden
 
     @cached_property
     def default_address(self) -> AddressType:
         """
-        The contract address calcuated from
-
-        Returns:
-            ``AddressType``
+        The contract address if you are to use default salt for the account.
         """
         return to_checksum_address(self.default_address_int)
 
@@ -605,7 +562,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
     @property
     def constructor_calldata(self) -> List[Any]:
-        """consructor calldata"""
+        """The list representing the function parameters."""
         return [] if self.class_hash == ARGENTX_ACCOUNT_CLASS_HASH else [self.public_key_int]
 
     @cached_property
@@ -724,7 +681,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         Deploys this account.
 
         Args:
-            funder (Optional[:class:`BaseStarknetAccount`]):
+            funder (Optional[:class:`~ape_starknet.accounts.BaseStarknetAccount`]):
               An account to use to assist in funding the deployment. Only requests
               transfer if needed.
             salt (Optional[int]): Contract address salt. Needed if wanting to deploy
@@ -734,7 +691,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
               class hash, such as the public key.
 
         Returns:
-            :class:`~ape.api.transactions.ReceiptAPI`: The receipt from the
+            ``ReceiptAPI``: The receipt from the
             :class:`~ape_starknet.transactions.DeployAccountTransaction`.
         """
         txn = self.get_deploy_account_txn(salt=salt, calldata=calldata)
@@ -801,7 +758,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         Get the estimate fee cost for transaction.
 
         Args:
-            txn(:class:`~ape.api.TransactionAPI`): Transaction
+            txn(``TransactionAPI``): Transaction
 
         Returns:
             int: Value of estimated gas cost.
@@ -813,11 +770,11 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         Checks and assigns signature to transaction.
 
         Args:
-            sign_result:
-            txn(:class:`~ape.api.TransactionAPI`): Transaction
+            sign_result: The results of the attempt to sign the transaction.
+            txn(``TransactionAPI``): Transaction
 
         Returns:
-            :class:`~ape.api.TransactionAPI`: Transaction with signature
+            ``TransactionAPI``: Transaction with signature
         """
         if not sign_result:
             raise SignatureError("Failed to sign transaction.")
@@ -891,7 +848,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         Declares a contract.
 
         Args:
-            contract_type(:class:`~ethpm_types.ContractType`): Type of contract.
+            contract_type(``ContractType``): Type of contract.
         """
         txn = self.starknet.encode_contract_blueprint(contract_type, sender=self.address)
         return self.call(txn)
@@ -959,7 +916,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
         Gets list of deployments.
 
         Returns:
-            List[:class:`StarknetAccountDeployment`]
+            List[:class:`~ape_starknet.accounts.StarknetAccountDeployment`]
         """
         return (
             [
@@ -996,7 +953,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
 
     def add_deployment(self, network_name: str, contract_address: int, salt: int):
         """
-        Add deployment if network is connected to local network else, raises `ValueError`.
+        Add deployment if network is connected to local network else, raises ``ValueError``.
 
         Args:
             network_name(str): Name of connected network
@@ -1025,7 +982,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         Retrieve account from file.
 
         Args:
-            path(pathlib.Path): Location of file where account is saved.
+            path(``Path``): Location of file where account is saved.
         """
         account_data = json.loads(path.read_text())
         salt = account_data.get("salt")
@@ -1053,7 +1010,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         kwargs["passphrase"] = passphrase
         new_account = cls(key_file_path=new_path)
-        new_account.write(**kwargs)
+        new_account._write(**kwargs)
         return new_account
 
     @property
@@ -1097,7 +1054,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             # Migrate keyfile now.
             private_key, passphrase = self.__get_private_key()
             key_pair = create_keypair(private_key)
-            self.write(
+            self._write(
                 passphrase=passphrase,
                 public_key=key_pair.public_key,
                 private_key=key_pair.private_key,
@@ -1189,7 +1146,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             return cast(TransactionAPI, signed_txn)
         return txn
 
-    def write(
+    def _write(
         self,
         passphrase: Optional[str] = None,
         new_passphrase: Optional[str] = None,
@@ -1201,22 +1158,6 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
         constructor_calldata: Optional[List[Any]] = None,
         leave_unlocked: Optional[bool] = None,
     ):
-        """
-        Write account to file.
-
-        Args:
-            passphrase(Optional[int]): Current passphrase for account.
-            new_passphrase(Optional[int]): New passphrase if necessary.
-            public_key(Optional[int]): Public key for account.
-            private_key(Optional[int]): Private key for account.
-            class_hash(Optional[int]): Class hash of contract.
-            deployments(Optional[List[Union[:class:`StarknetAccountDeployment`]]]):
-                List of networks account is deployed on.
-            salt(Optional[int]):
-                Contract address salt. Needed if wanting to deploy to a different address.
-            constructor_calldata(Optional[List[Any]]): Constructor calldata if necessary
-            leave_unlocked(Optional[bool]): Option to leave account unlocked.
-        """
         if not private_key:
             # Will either prompt or use cached if unlocked.
             private_key, passphrase = self.__get_private_key(
@@ -1286,10 +1227,10 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
 
         Args:
             address(Optional[Union[``AddressType``, int]]):
-                Address of account. Defaults to `None`.
+                Address of account. Defaults to ``None``.
             networks(Optional[Union[str, List[str]]]):
-                List of networks to delete account from. Defaults to `None`.
-            leave_unlocked(Optional[bool]): Option to leave account unlocked. Defaults to `None`.
+                List of networks to delete account from. Defaults to ``None``.
+            leave_unlocked(Optional[bool]): Option to leave account unlocked. Defaults to ``None``.
         """
         if not self.key_file_path.is_file():
             logger.warning(f"Keyfile for account '{self.alias}' already deleted.")
@@ -1324,7 +1265,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             ]
 
         if remaining_deployments and len(remaining_deployments) < deployments_at_start:
-            self.write(
+            self._write(
                 passphrase=passphrase,
                 deployments=remaining_deployments,
                 leave_unlocked=leave_unlocked,
@@ -1348,7 +1289,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
     def change_password(self, leave_unlocked: Optional[bool] = None):
         """
         Change password for account.
-        Note: User must enter passphrase even if unlocked
+        **NOTE**: User must enter passphrase even if unlocked
 
         Args:
             leave_unlocked(Optional[bool]):
@@ -1360,7 +1301,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             passphrase=original_passphrase, leave_unlocked=leave_unlocked
         )
         new_passphrase = self._get_passphrase_from_prompt("Enter new passphrase")
-        self.write(
+        self._write(
             passphrase=original_passphrase,
             new_passphrase=new_passphrase,
             private_key=private_key,
@@ -1390,15 +1331,16 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             network_name=network_name, contract_address=contract_address, salt=salt
         )
         deployments = [*self.deployments, new_deployment]
-        self.write(deployments=deployments, leave_unlocked=False)
+        self._write(deployments=deployments, leave_unlocked=False)
 
     def unlock(self, prompt: Optional[str] = None, passphrase: Optional[str] = None):
         """
         Unlock an account.
 
         Args:
-            prompt (Optional[str]):
+            prompt (Optional[str]): Prompt message. Defaults to ``None``.
             passphrase (Optional[str]): Passphrase that is used to unlock the account.
+                Defaults to ``None``.
         """
         if not self.__cached_key or not self.__cached_passphrase:
             # Sets cached keys.
@@ -1436,7 +1378,7 @@ class StarknetKeyfileAccount(BaseStarknetAccount):
             network_name (str): Name of network being looked at for deployment status.
 
         Returns:
-            Optional[:class:`ape_starknet.accounts.StarknetAccountDeployment`]
+            Optional[:class:`~ape_starknet.accounts.StarknetAccountDeployment`]
         """
         # NOTE: d is not None check only because mypy is confused
         return next(
