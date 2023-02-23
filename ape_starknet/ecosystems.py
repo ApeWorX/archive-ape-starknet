@@ -15,11 +15,13 @@ from starknet_py.net.client_models import StarknetBlock as StarknetClientBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
 from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
-from starkware.starknet.core.os.class_hash import compute_class_hash
+from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
+    compute_deprecated_class_hash,
+)
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name, get_storage_var_address
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
-from starkware.starknet.services.api.contract_class import ContractClass
+from starkware.starknet.services.api.contract_class.contract_class import DeprecatedCompiledClass
 
 from ape_starknet.exceptions import (
     ContractTypeNotFoundError,
@@ -31,8 +33,8 @@ from ape_starknet.transactions import (
     DeclareTransaction,
     DeployAccountReceipt,
     DeployAccountTransaction,
-    InvokeFunctionReceipt,
-    InvokeFunctionTransaction,
+    InvokeReceipt,
+    InvokeTransaction,
     StarknetReceipt,
     StarknetTransaction,
 )
@@ -236,8 +238,8 @@ class Starknet(EcosystemAPI, StarknetBase):
     def decode_receipt(self, data: dict) -> ReceiptAPI:
         txn_type = TransactionType(data["transaction"].type)
         receipt_cls: Type[StarknetReceipt]
-        if txn_type == TransactionType.INVOKE_FUNCTION:
-            receipt_cls = InvokeFunctionReceipt
+        if txn_type == TransactionType.INVOKE:
+            receipt_cls = InvokeReceipt
         elif txn_type == TransactionType.DECLARE:
             receipt_cls = ContractDeclaration
         elif txn_type == TransactionType.DEPLOY_ACCOUNT:
@@ -263,8 +265,8 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_deployment(
         self, deployment_bytecode: HexBytes, abi: ConstructorABI, *args, **kwargs
     ) -> TransactionAPI:
-        contract_class = ContractClass.deserialize(deployment_bytecode)
-        class_hash = compute_class_hash(contract_class)
+        contract_class = DeprecatedCompiledClass.deserialize(deployment_bytecode)
+        class_hash = compute_deprecated_class_hash(contract_class)
         contract_type = abi.contract_type
         if not contract_type:
             raise StarknetEcosystemError(
@@ -284,7 +286,7 @@ class Starknet(EcosystemAPI, StarknetBase):
 
         arguments = list(args)
         encoded_calldata = self._encode_calldata(contract_type.abi, abi, arguments)
-        return InvokeFunctionTransaction(
+        return InvokeTransaction(
             receiver=address,
             method_abi=abi,
             calldata=encoded_calldata,
@@ -313,7 +315,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             if contract_type.deployment_bytecode
             else 0
         )
-        starknet_contract = ContractClass.deserialize(HexBytes(code))
+        starknet_contract = DeprecatedCompiledClass.deserialize(HexBytes(code))
         return DeclareTransaction(
             contract_type=contract_type, data=starknet_contract.serialize(), **kwargs
         )
@@ -321,9 +323,9 @@ class Starknet(EcosystemAPI, StarknetBase):
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
         txn_cls: Type[StarknetTransaction]
-        invoking = txn_type == TransactionType.INVOKE_FUNCTION
+        invoking = txn_type == TransactionType.INVOKE
         if invoking:
-            txn_cls = InvokeFunctionTransaction
+            txn_cls = InvokeTransaction
         elif txn_type == TransactionType.DECLARE:
             txn_cls = DeclareTransaction
         elif txn_type == TransactionType.DEPLOY_ACCOUNT:

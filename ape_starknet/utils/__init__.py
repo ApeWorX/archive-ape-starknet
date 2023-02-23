@@ -22,7 +22,6 @@ from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
-from starknet_py.hash.class_hash import compute_class_hash
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
@@ -38,6 +37,9 @@ from starknet_py.net.signer.stark_curve_signer import KeyPair
 from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
+from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
+    compute_deprecated_class_hash,
+)
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.third_party.open_zeppelin.starknet_contracts import account_contract
@@ -83,7 +85,7 @@ OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID = "openzeppelin/account/Account.cairo"
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
     "Account", OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID, account_contract
 )
-OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_class_hash(account_contract)
+OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_deprecated_class_hash(account_contract)
 EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods[EXECUTE_METHOD_NAME]
 
 # Taken from https://github.com/argentlabs/argent-x/blob/develop/packages/extension/src/background/wallet.ts  # noqa: E501
@@ -275,7 +277,7 @@ def _try_extract_message_from_json(value: str) -> str:
 def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
     txn_dict = {**asdict(txn_info)}
     if isinstance(txn_info, InvokeTransaction):
-        txn_dict["type"] = TransactionType.INVOKE_FUNCTION
+        txn_dict["type"] = TransactionType.INVOKE
     elif isinstance(txn_info, DeclareTransaction):
         txn_dict["type"] = TransactionType.DECLARE
     elif isinstance(txn_info, DeployAccountTransaction):
@@ -346,7 +348,7 @@ def to_int(val: Any) -> int:
 
 def get_class_hash(code: Union[str, HexBytes]):
     contract_class = create_contract_class(code)
-    return compute_class_hash(contract_class)
+    return compute_deprecated_class_hash(contract_class)
 
 
 def create_keypair(private_key: Union[str, int]) -> KeyPair:

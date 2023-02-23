@@ -34,7 +34,7 @@ from ape_starknet.provider import StarknetDevnetProvider, StarknetProvider
 from ape_starknet.transactions import (
     AccountTransaction,
     DeployAccountTransaction,
-    InvokeFunctionTransaction,
+    InvokeTransaction,
     StarknetTransaction,
 )
 from ape_starknet.types import StarknetSignableMessage
@@ -749,7 +749,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
         txn.nonce = self.nonce
         txn = super().prepare_transaction(txn)
-        if isinstance(txn, InvokeFunctionTransaction):
+        if isinstance(txn, InvokeTransaction):
             return txn.as_execute()
 
         return txn

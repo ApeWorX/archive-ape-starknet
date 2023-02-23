@@ -30,7 +30,7 @@ from ape_starknet.transactions import (
     AccountTransaction,
     DeclareTransaction,
     DeployAccountTransaction,
-    InvokeFunctionTransaction,
+    InvokeTransaction,
     StarknetTransaction,
 )
 from ape_starknet.utils import (
@@ -192,9 +192,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
-        if isinstance(txn, InvokeFunctionTransaction):
+        if isinstance(txn, InvokeTransaction):
             if not txn.is_prepared:
-                txn = cast(InvokeFunctionTransaction, self.prepare_transaction(txn))
+                txn = cast(InvokeTransaction, self.prepare_transaction(txn))
 
             if txn.method_abi.name != EXECUTE_METHOD_NAME:
                 txn = txn.as_execute()
@@ -248,7 +248,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def send_call(self, txn: TransactionAPI) -> bytes:
-        if not isinstance(txn, InvokeFunctionTransaction):
+        if not isinstance(txn, InvokeTransaction):
             type_str = f"{txn.type!r}" if isinstance(txn.type, bytes) else str(txn.type)
             raise StarknetProviderError(
                 f"Transaction must be from an invocation. Received type {type_str}."
@@ -299,7 +299,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if isinstance(transaction, DeployAccountTransaction):
             # The DeployAccountReceipt expects first-hand access to the contract address.
             data["contract_address"] = transaction.contract_address
-        elif isinstance(transaction, InvokeFunctionTransaction):
+        elif isinstance(transaction, InvokeTransaction):
             # Manually remove `contract_address`, as it always confused Pydantic because
             # of TransactionAPI's `contract_address` attribute, which is required but a different
             # concept than this (for deploys, it is the new contract address but for invoke, it's
@@ -345,7 +345,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             return receipt
 
         sender_address = None
-        if isinstance(txn, InvokeFunctionTransaction):
+        if isinstance(txn, InvokeTransaction):
             # The real sender is the account contract address.
             sender_address = txn.receiver
         elif isinstance(txn, DeclareTransaction):
@@ -375,10 +375,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
                 "Unable to send non-Starknet transaction using a Starknet provider "
                 f"(received type '{type(txn)}')."
             )
-        elif (
-            isinstance(txn, InvokeFunctionTransaction)
-            and txn.method_abi.name != EXECUTE_METHOD_NAME
-        ):
+        elif isinstance(txn, InvokeTransaction) and txn.method_abi.name != EXECUTE_METHOD_NAME:
             raise StarknetProviderError(
                 f"Can only send invoke transaction to an account {EXECUTE_METHOD_NAME} method."
             )

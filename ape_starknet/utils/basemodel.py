@@ -1,14 +1,16 @@
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
 from eth_utils import is_0x_prefixed
 from ethpm_types import ContractType
 from hexbytes import HexBytes
-from starknet_py.net.client_models import ContractClass
-from starkware.starknet.core.os.class_hash import compute_class_hash
-from starkware.starknet.testing.contract_utils import get_contract_class
+from starkware.starknet.compiler.compile import compile_starknet_files
+from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
+    compute_deprecated_class_hash,
+)
+from starkware.starknet.services.api.contract_class.contract_class import DeprecatedCompiledClass
 
 if TYPE_CHECKING:
     from ape_starknet.accounts import StarknetAccountContainer
@@ -66,6 +68,10 @@ class StarknetBase(ManagerAccessMixin):
         ) or self.starknet_explorer.get_contract_type(address)
 
     def get_local_contract_type(self, class_hash: int) -> Optional[ContractType]:
+        """
+        Given a class hash, find and return its ``ethpm_types.ContractType``.
+        """
+
         for contract_name, contract_type in self.project_manager.contracts.items():
             if not contract_type.source_id or not contract_type.source_id.endswith(".cairo"):
                 continue
@@ -83,23 +89,38 @@ class StarknetBase(ManagerAccessMixin):
             except UnicodeDecodeError:
                 continue
 
-            contract_cls = get_contract_class(contract_class=contract_class)
-            computed_class_hash = compute_class_hash(contract_cls)
+            contract_cls = create_contract_class(contract_class)
+            computed_class_hash = compute_deprecated_class_hash(contract_cls)
             if computed_class_hash == class_hash:
                 return contract_type
 
         return None
 
 
-def create_contract_class(code: Union[str, bytes]) -> ContractClass:
+def create_contract_class(code: Union[str, bytes]) -> DeprecatedCompiledClass:
     if isinstance(code, str) and is_0x_prefixed(code):
-        return ContractClass.deserialize(HexBytes(code))
+        return DeprecatedCompiledClass.deserialize(HexBytes(code))
 
     elif isinstance(code, str):
-        return ContractClass.loads(code)
+        return DeprecatedCompiledClass.loads(code)
 
     elif isinstance(code, bytes):
-        return ContractClass.deserialize(code)
+        return DeprecatedCompiledClass.deserialize(code)
 
     else:
         raise TypeError(f"Unhandled bytecode type '{code}'.")
+
+
+def get_contract_class(
+    source: Optional[str] = None,
+    contract_class: Optional[DeprecatedCompiledClass] = None,
+    cairo_path: Optional[List[str]] = None,
+    disable_hint_validation: bool = False,
+) -> DeprecatedCompiledClass:
+    if contract_class is None:
+        contract_class = compile_starknet_files(
+            files=[source],
+            debug_info=True,
+            cairo_path=cairo_path,
+            disable_hint_validation=disable_hint_validation,
+        )

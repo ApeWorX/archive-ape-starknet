@@ -6,7 +6,7 @@ from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
 from starkware.starknet.definitions.fields import ContractAddressSalt
 
-from ape_starknet.transactions import InvokeFunctionTransaction
+from ape_starknet.transactions import InvokeTransaction
 from ape_starknet.utils.basemodel import StarknetBase
 
 DEFAULT_UDC_ADDRESS: AddressType = cast(
@@ -76,7 +76,7 @@ class UniversalDeployer(StarknetBase):
         salt: Optional[int] = None,
         unique: bool = True,
         **kwargs,
-    ) -> InvokeFunctionTransaction:
+    ) -> InvokeTransaction:
         """
         Deploy a contract using the Starknet public Universal Deployer Contract.
         """
@@ -91,7 +91,7 @@ class UniversalDeployer(StarknetBase):
             constructor_arguments,
             **kwargs,
         )
-        return cast(InvokeFunctionTransaction, txn)
+        return cast(InvokeTransaction, txn)
 
     def _cache_self(self):
         self.chain_manager.contracts[self.address] = self.contract_type
