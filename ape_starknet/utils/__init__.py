@@ -22,24 +22,24 @@ from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
 from ethpm_types.abi import EventABI, MethodABI
 from hexbytes import HexBytes
-from starknet_py.net import KeyPair
+from starknet_py.hash.class_hash import compute_class_hash
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
+    ContractClass,
     DeclareTransaction,
     DeployAccountTransaction,
     InvokeTransaction,
     Transaction,
+    TransactionType,
 )
-from starknet_py.net.models import TransactionType
 from starknet_py.net.models.address import parse_address
+from starknet_py.net.signer.stark_curve_signer import KeyPair
 from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
-from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.public.abi import get_selector_from_name
-from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.third_party.open_zeppelin.starknet_contracts import account_contract
 
 from ape_starknet.exceptions import StarknetProviderError

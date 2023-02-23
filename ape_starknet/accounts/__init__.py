@@ -14,13 +14,14 @@ from ape.logging import logger
 from ape.types import AddressType, TransactionSignature
 from ape.utils import ZERO_ADDRESS, cached_property
 from ape.utils.basemodel import BaseModel
+from crypto_cpp_py.cpp_bindings import ECSignature
 from eth_keyfile import create_keyfile_json, decode_keyfile_json
 from eth_utils import text_if_str, to_bytes, to_hex
 from ethpm_types import ContractType
 from hexbytes import HexBytes
 from pydantic import Field, validator
+from starknet_py.hash.utils import message_signature
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
-from starknet_py.utils.crypto.facade import ECSignature, message_signature
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
 from starkware.starknet.core.os.contract_address.contract_address import (
     calculate_contract_address_from_hash,
