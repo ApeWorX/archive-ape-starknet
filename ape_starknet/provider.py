@@ -411,13 +411,13 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         """
-        Get code and abi
+        Get the contract code and the ABI of an address. 
 
         Args:
-            address(Union[str, AddressType, int]):
+            address(Union[str, ``AddressType``, int]): The address of the account.
 
         Returns:
-            ContractCode
+            ``ContractCode``
         """
         address_int = parse_address(address)
 
@@ -435,10 +435,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     def get_class_hash(self, address: AddressType) -> int:
         """
-        Get class hash of address
+        Get class hash of an address.
 
         Args:
-            address(AddressType): The address to get the class hash from.
+            address(``AddressType``): The address of the account.
         """
         code = self.get_code_and_abi(address)
         return get_class_hash(code)

@@ -547,7 +547,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
     @cached_property
     def default_address(self) -> AddressType:
         """
-        The contract address if you are to use default salt for the account.
+        The contract address if you are to use the default salt for the account.
         """
         return to_checksum_address(self.default_address_int)
 
@@ -953,12 +953,15 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
 
     def add_deployment(self, network_name: str, contract_address: int, salt: int):
         """
-        Add deployment if network is connected to local network else, raises ``ValueError``.
+        Add deployment if network is connected to local network.
 
         Args:
             network_name(str): Name of connected network
             contract_address(int): Address for account.
             salt(int): Contract address salt. Needed if wanting to deploy to a different address.
+        
+        Raises:
+            ValueError: When not connected to the local network.
         """
         if network_name != LOCAL_NETWORK_NAME:
             raise ValueError("Can only use development accounts on local network.")

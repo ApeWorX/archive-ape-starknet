@@ -5,14 +5,14 @@ function getSelectedDocsVersion(pathname) {
     let parts = pathname.split('/').filter(item => item !== "");
     if (parts.length === 1) {
         if (parts[0] === PROJECT) {
-            // '/ape/' (return 'stable')
+            // '/ape-starknet/' (return 'stable')
             return "stable";
         } else {
             // '/latest/' (return 'latest')
             return parts[0];
         }
     } else if (parts[0] === PROJECT) {
-        // '/ape/latest/more' (return 'latest')
+        // '/ape-starknet/latest/more' (return 'latest')
         return parts[1];
     } else {
         // '/latest/more' (return 'latest')

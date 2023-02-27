@@ -4,6 +4,7 @@
 .. toctree::
    :caption: User Guides
    :maxdepth: 1
+   
    userguides/quickstart
    userguides/accounts
    userguides/contracts
@@ -22,6 +23,15 @@
    :caption: Python Reference
    :maxdepth: 1
    
-   methoddocs/providers.md
+   methoddocs/accounts.md
+   methoddocs/conversion.md
+   methoddocs/ecosystems.md
    methoddocs/exceptions.md
+   methoddocs/explorer.md
+   methoddocs/provider.md
+   methoddocs/tokens.md
+   methoddocs/transactions.md
+   methoddocs/types.md
+   methoddocs/udc.md
+   methoddocs/utils.md
 ```

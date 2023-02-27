@@ -1,5 +1,7 @@
 # Contracts
 
+You can learn more about interacting with contracts from the ApeWorX documentation about [contracts](https://docs.apeworx.io/ape/stable/userguides/contracts.html#contracts).
+
 ## Factory Contracts
 
 Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.

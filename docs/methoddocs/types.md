@@ -1,3 +1,4 @@
+# Types
 
 ```{eval-rst}
 .. automodule:: ape_starknet.types

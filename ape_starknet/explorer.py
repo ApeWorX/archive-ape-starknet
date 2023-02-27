@@ -45,7 +45,7 @@ class StarknetExplorer(ExplorerAPI, StarknetBase):
         Get contract type from provider for a given address.
 
         Args:
-            address(Union[int, AddressType]): The contract address.
+            address(Union[int, ``AddressType``]): The contract address.
         """
         code_and_abi = self.provider.get_code_and_abi(address)
 

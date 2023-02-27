@@ -45,7 +45,7 @@ owner = container.test_accounts[0]
 
 See the section below about [Testing](#Testing) to learn more about test accounts.
 
-Learn more about accounts by following the [accounts guide](docs/userguides/accounts.md).
+Learn more about accounts by following the [accounts guide](https://docs.apeworx.io/ape-starknet/stable/userguides/accounts.html).
 
 ### Declare and Deploy Contracts
 
@@ -84,7 +84,7 @@ account = accounts.load("<MY_STARK_ACCOUNT>")
 my_contract = project.MyContract.deploy(sender=account)
 ```
 
-Learn more about deploying contracts like factory contracts by following the [contracts guide](docs/userguides/contracts.md)
+Learn more about deploying contracts like factory contracts by following the [contracts guide](https://docs.apeworx.io/ape-starknet/stable/userguides/contracts.html)
 
 ### Contract Interaction
 

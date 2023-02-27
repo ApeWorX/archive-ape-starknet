@@ -303,7 +303,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             contract(Union[ContractContainer, ContractType]): The contract to be encoded.
 
         Returns:
-            DeclareTransaction
+            :class:`~ape_starknet.transactions.DeclareTransaction`
         """
         contract_type = (
             contract.contract_type if isinstance(contract, ContractContainer) else contract
@@ -469,7 +469,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         self, value: Any, output_type: Union[str, Tuple, List] = "felt"
     ) -> int:
         """
-        Decodes the value to given to int.
+        Decodes the value to given to an integer.
 
         Args:
             value(Any): The given value to be changed.

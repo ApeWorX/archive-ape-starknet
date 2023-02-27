@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
-project = "ape"
+project = "ape-starknet"
 copyright = "2021, ApeWorX LTD"
 author = "ApeWorX Team"
 extensions = [
@@ -57,7 +57,7 @@ master_doc = "index"
 html_theme = "sphinx_rtd_theme"
 html_favicon = "favicon.ico"
 html_logo = "logo.gif"
-html_baseurl = "/ape/"
+html_baseurl = "/ape-starknet/"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
