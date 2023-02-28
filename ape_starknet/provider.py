@@ -411,7 +411,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
         """
-        Get the contract code and the ABI of an address. 
+        Get the contract code and the ABI of an address.
 
         Args:
             address(Union[str, ``AddressType``, int]): The address of the account.

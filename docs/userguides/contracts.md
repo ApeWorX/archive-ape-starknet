@@ -7,7 +7,7 @@ You can learn more about interacting with contracts from the ApeWorX documentati
 Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.
 Let's say for example I have the following Cairo factory contract:
 
-```cairo
+```
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import deploy
 from starkware.cairo.common.cairo_builtins import HashBuiltin

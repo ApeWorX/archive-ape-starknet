@@ -129,3 +129,4 @@ testnet_account.set_autosign(True, passphrase=password)
 
 # Won't prompt for signing or unlocking
 testnet_account.sign_message([123])
+```

@@ -107,7 +107,7 @@ class StarknetAccountContainer(AccountContainerAPI, StarknetBase):
         Returns:
             List[:class:`~ape_starknet.accounts.StarknetDevelopmentAccount`]
         """
-        if "genesis_test_accounts" in self.__dict__:
+        if "_genesis_test_accounts" in self.__dict__:
             return self._genesis_test_accounts
 
         if (
@@ -959,7 +959,7 @@ class StarknetDevelopmentAccount(BaseStarknetAccount):
             network_name(str): Name of connected network
             contract_address(int): Address for account.
             salt(int): Contract address salt. Needed if wanting to deploy to a different address.
-        
+
         Raises:
             ValueError: When not connected to the local network.
         """
@@ -1489,5 +1489,5 @@ __all__ = [
     "StarknetKeyfileAccount",
     "StarknetAccountDeployment",
     "BaseStarknetAccount",
-    "StarknetDevelopmentAccount"
+    "StarknetDevelopmentAccount",
 ]

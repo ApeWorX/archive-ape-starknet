@@ -49,6 +49,6 @@ def test_encode_and_decode_address(value, starknet):
 
 
 def test_decode_logs(starknet, event_abi, raw_logs):
-    actual = starknet.decode_logs(raw_logs, event_abi)
+    actual = list(starknet.decode_logs(raw_logs, event_abi))
     assert len(actual) == 1
     assert actual[0].amount == "4321"

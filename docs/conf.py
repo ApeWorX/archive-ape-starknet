@@ -10,7 +10,6 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import re
 import sys
 from pathlib import Path
 from typing import List
@@ -87,17 +86,11 @@ def fixpath(path: str) -> str:
 
 
 def get_versions() -> List[str]:
-    build_dir = Path(__file__).parent / "_build" / "ape"
+    build_dir = Path(__file__).parent / "_build" / "ape-starknet"
     if not build_dir.exists():
         return []
 
-    pattern = re.compile(r"v\d+.?\d?.?\d?")
-
-    versions = [
-        d.name
-        for d in build_dir.iterdir()
-        if d.is_dir and pattern.match(d.stem) and "beta" not in d.name and "alpha" not in d.name
-    ]
+    versions = [d.name for d in build_dir.iterdir()]
 
     return versions
 
