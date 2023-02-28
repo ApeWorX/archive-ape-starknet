@@ -56,7 +56,7 @@ master_doc = "index"
 html_theme = "sphinx_rtd_theme"
 html_favicon = "favicon.ico"
 html_logo = "logo.gif"
-html_baseurl = "/ape-starknet/"
+html_baseurl = f"/{project}/"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -86,7 +86,7 @@ def fixpath(path: str) -> str:
 
 
 def get_versions() -> List[str]:
-    build_dir = Path(__file__).parent / "_build" / "ape-starknet"
+    build_dir = Path(__file__).parent / "_build" / project
     if not build_dir.exists():
         return []
 
