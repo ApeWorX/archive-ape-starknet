@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+
+<head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Accounts &mdash; ape-starknet  documentation</title>
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/custom.css" type="text/css" /> <link rel="shortcut icon" href="../_static/favicon.ico" />
+    <link rel="canonical" href="/ape-starknet/methoddocs/accounts.html" />
+    <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/custom.js"></script>
+    <script>
+        var PROJECT = "ape-starknet";
+    </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Conversion" href="conversion.html" />
+    <link rel="prev" title="accounts" href="../commands/accounts.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+    <div class="wy-grid-for-nav">
+        <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+            <div class="wy-side-scroll">
+                <div class="wy-side-nav-search" >
+
+                    
+                    
+                    <a href="../index.html"  class="icon icon-home" >
+                        ape-starknet
+                        <img src="../_static/logo.gif" class="logo" alt="Logo" />
+                    </a>
+
+                    <div class="version">
+                        <label for="version-picker" id="version-picker-label">Version:</label>
+                        <select id="version-picker">
+                            <option value="">Select version...</option>
+                            <option value="latest">latest</option>
+                            <option value="stable">stable</option>
+                            <option value="latest">latest</option>
+                        </select>
+                    </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+                </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation"
+                    aria-label="Navigation menu">
+                    <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/contracts.html">Contracts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../commands/accounts.html">accounts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conversion.html">Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ecosystems.html">Ecosystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="exceptions.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="explorer.html">Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="provider.html">Provider</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tokens.html">Tokens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transactions.html">Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="types.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="udc.html">Universal Deployer Contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+</ul>
+
+                </div>
+            </div>
+        </nav>
+
+        <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+                <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+                <a href="../index.html">ape-starknet</a>
+            </nav>
+
+            <div class="wy-nav-content">
+                    <div class="rst-content">
+                        <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Accounts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/methoddocs/accounts.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+                        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+                            <div itemprop="articleBody">
+                                
+  <section id="module-ape_starknet.accounts">
+<span id="accounts"></span><h1>Accounts<a class="headerlink" href="#module-ape_starknet.accounts" title="Permalink to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ape_starknet.accounts.</span></span><span class="sig-name descname"><span class="pre">BaseStarknetAccount</span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount" title="Permalink to this definition"></a></dt>
+<dd><p>Base Starknet Account</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.address_int">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">address_int</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.address_int" title="Permalink to this definition"></a></dt>
+<dd><p>The account’s address to as an integer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.call">
+<span class="sig-name descname"><span class="pre">call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">send_everything</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">signer_options</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ReceiptAPI</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.call" title="Permalink to this definition"></a></dt>
+<dd><p>Make a transaction call.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>AccountsError</strong> – When the nonce is invalid or the sender does
+    not have enough funds.</p></li>
+<li><p><strong>TransactionError</strong> – When the required confirmations are negative.</p></li>
+<li><p><strong>SignatureError</strong> – When the user does not sign the transaction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>txn</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – An invoke-transaction.</p></li>
+<li><p><strong>send_everything</strong> (<em>bool</em>) – <code class="docutils literal notranslate"><span class="pre">True</span></code> will send the difference from balance and fee.
+Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>**signer_options</strong> – Additional kwargs given to the signer to modify the signing operation.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ReceiptAPI</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.check_signature">
+<span class="sig-name descname"><span class="pre">check_signature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">TransactionAPI</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="types.html#ape_starknet.types.StarknetSignableMessage" title="ape_starknet.types.StarknetSignableMessage"><span class="pre">StarknetSignableMessage</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.check_signature" title="Permalink to this definition"></a></dt>
+<dd><p>Verify a message or transaction was signed by this account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (Union[<code class="xref py py-class docutils literal notranslate"><span class="pre">SignableMessage</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code>]) – # noqa: E501
+The message or transaction to verify.</p></li>
+<li><p><strong>signature</strong> (Optional[<code class="xref py py-class docutils literal notranslate"><span class="pre">MessageSignature</span></code>]) – The signature to check.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the data was signed by this account. <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.class_hash">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">class_hash</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.class_hash" title="Permalink to this definition"></a></dt>
+<dd><p>The class hash of the contract.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.constructor_calldata">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">constructor_calldata</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.constructor_calldata" title="Permalink to this definition"></a></dt>
+<dd><p>The list representing the function parameters.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.declare">
+<span class="sig-name descname"><span class="pre">declare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contract_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ContractType</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.declare" title="Permalink to this definition"></a></dt>
+<dd><p>Declares a contract.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>contract_type</strong> (<code class="docutils literal notranslate"><span class="pre">ContractType</span></code>) – Type of contract.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.default_address">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_address</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ChecksumAddress</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.default_address" title="Permalink to this definition"></a></dt>
+<dd><p>The contract address if you are to use the default salt for the account.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.default_address_int">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_address_int</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.default_address_int" title="Permalink to this definition"></a></dt>
+<dd><p>The contract address (int) calculated from the class hash, root contract
+address salt, and constructor calldata.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.deploy">
+<span class="sig-name descname"><span class="pre">deploy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contract</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ContractContainer</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><span class="pre">BaseStarknetAccount</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">publish</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ContractInstance</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ReceiptAPI</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.deploy" title="Permalink to this definition"></a></dt>
+<dd><p>Create a smart contract on the blockchain. The smart contract must compile before
+deploying and a provider must be active.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>contract</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ContractContainer</span></code>) – The type of contract to deploy.</p></li>
+<li><p><strong>publish</strong> (<em>bool</em>) – Set to <code class="docutils literal notranslate"><span class="pre">True</span></code> to attempt explorer contract verification.
+Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An instance of the deployed contract.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ContractInstance</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.deploy_account">
+<span class="sig-name descname"><span class="pre">deploy_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">funder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><span class="pre">BaseStarknetAccount</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calldata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ReceiptAPI</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.deploy_account" title="Permalink to this definition"></a></dt>
+<dd><p>Deploys this account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>funder</strong> (Optional[<a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseStarknetAccount</span></code></a>]) – An account to use to assist in funding the deployment. Only requests
+transfer if needed.</p></li>
+<li><p><strong>salt</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Contract address salt. Needed if wanting to deploy
+to a different address.</p></li>
+<li><p><strong>calldata</strong> (<em>Optional</em><em>[</em><em>List</em><em>]</em>) – Custom calldata to provide. Defaults to the
+calldata in the keyfile, if found. Else, uses what is expected per the
+class hash, such as the public key.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The receipt from the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DeployAccountTransaction</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">ReceiptAPI</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.deployed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deployed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.deployed" title="Permalink to this definition"></a></dt>
+<dd><p>Checks to see if the account is deployed on the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>network_name</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Name of network that address is deployed on.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.deployments">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deployments</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><span class="pre">StarknetAccountDeployment</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.deployments" title="Permalink to this definition"></a></dt>
+<dd><p>List of deployments</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetAccountDeployment</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.get_contract_address">
+<span class="sig-name descname"><span class="pre">get_contract_address</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.get_contract_address" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate a contract address for the given account’s salt, class hash,
+and constructor data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>salt</strong> (<em>Optional</em><em>[</em><em>salt</em><em>]</em>) – Salt to use. Defaults to the root account salt.
+Note: accounts use a root default salt to have consistent addresses
+accross different networks.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The contract address.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.get_fee_estimate">
+<span class="sig-name descname"><span class="pre">get_fee_estimate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.get_fee_estimate" title="Permalink to this definition"></a></dt>
+<dd><p>Get the estimate fee cost for transaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>txn</strong> (<code class="docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – Transaction</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Value of estimated gas cost.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.handle_signature">
+<span class="sig-name descname"><span class="pre">handle_signature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sign_result</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">TransactionAPI</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.handle_signature" title="Permalink to this definition"></a></dt>
+<dd><p>Checks and assigns signature to transaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sign_result</strong> – The results of the attempt to sign the transaction.</p></li>
+<li><p><strong>txn</strong> (<code class="docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – Transaction</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Transaction with signature</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">TransactionAPI</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.prepare_transaction">
+<span class="sig-name descname"><span class="pre">prepare_transaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">TransactionAPI</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.prepare_transaction" title="Permalink to this definition"></a></dt>
+<dd><p>Set default values on a transaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>AccountsError</strong> – When the account cannot afford the transaction
+    or the nonce is invalid.</p></li>
+<li><p><strong>TransactionError</strong> – When given negative required confirmations.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>txn</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – The transaction to prepare.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.public_key">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">public_key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.public_key" title="Permalink to this definition"></a></dt>
+<dd><p>The public key of the account.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.salt">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">salt</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.salt" title="Permalink to this definition"></a></dt>
+<dd><p>The salt is used to determine the contract address. If you change the salt
+but keep the class hash and calldata the same, you will get a new address.
+To keep addresses consistent across networks, a single salt value exists
+at the root of an account. However, when deploying an account on live
+networks, you will have the option to change the salt for each deployment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.BaseStarknetAccount.transfer">
+<span class="sig-name descname"><span class="pre">transfer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">account</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ChecksumAddress</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">BaseAddress</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ReceiptAPI</span></span></span><a class="headerlink" href="#ape_starknet.accounts.BaseStarknetAccount.transfer" title="Permalink to this definition"></a></dt>
+<dd><p>Send funds to an account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>account</strong> (<em>str</em>) – The account to send funds to.</p></li>
+<li><p><strong>value</strong> (<em>str</em>) – The amount to send.</p></li>
+<li><p><strong>data</strong> (<em>str</em>) – Extra data to include in the transaction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ReceiptAPI</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ape_starknet.accounts.</span></span><span class="sig-name descname"><span class="pre">StarknetAccountContainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_folder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">account_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">AccountAPI</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ephemeral_accounts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cached_accounts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#ape_starknet.accounts.StarknetKeyfileAccount" title="ape_starknet.accounts.StarknetKeyfileAccount"><span class="pre">StarknetKeyfileAccount</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer" title="Permalink to this definition"></a></dt>
+<dd><p>Starknet Account Container</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.accounts">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">accounts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">AccountAPI</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.accounts" title="Permalink to this definition"></a></dt>
+<dd><p>Iterate over available accounts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Iterator[<code class="docutils literal notranslate"><span class="pre">AccountAPI</span></code>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.aliases">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">aliases</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.aliases" title="Permalink to this definition"></a></dt>
+<dd><p>Iterate over all available aliases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Iterator[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.cached_accounts">
+<span class="sig-name descname"><span class="pre">cached_accounts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#ape_starknet.accounts.StarknetKeyfileAccount" title="ape_starknet.accounts.StarknetKeyfileAccount"><span class="pre">StarknetKeyfileAccount</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.cached_accounts" title="Permalink to this definition"></a></dt>
+<dd><p>Accounts created in a live network that persist in key-files.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.create_account">
+<span class="sig-name descname"><span class="pre">create_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3146761231686369291210245479075933162526514193311043598334639064078158562617</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">private_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constructor_calldata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_local_file_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><span class="pre">BaseStarknetAccount</span></a></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.create_account" title="Permalink to this definition"></a></dt>
+<dd><p>Create an account within the parameters given or generated.</p>
+<p><strong>NOTE</strong>: Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code> for all non-local networks and <code class="docutils literal notranslate"><span class="pre">False</span></code> for local networks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alias</strong> (<em>str</em>) – A shortened-name for quicker access to the account.</p></li>
+<li><p><strong>class_hash</strong> (<em>int</em>) – A hash chain of the definition of the class.</p></li>
+<li><p><strong>salt</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Contract address salt. Needed if wanting to deploy to a different address.</p></li>
+<li><p><strong>private_key</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Set private key manually or leave blank to generate one randomly.</p></li>
+<li><p><strong>constructor_calldata</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em>) – List representing the function parameters.</p></li>
+<li><p><strong>allow_local_file_store</strong> (<em>bool</em>) – Allow for account to be stored on local file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseStarknetAccount</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.delete_account">
+<span class="sig-name descname"><span class="pre">delete_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ChecksumAddress</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">networks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leave_unlocked</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.delete_account" title="Permalink to this definition"></a></dt>
+<dd><p>Delete an account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alias</strong> (<em>str</em>) – A shortened-name for quicker access to the account.</p></li>
+<li><p><strong>address</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>AddressType</em><em>, </em><em>int</em><em>]</em><em>]</em>) – The address of the account to be deleted Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>networks</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>str</em><em>, </em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em><em>]</em>) – The network(s) for the accounts to be deleted from. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>leave_unlocked</strong> (<em>bool</em>) – Option to leave account unlocked for future interactions. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.ephemeral_accounts">
+<span class="sig-name descname"><span class="pre">ephemeral_accounts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.ephemeral_accounts" title="Permalink to this definition"></a></dt>
+<dd><p>Local-network accounts that do not persist.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.get_account">
+<span class="sig-name descname"><span class="pre">get_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ChecksumAddress</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><span class="pre">BaseStarknetAccount</span></a></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.get_account" title="Permalink to this definition"></a></dt>
+<dd><p>Get account based on address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>address</strong> (Union[<code class="docutils literal notranslate"><span class="pre">AddressType</span></code>, int]) – Address of the account.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseStarknetAccount</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.import_account">
+<span class="sig-name descname"><span class="pre">import_account</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">private_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deployments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><span class="pre">StarknetAccountDeployment</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constructor_calldata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_local_file_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><span class="pre">BaseStarknetAccount</span></a></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.import_account" title="Permalink to this definition"></a></dt>
+<dd><p>Import deployed starknet account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alias</strong> (<em>str</em>) – A shortened-name for quicker access to the account.</p></li>
+<li><p><strong>class_hash</strong> (<em>int</em>) – Class hash of contract.</p></li>
+<li><p><strong>private_key</strong> (<em>Union</em><em>[</em><em>int</em><em>, </em><em>str</em><em>]</em>) – Private key for account.</p></li>
+<li><p><strong>deployments</strong> (Optional[List[<a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetAccountDeployment</span></code></a>]]) – The network deployment status of the account.</p></li>
+<li><p><strong>constructor_calldata</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em>) – List representing the function parameters.</p></li>
+<li><p><strong>salt</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Contract address salt. Needed if wanting to deploy to a different address.</p></li>
+<li><p><strong>allow_local_file_store</strong> (<em>bool</em>) – Allows to store in local file store.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseStarknetAccount</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><span class="pre">BaseStarknetAccount</span></a></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.load" title="Permalink to this definition"></a></dt>
+<dd><p>Loads an account based on alias.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>alias</strong> (<em>str</em>) – A shortened-name for quicker access to the account.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#ape_starknet.accounts.BaseStarknetAccount" title="ape_starknet.accounts.BaseStarknetAccount"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseStarknetAccount</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.provider_config">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">provider_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ProviderConfig</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.provider_config" title="Permalink to this definition"></a></dt>
+<dd><p>Provider network configuration</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ProviderConfig</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountContainer.test_accounts">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">test_accounts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.StarknetDevelopmentAccount" title="ape_starknet.accounts.StarknetDevelopmentAccount"><span class="pre">StarknetDevelopmentAccount</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountContainer.test_accounts" title="Permalink to this definition"></a></dt>
+<dd><p>Makes a list of test accounts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#ape_starknet.accounts.StarknetDevelopmentAccount" title="ape_starknet.accounts.StarknetDevelopmentAccount"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetDevelopmentAccount</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetAccountDeployment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ape_starknet.accounts.</span></span><span class="sig-name descname"><span class="pre">StarknetAccountDeployment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contract_address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ChecksumAddress</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetAccountDeployment" title="Permalink to this definition"></a></dt>
+<dd><p>Starknet Account Deployment</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ape_starknet.accounts.</span></span><span class="sig-name descname"><span class="pre">StarknetDevelopmentAccount</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ChecksumAddress</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">private_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">public_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3146761231686369291210245479075933162526514193311043598334639064078158562617</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constructor_calldata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_deployed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount" title="Permalink to this definition"></a></dt>
+<dd><p>Starknet Development Account</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.add_deployment">
+<span class="sig-name descname"><span class="pre">add_deployment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contract_address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.add_deployment" title="Permalink to this definition"></a></dt>
+<dd><p>Add deployment if network is connected to local network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>network_name</strong> (<em>str</em>) – Name of connected network</p></li>
+<li><p><strong>contract_address</strong> (<em>int</em>) – Address for account.</p></li>
+<li><p><strong>salt</strong> (<em>int</em>) – Contract address salt. Needed if wanting to deploy to a different address.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – When not connected to the local network.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.address">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">address</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ChecksumAddress</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.address" title="Permalink to this definition"></a></dt>
+<dd><p>The address of this account. Subclasses must override and provide this value.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.class_hash">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">class_hash</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.class_hash" title="Permalink to this definition"></a></dt>
+<dd><p>The class hash of the contract.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.constructor_calldata">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">constructor_calldata</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.constructor_calldata" title="Permalink to this definition"></a></dt>
+<dd><p>The list representing the function parameters.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.contract_address">
+<span class="sig-name descname"><span class="pre">contract_address</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ChecksumAddress</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.contract_address" title="Permalink to this definition"></a></dt>
+<dd><p>The contract address of the account.
+If not set, calculates it based on other properties.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.deployments">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deployments</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><span class="pre">StarknetAccountDeployment</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.deployments" title="Permalink to this definition"></a></dt>
+<dd><p>Gets list of deployments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetAccountDeployment</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.private_key">
+<span class="sig-name descname"><span class="pre">private_key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.private_key" title="Permalink to this definition"></a></dt>
+<dd><p>The account’s private key.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.pub_key">
+<span class="sig-name descname"><span class="pre">pub_key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.pub_key" title="Permalink to this definition"></a></dt>
+<dd><p>The public key of the account. Aliased from <code class="docutils literal notranslate"><span class="pre">public_key</span></code> because that is
+a <code class="docutils literal notranslate"><span class="pre">&#64;property</span></code> in the base class.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.public_key">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">public_key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.public_key" title="Permalink to this definition"></a></dt>
+<dd><p>The public key of the account.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.salt">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">salt</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.salt" title="Permalink to this definition"></a></dt>
+<dd><p>The salt is used to determine the contract address. If you change the salt
+but keep the class hash and calldata the same, you will get a new address.
+To keep addresses consistent across networks, a single salt value exists
+at the root of an account. However, when deploying an account on live
+networks, you will have the option to change the salt for each deployment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.sign_message">
+<span class="sig-name descname"><span class="pre">sign_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="types.html#ape_starknet.types.StarknetSignableMessage" title="ape_starknet.types.StarknetSignableMessage"><span class="pre">StarknetSignableMessage</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.sign_message" title="Permalink to this definition"></a></dt>
+<dd><p>Sign a message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>msg</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">SignableMessage</span></code>) – The message to sign.
+See these
+<a class="reference external" href="https://eth-account.readthedocs.io/en/stable/eth_account.html#eth_account.messages.SignableMessage">docs</a>  # noqa: E501
+for more type information on this type.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The signed message.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MessageSignature</span></code> (optional)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetDevelopmentAccount.sign_transaction">
+<span class="sig-name descname"><span class="pre">sign_transaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">signer_options</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">TransactionAPI</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetDevelopmentAccount.sign_transaction" title="Permalink to this definition"></a></dt>
+<dd><p>Sign a transaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>txn</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – The transaction to sign.</p></li>
+<li><p><strong>**signer_options</strong> – Additional kwargs given to the signer to modify the signing operation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A signed transaction.</dt><dd><p>The <cite>TransactionAPI</cite> returned by this method may not correspond to <cite>txn</cite> given as input,
+however returning a properly-formatted transaction here is meant to be executed.
+Returns <cite>None</cite> if the account does not have a transaction it wishes to execute.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code> (optional)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ape_starknet.accounts.</span></span><span class="sig-name descname"><span class="pre">StarknetKeyfileAccount</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">locked</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount" title="Permalink to this definition"></a></dt>
+<dd><p>Starknet Keyfile Account</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.account_data">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">account_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.account_data" title="Permalink to this definition"></a></dt>
+<dd><p>Get the account data of a single account.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.add_deployment">
+<span class="sig-name descname"><span class="pre">add_deployment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contract_address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leave_unlocked</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.add_deployment" title="Permalink to this definition"></a></dt>
+<dd><p>Add deployment status for account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>network_name</strong> (<em>str</em>) – Name of connected network.</p></li>
+<li><p><strong>contract_address</strong> (<em>str</em>) – Contract address for account.</p></li>
+<li><p><strong>salt</strong> (<em>int</em>) – Contract address salt. Needed if wanting to deploy to a different address.</p></li>
+<li><p><strong>leave_unlocked</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Option to leave account unlocked after deployment.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.address">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">address</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ChecksumAddress</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.address" title="Permalink to this definition"></a></dt>
+<dd><p>The address of this account. Subclasses must override and provide this value.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.alias">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">alias</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.alias" title="Permalink to this definition"></a></dt>
+<dd><p>A shortened-name for quicker access to the account.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.change_password">
+<span class="sig-name descname"><span class="pre">change_password</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">leave_unlocked</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.change_password" title="Permalink to this definition"></a></dt>
+<dd><p>Change password for account.
+<strong>NOTE</strong>: User must enter passphrase even if unlocked</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>leave_unlocked</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Option to leave account unlocked after changing password.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.class_hash">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">class_hash</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.class_hash" title="Permalink to this definition"></a></dt>
+<dd><p>The class hash of the contract.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.constructor_calldata">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">constructor_calldata</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.constructor_calldata" title="Permalink to this definition"></a></dt>
+<dd><p>The list representing the function parameters.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ChecksumAddress</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">networks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leave_unlocked</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.delete" title="Permalink to this definition"></a></dt>
+<dd><p>Delete an account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>address</strong> (Optional[Union[<code class="docutils literal notranslate"><span class="pre">AddressType</span></code>, int]]) – Address of account. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>networks</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>str</em><em>, </em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em><em>]</em>) – List of networks to delete account from. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>leave_unlocked</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Option to leave account unlocked. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.deployed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deployed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.deployed" title="Permalink to this definition"></a></dt>
+<dd><p>Checks to see if the account is deployed on the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>network_name</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Name of network that address is deployed on.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.deployments">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deployments</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><span class="pre">StarknetAccountDeployment</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.deployments" title="Permalink to this definition"></a></dt>
+<dd><p>List of deployments</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetAccountDeployment</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.from_file">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Retrieve account from file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<code class="docutils literal notranslate"><span class="pre">Path</span></code>) – Location of file where account is saved.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.get_deployment">
+<span class="sig-name descname"><span class="pre">get_deployment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><span class="pre">StarknetAccountDeployment</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.get_deployment" title="Permalink to this definition"></a></dt>
+<dd><p>Gets deployment status from the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>network_name</strong> (<em>str</em>) – Name of network being looked at for deployment status.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Optional[<a class="reference internal" href="#ape_starknet.accounts.StarknetAccountDeployment" title="ape_starknet.accounts.StarknetAccountDeployment"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetAccountDeployment</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.keyfile_data">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">keyfile_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.keyfile_data" title="Permalink to this definition"></a></dt>
+<dd><p>Keyfile data for accounts saved as a dictionary.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.lock">
+<span class="sig-name descname"><span class="pre">lock</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.lock" title="Permalink to this definition"></a></dt>
+<dd><p>Lock the account and removes cached key and passphrase.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.nonce">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">nonce</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.nonce" title="Permalink to this definition"></a></dt>
+<dd><p>The number of transactions associated with the address.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.prepare_transaction">
+<span class="sig-name descname"><span class="pre">prepare_transaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">TransactionAPI</span></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.prepare_transaction" title="Permalink to this definition"></a></dt>
+<dd><p>Set default values on a transaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>AccountsError</strong> – When the account cannot afford the transaction
+    or the nonce is invalid.</p></li>
+<li><p><strong>TransactionError</strong> – When given negative required confirmations.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>txn</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – The transaction to prepare.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.public_key">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">public_key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.public_key" title="Permalink to this definition"></a></dt>
+<dd><p>The public key of the account.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.salt">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">salt</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.salt" title="Permalink to this definition"></a></dt>
+<dd><p>The salt is used to determine the contract address. If you change the salt
+but keep the class hash and calldata the same, you will get a new address.
+To keep addresses consistent across networks, a single salt value exists
+at the root of an account. However, when deploying an account on live
+networks, you will have the option to change the salt for each deployment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.set_autosign">
+<span class="sig-name descname"><span class="pre">set_autosign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">passphrase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.set_autosign" title="Permalink to this definition"></a></dt>
+<dd><p>Unlock keyfile accounts with set autosign message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>enabled</strong> (<em>bool</em>) – Set True/False to enable autosign for account.</p></li>
+<li><p><strong>passphrase</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Set passphrase to unlock account if password exists.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.sign_message">
+<span class="sig-name descname"><span class="pre">sign_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="types.html#ape_starknet.types.StarknetSignableMessage" title="ape_starknet.types.StarknetSignableMessage"><span class="pre">StarknetSignableMessage</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.sign_message" title="Permalink to this definition"></a></dt>
+<dd><p>Sign a message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>msg</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">SignableMessage</span></code>) – The message to sign.
+See these
+<a class="reference external" href="https://eth-account.readthedocs.io/en/stable/eth_account.html#eth_account.messages.SignableMessage">docs</a>  # noqa: E501
+for more type information on this type.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The signed message.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MessageSignature</span></code> (optional)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.sign_transaction">
+<span class="sig-name descname"><span class="pre">sign_transaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TransactionAPI</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">signer_optins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">TransactionAPI</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.sign_transaction" title="Permalink to this definition"></a></dt>
+<dd><p>Sign a transaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>txn</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code>) – The transaction to sign.</p></li>
+<li><p><strong>**signer_options</strong> – Additional kwargs given to the signer to modify the signing operation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A signed transaction.</dt><dd><p>The <cite>TransactionAPI</cite> returned by this method may not correspond to <cite>txn</cite> given as input,
+however returning a properly-formatted transaction here is meant to be executed.
+Returns <cite>None</cite> if the account does not have a transaction it wishes to execute.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TransactionAPI</span></code> (optional)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ape_starknet.accounts.StarknetKeyfileAccount.unlock">
+<span class="sig-name descname"><span class="pre">unlock</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">passphrase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.accounts.StarknetKeyfileAccount.unlock" title="Permalink to this definition"></a></dt>
+<dd><p>Unlock an account.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prompt</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Prompt message. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>passphrase</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Passphrase that is used to unlock the account.
+Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                            </div>
+                        </div>
+                        <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../commands/accounts.html" class="btn btn-neutral float-left" title="accounts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="conversion.html" class="btn btn-neutral float-right" title="Conversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, ApeWorX LTD.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+                    </div>
+                </div>
+        </section>
+    </div>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script> 
+
+</body>
+
+</html>

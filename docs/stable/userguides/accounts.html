@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+
+<head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Accounts &mdash; ape-starknet  documentation</title>
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/custom.css" type="text/css" /> <link rel="shortcut icon" href="../_static/favicon.ico" />
+    <link rel="canonical" href="/ape-starknet/userguides/accounts.html" />
+    <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/custom.js"></script>
+    <script>
+        var PROJECT = "ape-starknet";
+    </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contracts" href="contracts.html" />
+    <link rel="prev" title="Quick Start" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+    <div class="wy-grid-for-nav">
+        <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+            <div class="wy-side-scroll">
+                <div class="wy-side-nav-search" >
+
+                    
+                    
+                    <a href="../index.html"  class="icon icon-home" >
+                        ape-starknet
+                        <img src="../_static/logo.gif" class="logo" alt="Logo" />
+                    </a>
+
+                    <div class="version">
+                        <label for="version-picker" id="version-picker-label">Version:</label>
+                        <select id="version-picker">
+                            <option value="">Select version...</option>
+                            <option value="latest">latest</option>
+                            <option value="stable">stable</option>
+                            <option value="latest">latest</option>
+                        </select>
+                    </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+                </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation"
+                    aria-label="Navigation menu">
+                    <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Accounts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#importing-an-account">Importing an Account</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-an-account">Creating an Account</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deploying-an-account">Deploying an Account</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#listing-accounts">Listing Accounts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deleting-an-account">Deleting an Account</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#auto-sign-message">Auto-Sign Message</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contracts.html">Contracts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../commands/accounts.html">accounts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/conversion.html">Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/ecosystems.html">Ecosystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/exceptions.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/explorer.html">Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/provider.html">Provider</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/tokens.html">Tokens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/transactions.html">Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/types.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/udc.html">Universal Deployer Contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html">Utils</a></li>
+</ul>
+
+                </div>
+            </div>
+        </nav>
+
+        <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+                <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+                <a href="../index.html">ape-starknet</a>
+            </nav>
+
+            <div class="wy-nav-content">
+                    <div class="rst-content">
+                        <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Accounts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/userguides/accounts.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+                        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+                            <div itemprop="articleBody">
+                                
+  <section id="accounts">
+<h1>Accounts<a class="headerlink" href="#accounts" title="Permalink to this heading"></a></h1>
+<p>When using a live network, you will have to import or create an account first.</p>
+<section id="importing-an-account">
+<h2>Importing an Account<a class="headerlink" href="#importing-an-account" title="Permalink to this heading"></a></h2>
+<p>To import an account, use the <code class="docutils literal notranslate"><span class="pre">import</span></code> command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>import<span class="w"> </span>&lt;ALIAS&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="w"> </span>testnet,testnet2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--address<span class="w"> </span>0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--class-hash<span class="w"> </span><span class="s2">&quot;0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918&quot;</span>
+<span class="w">    </span>--salt<span class="w"> </span><span class="m">123</span>
+</pre></div>
+</div>
+<p>The command above is using a network value of <code class="docutils literal notranslate"><span class="pre">testnet,testnet2</span></code>, meaning both Starknet’s Goerli testnet and Goerli testnet2 networks.
+You can run the import command more than once to add more networks at a later time.
+To add all networks at once, you can also use a <code class="docutils literal notranslate"><span class="pre">--network</span></code> value of <code class="docutils literal notranslate"><span class="pre">starknet</span></code>.</p>
+<p>If the account is already added, you can omit the <code class="docutils literal notranslate"><span class="pre">--address</span></code> flag and use the calculated one instead.
+If you know the salt the account used to calculate its address, you can provide that with the <code class="docutils literal notranslate"><span class="pre">--salt</span></code> flag.
+This will allow future deployments to use the same address.</p>
+<p>Importing accounts is complex.
+A common use-case is to import your Argent-X wallet.
+To do this, you can use the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>import<span class="w"> </span>&lt;ArgentX-Alias&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="w"> </span>starknet<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--address<span class="w"> </span>0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--class-hash<span class="w"> </span>argentx
+</pre></div>
+</div>
+<p>And then export your Argent-X private key from the app and paste it in the CLI prompt.
+Now, you can use your argent-x account to fund and create other accounts!</p>
+</section>
+<section id="creating-an-account">
+<h2>Creating an Account<a class="headerlink" href="#creating-an-account" title="Permalink to this heading"></a></h2>
+<p>To create a new account, you can use the <code class="docutils literal notranslate"><span class="pre">create</span></code> command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>create<span class="w"> </span>&lt;NEW-ALIAS&gt;
+</pre></div>
+</div>
+<p>By default, new accounts use the Open Zeppelin account contract implementation.
+However, if you want to change the class, use the <code class="docutils literal notranslate"><span class="pre">--class-hash</span></code> option:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">CLASS_HASH</span><span class="o">=</span><span class="s2">&quot;0x1a7820094feaf82d53f53f214b81292d717e7bb9a92bb2488092cd306f3993f&quot;</span>
+ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>create<span class="w"> </span>&lt;NEW-ALIAS&gt;<span class="w"> </span>--class-hash<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CLASS_HASH</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p><strong>NOTE</strong>: You may also need to change the constructor calldata using the <code class="docutils literal notranslate"><span class="pre">--constructor-calldata</span></code> flag when using a different account contract type.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">create</span></code> command will first generate the public and private key combination and store a local keyfile for the account.
+However, it does not deploy the account.
+The reason it does not deploy is that the account needs funding to pay for its deployment and there are several ways to achieve this.
+See <a class="reference external" href="https://starknet.io/docs/hello_starknet/account_setup.html#transferring-goerli-eth-to-the-account">this section</a> of the Starknet official guides for more information.</p>
+</section>
+<section id="deploying-an-account">
+<h2>Deploying an Account<a class="headerlink" href="#deploying-an-account" title="Permalink to this heading"></a></h2>
+<p>To deploy the new account, use the <code class="docutils literal notranslate"><span class="pre">deploy</span></code> command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>deploy<span class="w"> </span>&lt;NEW-ALIAS&gt;<span class="w"> </span>--network<span class="w"> </span>testnet
+</pre></div>
+</div>
+<p>This only works if the account has been funded.
+For convenience purposes, if you have another account with funds, you can use that account to fund the deployment of this one using the <code class="docutils literal notranslate"><span class="pre">--funder</span></code> option:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>deploy<span class="w"> </span>&lt;NEW-ALIAS&gt;<span class="w"> </span>--network<span class="w"> </span>testnet<span class="w"> </span>--funder<span class="w"> </span>&lt;EXISTING-FUNDED-ALIAS&gt;
+</pre></div>
+</div>
+<p><strong>NOTE</strong>: You cannot use an Ethereum account to send funds to a Starknet account directly.
+You must use the <a class="reference external" href="https://goerli.starkgate.starknet.io/">StarkNet L2 bridge</a> to transfer existing Goerli L1 ETH to and from the L2 account.</p>
+</section>
+<section id="listing-accounts">
+<h2>Listing Accounts<a class="headerlink" href="#listing-accounts" title="Permalink to this heading"></a></h2>
+<p>See your accounts and all of their deployment addresses:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>list
+</pre></div>
+</div>
+<p>shows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Alias<span class="w">                      </span>-<span class="w"> </span>&lt;ALIAS&gt;
+Public<span class="w"> </span>key<span class="w">                 </span>-<span class="w"> </span>0x123444444d716666dd88882bE2e99991555DE1c7
+Class<span class="w"> </span><span class="nb">hash</span><span class="w">                 </span>-<span class="w"> </span>0x25ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918
+Contract<span class="w"> </span>address<span class="w"> </span><span class="o">(</span>testnet<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>0x6b7111AA4111e5B2229c3332B66696888164440A773333143333B383333a183
+Contract<span class="w"> </span>address<span class="w"> </span><span class="o">(</span>mainnet<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>0x7873113A4111e5B2229c3332B66696388163440A373333143333B3833332122
+</pre></div>
+</div>
+</section>
+<section id="deleting-an-account">
+<h2>Deleting an Account<a class="headerlink" href="#deleting-an-account" title="Permalink to this heading"></a></h2>
+<p>You can also delete accounts:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ape<span class="w"> </span>starknet<span class="w"> </span>accounts<span class="w"> </span>delete<span class="w"> </span>&lt;ALIAS&gt;<span class="w"> </span>--network<span class="w"> </span>testnet,testnet2
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">delete</span></code> command differs based on its values of <code class="docutils literal notranslate"><span class="pre">--network</span></code> and <code class="docutils literal notranslate"><span class="pre">--address</span></code>:</p>
+<ul class="simple">
+<li><p>To delete all deployments on a given network, use the <code class="docutils literal notranslate"><span class="pre">--network</span></code> option without <code class="docutils literal notranslate"><span class="pre">--address</span></code>.</p></li>
+<li><p>To delete all deployments matching an address (regardless of network), use the <code class="docutils literal notranslate"><span class="pre">--address</span></code> option without <code class="docutils literal notranslate"><span class="pre">--network</span></code>.</p></li>
+<li><p>To delete a deployment on a network with a particular address, use both <code class="docutils literal notranslate"><span class="pre">--network</span></code> and <code class="docutils literal notranslate"><span class="pre">--address</span></code>.</p></li>
+<li><p>Exclude both options to delete the whole account.</p></li>
+</ul>
+<p>Note you can also specify multiple networks, the same as <code class="docutils literal notranslate"><span class="pre">import</span></code>.</p>
+</section>
+<section id="auto-sign-message">
+<h2>Auto-Sign Message<a class="headerlink" href="#auto-sign-message" title="Permalink to this heading"></a></h2>
+<p>While generally bad practice, sometimes it is necessary to have unlocked keyfile accounts auto-signing messages.
+An example would be during testnet automated deployments.
+To achieve this, use the <code class="docutils literal notranslate"><span class="pre">set_autosign()</span></code> method available on the keyfile accounts:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">keyring</span>
+<span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
+
+<span class="c1"># Use keyring package to store secrets</span>
+<span class="n">password</span> <span class="o">=</span> <span class="n">keyring</span><span class="o">.</span><span class="n">get_password</span><span class="p">(</span><span class="s2">&quot;starknet-testnet-automations&quot;</span><span class="p">,</span> <span class="s2">&quot;ci-shared-account&quot;</span><span class="p">)</span>
+<span class="n">testnet_account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;starknet-testnet-account&quot;</span><span class="p">)</span>
+<span class="n">testnet_account</span><span class="o">.</span><span class="n">set_autosign</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">passphrase</span><span class="o">=</span><span class="n">password</span><span class="p">)</span>
+
+<span class="c1"># Won&#39;t prompt for signing or unlocking</span>
+<span class="n">testnet_account</span><span class="o">.</span><span class="n">sign_message</span><span class="p">([</span><span class="mi">123</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+                            </div>
+                        </div>
+                        <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick Start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="contracts.html" class="btn btn-neutral float-right" title="Contracts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, ApeWorX LTD.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+                    </div>
+                </div>
+        </section>
+    </div>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script> 
+
+</body>
+
+</html>

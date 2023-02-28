@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+
+<head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contracts &mdash; ape-starknet  documentation</title>
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/custom.css" type="text/css" /> <link rel="shortcut icon" href="../_static/favicon.ico" />
+    <link rel="canonical" href="/ape-starknet/userguides/contracts.html" />
+    <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/custom.js"></script>
+    <script>
+        var PROJECT = "ape-starknet";
+    </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="accounts" href="../commands/accounts.html" />
+    <link rel="prev" title="Accounts" href="accounts.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+    <div class="wy-grid-for-nav">
+        <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+            <div class="wy-side-scroll">
+                <div class="wy-side-nav-search" >
+
+                    
+                    
+                    <a href="../index.html"  class="icon icon-home" >
+                        ape-starknet
+                        <img src="../_static/logo.gif" class="logo" alt="Logo" />
+                    </a>
+
+                    <div class="version">
+                        <label for="version-picker" id="version-picker-label">Version:</label>
+                        <select id="version-picker">
+                            <option value="">Select version...</option>
+                            <option value="latest">latest</option>
+                            <option value="stable">stable</option>
+                            <option value="latest">latest</option>
+                        </select>
+                    </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+                </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation"
+                    aria-label="Navigation menu">
+                    <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accounts.html">Accounts</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Contracts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#factory-contracts">Factory Contracts</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../commands/accounts.html">accounts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/conversion.html">Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/ecosystems.html">Ecosystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/exceptions.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/explorer.html">Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/provider.html">Provider</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/tokens.html">Tokens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/transactions.html">Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/types.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/udc.html">Universal Deployer Contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html">Utils</a></li>
+</ul>
+
+                </div>
+            </div>
+        </nav>
+
+        <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+                <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+                <a href="../index.html">ape-starknet</a>
+            </nav>
+
+            <div class="wy-nav-content">
+                    <div class="rst-content">
+                        <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Contracts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/userguides/contracts.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+                        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+                            <div itemprop="articleBody">
+                                
+  <section id="contracts">
+<h1>Contracts<a class="headerlink" href="#contracts" title="Permalink to this heading"></a></h1>
+<p>You can learn more about interacting with contracts from the ApeWorX documentation about <a class="reference external" href="https://docs.apeworx.io/ape/stable/userguides/contracts.html#contracts">contracts</a>.</p>
+<section id="factory-contracts">
+<h2>Factory Contracts<a class="headerlink" href="#factory-contracts" title="Permalink to this heading"></a></h2>
+<p>Alternatively, you can use the class hash in a <code class="docutils literal notranslate"><span class="pre">deploy()</span></code> system call in a local factory contract.
+Let’s say for example I have the following Cairo factory contract:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">starkware.cairo.common.alloc</span> <span class="kn">import</span> <span class="n">alloc</span>
+<span class="kn">from</span> <span class="nn">starkware.starknet.common.syscalls</span> <span class="kn">import</span> <span class="n">deploy</span>
+<span class="kn">from</span> <span class="nn">starkware.cairo.common.cairo_builtins</span> <span class="kn">import</span> <span class="n">HashBuiltin</span>
+
+<span class="nd">@storage_var</span>
+<span class="n">func</span> <span class="n">class_hash</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">class_hash</span><span class="p">:</span> <span class="n">felt</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">}</span>
+
+<span class="nd">@storage_var</span>
+<span class="n">func</span> <span class="n">salt</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">felt</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">}</span>
+
+<span class="nd">@constructor</span>
+<span class="n">func</span> <span class="n">constructor</span><span class="p">{</span><span class="n">syscall_ptr</span><span class="p">:</span> <span class="n">felt</span><span class="o">*</span><span class="p">,</span> <span class="n">pedersen_ptr</span><span class="p">:</span> <span class="n">HashBuiltin</span><span class="o">*</span><span class="p">,</span> <span class="n">range_check_ptr</span><span class="p">}(</span><span class="n">cls_hash</span><span class="p">:</span> <span class="n">felt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">class_hash</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">cls_hash</span><span class="p">);</span>
+    <span class="k">return</span> <span class="p">();</span>
+<span class="p">}</span>
+
+<span class="nd">@external</span>
+<span class="n">func</span> <span class="n">deploy_my_contract</span><span class="p">{</span><span class="n">syscall_ptr</span><span class="p">:</span> <span class="n">felt</span><span class="o">*</span><span class="p">,</span> <span class="n">pedersen_ptr</span><span class="p">:</span> <span class="n">HashBuiltin</span><span class="o">*</span><span class="p">,</span> <span class="n">range_check_ptr</span><span class="p">}()</span> <span class="p">{</span>
+    <span class="n">let</span> <span class="p">(</span><span class="n">cls_hash</span><span class="p">)</span> <span class="o">=</span> <span class="n">class_hash</span><span class="o">.</span><span class="n">read</span><span class="p">();</span>
+    <span class="n">let</span> <span class="p">(</span><span class="n">current_salt</span><span class="p">)</span> <span class="o">=</span> <span class="n">salt</span><span class="o">.</span><span class="n">read</span><span class="p">();</span>
+    <span class="n">let</span> <span class="p">(</span><span class="n">ctor_calldata</span><span class="p">)</span> <span class="o">=</span> <span class="n">alloc</span><span class="p">();</span>
+    <span class="n">let</span> <span class="p">(</span><span class="n">contract_addr</span><span class="p">)</span> <span class="o">=</span> <span class="n">deploy</span><span class="p">(</span>
+        <span class="n">class_hash</span><span class="o">=</span><span class="n">cls_hash</span><span class="p">,</span>
+        <span class="n">contract_address_salt</span><span class="o">=</span><span class="n">current_salt</span><span class="p">,</span>
+        <span class="n">constructor_calldata_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">constructor_calldata</span><span class="o">=</span><span class="n">ctor_calldata</span><span class="p">,</span>
+        <span class="n">deploy_from_zero</span><span class="o">=</span><span class="n">FALSE</span><span class="p">,</span>
+    <span class="p">);</span>
+    <span class="n">salt</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">current_salt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This contract accepts a class hash of a declared contract deploys it.
+The following example shows how to use this factory class to deploy other contracts:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">Contract</span><span class="p">,</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">networks</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">declaration</span> <span class="o">=</span> <span class="n">account</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="p">)</span>
+
+<span class="c1"># NOTE: Assuming you have a contract named &#39;ContractFactory&#39;.</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">ContractFactory</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">declaration</span><span class="o">.</span><span class="n">class_hash</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
+
+<span class="n">call_result</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">deploy_my_contract</span><span class="p">()</span>
+<span class="n">contract_address</span> <span class="o">=</span> <span class="n">networks</span><span class="o">.</span><span class="n">starknet</span><span class="o">.</span><span class="n">decode_address</span><span class="p">(</span><span class="n">call_result</span><span class="p">)</span>
+<span class="n">contract</span> <span class="o">=</span> <span class="n">Contract</span><span class="p">(</span><span class="n">contract_address</span><span class="p">,</span> <span class="n">contract_type</span><span class="o">=</span><span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">contract_type</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+                            </div>
+                        </div>
+                        <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="accounts.html" class="btn btn-neutral float-left" title="Accounts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../commands/accounts.html" class="btn btn-neutral float-right" title="accounts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, ApeWorX LTD.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+                    </div>
+                </div>
+        </section>
+    </div>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script> 
+
+</body>
+
+</html>

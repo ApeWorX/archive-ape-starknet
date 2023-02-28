@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+
+<head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>accounts &mdash; ape-starknet  documentation</title>
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/custom.css" type="text/css" /> <link rel="shortcut icon" href="../_static/favicon.ico" />
+    <link rel="canonical" href="/ape-starknet/commands/accounts.html" />
+    <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/custom.js"></script>
+    <script>
+        var PROJECT = "ape-starknet";
+    </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Accounts" href="../methoddocs/accounts.html" />
+    <link rel="prev" title="Contracts" href="../userguides/contracts.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+    <div class="wy-grid-for-nav">
+        <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+            <div class="wy-side-scroll">
+                <div class="wy-side-nav-search" >
+
+                    
+                    
+                    <a href="../index.html"  class="icon icon-home" >
+                        ape-starknet
+                        <img src="../_static/logo.gif" class="logo" alt="Logo" />
+                    </a>
+
+                    <div class="version">
+                        <label for="version-picker" id="version-picker-label">Version:</label>
+                        <select id="version-picker">
+                            <option value="">Select version...</option>
+                            <option value="latest">latest</option>
+                            <option value="stable">stable</option>
+                            <option value="latest">latest</option>
+                        </select>
+                    </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+                </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation"
+                    aria-label="Navigation menu">
+                    <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/contracts.html">Contracts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">accounts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#accounts">accounts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-change-password">change-password</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-create">create</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-delete">delete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-deploy">deploy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-export">export</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-import">import</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accounts-list">list</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/conversion.html">Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/ecosystems.html">Ecosystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/exceptions.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/explorer.html">Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/provider.html">Provider</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/tokens.html">Tokens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/transactions.html">Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/types.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/udc.html">Universal Deployer Contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html">Utils</a></li>
+</ul>
+
+                </div>
+            </div>
+        </nav>
+
+        <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+                <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+                <a href="../index.html">ape-starknet</a>
+            </nav>
+
+            <div class="wy-nav-content">
+                    <div class="rst-content">
+                        <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">accounts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/commands/accounts.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+                        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+                            <div itemprop="articleBody">
+                                
+  <section id="accounts">
+<h1>accounts<a class="headerlink" href="#accounts" title="Permalink to this heading"></a></h1>
+<section id="accounts">
+<h2>accounts<a class="headerlink" href="#accounts" title="Permalink to this heading"></a></h2>
+<p>Manage Starknet accounts</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="accounts-change-password">
+<h3>change-password<a class="headerlink" href="#accounts-change-password" title="Permalink to this heading"></a></h3>
+<p>Change the password of an existing account</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span>change-password<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">{}</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-change-password-v">
+<span id="cmdoption-accounts-change-password-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-change-password-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-change-password-arg-ALIAS">
+<span id="cmdoption-accounts-change-password-arg-alias"></span><span class="sig-name descname"><span class="pre">ALIAS</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-accounts-change-password-arg-ALIAS" title="Permalink to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="accounts-create">
+<h3>create<a class="headerlink" href="#accounts-create" title="Permalink to this heading"></a></h3>
+<p>Create an account keypair</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span>create<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>ALIAS
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-create-v">
+<span id="cmdoption-accounts-create-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-create-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-create-class-hash">
+<span class="sig-name descname"><span class="pre">--class-hash</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;class_hash&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-create-class-hash" title="Permalink to this definition"></a></dt>
+<dd><p>The class hash of the account contract.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-create-constructor-calldata">
+<span class="sig-name descname"><span class="pre">--constructor-calldata</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;constructor_calldata&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-create-constructor-calldata" title="Permalink to this definition"></a></dt>
+<dd><p>Comma separated list of calldata, default uses keyfile or known inputs.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-create-salt">
+<span class="sig-name descname"><span class="pre">--salt</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;salt&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-create-salt" title="Permalink to this definition"></a></dt>
+<dd><p>The default address salt to use when deploying.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-create-arg-ALIAS">
+<span id="cmdoption-accounts-create-arg-alias"></span><span class="sig-name descname"><span class="pre">ALIAS</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-accounts-create-arg-ALIAS" title="Permalink to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="accounts-delete">
+<h3>delete<a class="headerlink" href="#accounts-delete" title="Permalink to this heading"></a></h3>
+<p>Delete an existing account deployment</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">{}</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-delete-v">
+<span id="cmdoption-accounts-delete-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-delete-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-delete-network">
+<span class="sig-name descname"><span class="pre">--network</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;network&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-delete-network" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-delete-address">
+<span class="sig-name descname"><span class="pre">--address</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;address&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-delete-address" title="Permalink to this definition"></a></dt>
+<dd><p>The contract address of the account</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-delete-arg-ALIAS">
+<span id="cmdoption-accounts-delete-arg-alias"></span><span class="sig-name descname"><span class="pre">ALIAS</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-accounts-delete-arg-ALIAS" title="Permalink to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="accounts-deploy">
+<h3>deploy<a class="headerlink" href="#accounts-deploy" title="Permalink to this heading"></a></h3>
+<p>Deploy an account</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span>deploy<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>ALIAS
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-deploy-v">
+<span id="cmdoption-accounts-deploy-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-deploy-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-deploy-network">
+<span class="sig-name descname"><span class="pre">--network</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;network&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-deploy-network" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-deploy-funder">
+<span class="sig-name descname"><span class="pre">--funder</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;funder&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-deploy-funder" title="Permalink to this definition"></a></dt>
+<dd><p>Use another an account to help fund</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-deploy-constructor-calldata">
+<span class="sig-name descname"><span class="pre">--constructor-calldata</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;constructor_calldata&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-deploy-constructor-calldata" title="Permalink to this definition"></a></dt>
+<dd><p>Comma separated list of calldata, default uses keyfile or known inputs.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-deploy-arg-ALIAS">
+<span id="cmdoption-accounts-deploy-arg-alias"></span><span class="sig-name descname"><span class="pre">ALIAS</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-accounts-deploy-arg-ALIAS" title="Permalink to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="accounts-export">
+<h3>export<a class="headerlink" href="#accounts-export" title="Permalink to this heading"></a></h3>
+<p>Export an account private key</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">{}</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-export-v">
+<span id="cmdoption-accounts-export-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-export-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-export-arg-ALIAS">
+<span id="cmdoption-accounts-export-arg-alias"></span><span class="sig-name descname"><span class="pre">ALIAS</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-accounts-export-arg-ALIAS" title="Permalink to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="accounts-import">
+<h3>import<a class="headerlink" href="#accounts-import" title="Permalink to this heading"></a></h3>
+<p>Add an existing, deployed account</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span>import<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>ALIAS
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-import-v">
+<span id="cmdoption-accounts-import-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-import-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-import-network">
+<span class="sig-name descname"><span class="pre">--network</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;network&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-import-network" title="Permalink to this definition"></a></dt>
+<dd><p><strong>Required</strong></p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-import-address">
+<span class="sig-name descname"><span class="pre">--address</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;address&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-import-address" title="Permalink to this definition"></a></dt>
+<dd><p>The contract address of the account</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-import-class-hash">
+<span class="sig-name descname"><span class="pre">--class-hash</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;class_hash&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-import-class-hash" title="Permalink to this definition"></a></dt>
+<dd><p>The class hash of the account contract.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-import-salt">
+<span class="sig-name descname"><span class="pre">--salt</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;salt&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-import-salt" title="Permalink to this definition"></a></dt>
+<dd><p>The contract address salt used when deploying the contract.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-import-arg-ALIAS">
+<span id="cmdoption-accounts-import-arg-alias"></span><span class="sig-name descname"><span class="pre">ALIAS</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-accounts-import-arg-ALIAS" title="Permalink to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="accounts-list">
+<h3>list<a class="headerlink" href="#accounts-list" title="Permalink to this heading"></a></h3>
+<p>List your Starknet accounts</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>accounts<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-accounts-list-v">
+<span id="cmdoption-accounts-list-verbosity"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbosity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;LVL&gt;</span></span><a class="headerlink" href="#cmdoption-accounts-list-v" title="Permalink to this definition"></a></dt>
+<dd><p>One of ERROR, WARNING, SUCCESS, INFO, or DEBUG</p>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+                            </div>
+                        </div>
+                        <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../userguides/contracts.html" class="btn btn-neutral float-left" title="Contracts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../methoddocs/accounts.html" class="btn btn-neutral float-right" title="Accounts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, ApeWorX LTD.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+                    </div>
+                </div>
+        </section>
+    </div>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script> 
+
+</body>
+
+</html>

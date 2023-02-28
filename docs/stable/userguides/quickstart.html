@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+
+<head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quick Start &mdash; ape-starknet  documentation</title>
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="/ape-starknet/latest/_static/custom.css" type="text/css" /> <link rel="shortcut icon" href="../_static/favicon.ico" />
+    <link rel="canonical" href="/ape-starknet/userguides/quickstart.html" />
+    <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/custom.js"></script>
+    <script>
+        var PROJECT = "ape-starknet";
+    </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Accounts" href="accounts.html" />
+    <link rel="prev" title="Ape-Starknet Documentation" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+    <div class="wy-grid-for-nav">
+        <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+            <div class="wy-side-scroll">
+                <div class="wy-side-nav-search" >
+
+                    
+                    
+                    <a href="../index.html"  class="icon icon-home" >
+                        ape-starknet
+                        <img src="../_static/logo.gif" class="logo" alt="Logo" />
+                    </a>
+
+                    <div class="version">
+                        <label for="version-picker" id="version-picker-label">Version:</label>
+                        <select id="version-picker">
+                            <option value="">Select version...</option>
+                            <option value="latest">latest</option>
+                            <option value="stable">stable</option>
+                            <option value="latest">latest</option>
+                        </select>
+                    </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+                </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation"
+                    aria-label="Navigation menu">
+                    <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#via-pip">via <code class="docutils literal notranslate"><span class="pre">pip</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#via-setuptools">via <code class="docutils literal notranslate"><span class="pre">setuptools</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-usage">Quick Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#account-management">Account Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#declare-and-deploy-contracts">Declare and Deploy Contracts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#contract-interaction">Contract Interaction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing">Testing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#accounts">Accounts</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#paying-fees">Paying Fees</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mainnet-alpha-whitelist-deployment-token">Mainnet Alpha Whitelist Deployment Token</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#development">Development</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contracts.html">Contracts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../commands/accounts.html">accounts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/accounts.html">Accounts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/conversion.html">Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/ecosystems.html">Ecosystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/exceptions.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/explorer.html">Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/provider.html">Provider</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/tokens.html">Tokens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/transactions.html">Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/types.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/udc.html">Universal Deployer Contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html">Utils</a></li>
+</ul>
+
+                </div>
+            </div>
+        </nav>
+
+        <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+                <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+                <a href="../index.html">ape-starknet</a>
+            </nav>
+
+            <div class="wy-nav-content">
+                    <div class="rst-content">
+                        <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quick Start</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/userguides/quickstart.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+                        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+                            <div itemprop="articleBody">
+                                
+  <section id="quick-start">
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this heading"></a></h1>
+<p>Plugins for the <a class="reference external" href="https://starkware.co/starknet/">StarkNet Ethereum L2 networks</a>.</p>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.python.org/downloads">python3</a> version 3.8 or greater, python3-dev</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
+<section id="via-pip">
+<h3>via <code class="docutils literal notranslate"><span class="pre">pip</span></code><a class="headerlink" href="#via-pip" title="Permalink to this heading"></a></h3>
+<p>You can install the latest release via <a class="reference external" href="https://pypi.org/project/pip/"><code class="docutils literal notranslate"><span class="pre">pip</span></code></a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>ape-starknet
+</pre></div>
+</div>
+</section>
+<section id="via-setuptools">
+<h3>via <code class="docutils literal notranslate"><span class="pre">setuptools</span></code><a class="headerlink" href="#via-setuptools" title="Permalink to this heading"></a></h3>
+<p>You can clone the repository and use <a class="reference external" href="https://github.com/pypa/setuptools"><code class="docutils literal notranslate"><span class="pre">setuptools</span></code></a> for the most up-to-date version:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ApeWorX/ape-starknet.git
+<span class="nb">cd</span><span class="w"> </span>ape-starknet
+python3<span class="w"> </span>setup.py<span class="w"> </span>install
+</pre></div>
+</div>
+</section>
+</section>
+<section id="quick-usage">
+<h2>Quick Usage<a class="headerlink" href="#quick-usage" title="Permalink to this heading"></a></h2>
+<section id="account-management">
+<h3>Account Management<a class="headerlink" href="#account-management" title="Permalink to this heading"></a></h3>
+<p>Accounts are used to execute transactions and sign call data.
+Accounts are smart contracts in Starknet.</p>
+<p>Out of the box, <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code> comes with development accounts.
+Access them like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
+
+<span class="n">container</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">containers</span><span class="p">[</span><span class="s2">&quot;starknet&quot;</span><span class="p">]</span>
+<span class="n">owner</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">test_accounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>See the section below about <a class="reference external" href="#Testing">Testing</a> to learn more about test accounts.</p>
+<p>Learn more about accounts by following the <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/accounts.html">accounts guide</a>.</p>
+</section>
+<section id="declare-and-deploy-contracts">
+<h3>Declare and Deploy Contracts<a class="headerlink" href="#declare-and-deploy-contracts" title="Permalink to this heading"></a></h3>
+<p>In Starknet, you can declare contract types by publishing them to the chain.
+This allows other contracts to create instances of them using the <a class="reference external" href="https://www.cairo-lang.org/docs/hello_starknet/deploying_from_contracts.html">deploy system call</a>.</p>
+<p>To declare a contract using <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code>, do the following (in a script or console):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">declaration</span> <span class="o">=</span> <span class="n">account</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">declaration</span><span class="o">.</span><span class="n">class_hash</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then, you can use the <code class="docutils literal notranslate"><span class="pre">deploy</span></code> method to deploy the contracts.
+<strong>NOTE</strong>: The <code class="docutils literal notranslate"><span class="pre">deploy</span></code> method in <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code> makes an invoke-function call against the Starknet public UDC contract.
+Learn more about UDC contracts <a class="reference external" href="https://community.starknet.io/t/universal-deployer-contract-proposal/1864">here</a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="c1"># This only works if `project.MyContract` was declared previously.</span>
+<span class="c1"># The class hash is not necessary as an argument. Ape will look it up.</span>
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">account</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContact</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also deploy contracts by doing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">my_contract</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Learn more about deploying contracts like factory contracts by following the <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/contracts.html">contracts guide</a></p>
+</section>
+<section id="contract-interaction">
+<h3>Contract Interaction<a class="headerlink" href="#contract-interaction" title="Permalink to this heading"></a></h3>
+<p>After you have deployed your contracts, you can begin interacting with them.
+<code class="docutils literal notranslate"><span class="pre">deploy</span></code> methods return a contract instance from which you can call methods on:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">project</span>
+
+<span class="n">contract</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
+
+<span class="c1"># Interact with deployed contract</span>
+<span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_view_method</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>You can access the return data from a mutable method’s receipt:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">receipt</span><span class="o">.</span><span class="n">return_value</span>
+</pre></div>
+</div>
+<p>Include a sender to delegate the transaction to an account contract:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
+
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;my_account&quot;</span><span class="p">)</span>
+<span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>NOTE</strong>: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">store_my_list</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Permalink to this heading"></a></h3>
+<section id="accounts">
+<h4>Accounts<a class="headerlink" href="#accounts" title="Permalink to this heading"></a></h4>
+<p>You can use <code class="docutils literal notranslate"><span class="pre">starknet-devnet</span></code> accounts in your tests.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytest</span>
+<span class="kn">import</span> <span class="nn">ape</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span> <span class="nf">devnet_accounts</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">ape</span><span class="o">.</span><span class="n">accounts</span><span class="o">.</span><span class="n">containers</span><span class="p">[</span><span class="s2">&quot;starknet&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">test_accounts</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span> <span class="nf">owner</span><span class="p">(</span><span class="n">devnet_accounts</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">devnet_accounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Additionally, any accounts deployed in the local network are <strong>not</strong> saved to disk and are ephemeral.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytest</span>
+<span class="kn">import</span> <span class="nn">ape</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;session&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">ephemeral_account</span><span class="p">():</span>
+    <span class="n">accounts</span> <span class="o">=</span> <span class="n">ape</span><span class="o">.</span><span class="n">accounts</span><span class="o">.</span><span class="n">containers</span><span class="p">[</span><span class="s2">&quot;starknet&quot;</span><span class="p">]</span>
+    <span class="n">accounts</span><span class="o">.</span><span class="n">deploy_account</span><span class="p">(</span><span class="s2">&quot;ALIAS&quot;</span><span class="p">)</span>
+
+    <span class="c1"># This account only exists in the devnet and is not a key-file account.</span>
+    <span class="k">return</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;ALIAS&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="paying-fees">
+<h3>Paying Fees<a class="headerlink" href="#paying-fees" title="Permalink to this heading"></a></h3>
+<p>Starknet fees are currently paid in ETH, which is an ERC-20 on the Starknet chain.
+To check your account balance (in ETH), use the <code class="docutils literal notranslate"><span class="pre">balance</span></code> property on the account:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
+
+<span class="n">acct</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;Alias&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">acct</span><span class="o">.</span><span class="n">balance</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If your account has a positive balance, you can begin paying fees!</p>
+<p>To pay fees, you can either manually set the <code class="docutils literal notranslate"><span class="pre">max_fee</span></code> kwarg on an invoke-transaction:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span> <span class="n">max_fee</span><span class="o">=</span><span class="mi">2900000000000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>NOTE</strong>: By not setting the <code class="docutils literal notranslate"><span class="pre">max_fee</span></code>, it will automatically get set to the value returned from the provider <code class="docutils literal notranslate"><span class="pre">estimate_gas_cost()</span></code> call.
+You do <strong>not</strong> need to call <code class="docutils literal notranslate"><span class="pre">estimate_gas_cost()</span></code> explicitly.</p>
+</section>
+<section id="mainnet-alpha-whitelist-deployment-token">
+<h3>Mainnet Alpha Whitelist Deployment Token<a class="headerlink" href="#mainnet-alpha-whitelist-deployment-token" title="Permalink to this heading"></a></h3>
+<p>Currently, to deploy to Alpha-Mainnet, your contract needs to be whitelisted.
+You can provide your WL token in a variety of ways.</p>
+<p>Via Python code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">project</span>
+
+<span class="n">my_contract</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">token</span><span class="o">=</span><span class="s2">&quot;MY_TOKEN&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Via an Environment Variable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">ALPHA_MAINNET_WL_DEPLOY_TOKEN</span><span class="o">=</span><span class="s2">&quot;MY_TOKEN&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="development">
+<h2>Development<a class="headerlink" href="#development" title="Permalink to this heading"></a></h2>
+<p>This project is in development and should be considered a beta.
+Things might not be in their final state and breaking changes may occur.
+Comments, questions, criticisms and pull requests are welcomed.</p>
+</section>
+</section>
+
+
+                            </div>
+                        </div>
+                        <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Ape-Starknet Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="accounts.html" class="btn btn-neutral float-right" title="Accounts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, ApeWorX LTD.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+                    </div>
+                </div>
+        </section>
+    </div>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script> 
+
+</body>
+
+</html>
