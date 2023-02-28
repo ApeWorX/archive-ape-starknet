@@ -52,6 +52,10 @@ from ape_starknet.utils.basemodel import StarknetBase
 
 
 class DevnetClient:
+    """
+    A Devnet Client session
+    """
+
     def __init__(self, host_address: str):
         self.session = Session()
         self.host_address = host_address
@@ -98,6 +102,10 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @property
     def connected_client(self) -> GatewayClient:
+        """
+        Connect to client or raises a :class:`~ape_starknet.exceptions.ProviderNotConnectedError`
+        otherwise.
+        """
         if not self.client:
             raise ProviderNotConnectedError()
 
@@ -121,6 +129,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @property
     def starknet_client(self) -> GatewayClient:
+        """An HTTP client for Starknet."""
         if not self.is_connected:
             raise StarknetProviderError("Provider is not connected to Starknet.")
 
@@ -128,10 +137,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @cached_property
     def plugin_config(self) -> StarknetConfig:
+        """Returns network configurations"""
         return self.config_manager.get_config(PLUGIN_NAME) or StarknetConfig()  # type: ignore
 
     @cached_property
     def uri(self) -> str:
+        """Network uri or local port"""
         network_config = self.plugin_config.provider.dict().get(self.network.name)
         if not network_config:
             raise StarknetProviderError(f"Unknown network '{self.network.name}'.")
@@ -164,6 +175,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def get_abi(self, address: str) -> List[Dict]:
+        """Get the ABI of a contract."""
         return self.get_code_and_abi(address).abi
 
     @handle_client_errors
@@ -398,6 +410,15 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return VirtualMachineError(base_err=exception, txn=txn)
 
     def get_code_and_abi(self, address: Union[str, AddressType, int]) -> ContractCode:
+        """
+        Get the contract code and the ABI of an address.
+
+        Args:
+            address(Union[str, ``AddressType``, int]): The address of the account.
+
+        Returns:
+            ``ContractCode``
+        """
         address_int = parse_address(address)
 
         # Cache code for faster look-up
@@ -413,6 +434,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         return self.cached_code[address_int]
 
     def get_class_hash(self, address: AddressType) -> int:
+        """
+        Get class hash of an address.
+
+        Args:
+            address(``AddressType``): The address of the account.
+        """
         code = self.get_code_and_abi(address)
         return get_class_hash(code)
 
@@ -464,6 +491,12 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
         ]
 
     def set_timestamp(self, new_timestamp: int):
+        """
+        Set timestamp to devnet client.
+
+        Args:
+            new_timestamp(int): The value to change the timestamp to in the devnet client.
+        """
         if self.devnet_client is None:
             raise StarknetProviderError("Must be connected to starknet-devnet to use this feature.")
 
@@ -472,6 +505,12 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             raise StarknetProviderError(result)
 
     def mine(self, num_blocks: int = 1):
+        """
+        Mine a number of blocks.
+
+        Args:
+            num_blocks(int): The number of blocks to mine.
+        """
         for index in range(num_blocks):
             self.devnet_client.create_block()
 
@@ -479,6 +518,11 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
         """
         Mint the difference between the account's current balance and the desired balance
         and give it to the account.
+
+        Args:
+            account(``AddressType``): The contract account.
+            amount(Union[int, float, str, bytes]): The amount of tokens to mint and add to the
+                account.
         """
 
         # Convert account

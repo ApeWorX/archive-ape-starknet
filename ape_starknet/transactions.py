@@ -68,7 +68,7 @@ class StarknetTransaction(TransactionAPI, StarknetBase):
     @abstractmethod
     def as_starknet_object(self) -> Transaction:
         """
-        Convert :class:`~ape.api.providers.TransactionAPI` to its Starknet
+        Convert ``TransactionAPI`` to its Starknet
         transaction equivalent so it can be accepted by the core Starknet OS
         framework.
         """
@@ -144,7 +144,7 @@ class InvokeFunctionTransaction(AccountTransaction):
 
     contract_address: Optional[AddressType]
     """
-    Gets set when calling `deployContract` on a UDC contract.
+    Gets set when calling ``deployContract`` on a UDC contract.
     """
 
     # Gets set when calling `as_execute()` and is intended to be the

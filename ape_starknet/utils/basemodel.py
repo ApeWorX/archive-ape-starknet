@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
 
 class StarknetBase(ManagerAccessMixin):
+    """
+    Starknet Base Model
+    """
+
     @property
     def starknet_config(self) -> "StarknetConfig":
         return cast("StarknetConfig", self.config_manager.get_config("starknet"))

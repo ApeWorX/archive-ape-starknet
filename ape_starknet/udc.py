@@ -77,6 +77,9 @@ class UniversalDeployer(StarknetBase):
         unique: bool = True,
         **kwargs,
     ) -> InvokeFunctionTransaction:
+        """
+        Deploy a contract using the Starknet public Universal Deployer Contract.
+        """
         salt = salt or ContractAddressSalt.get_random_value()
         txn = self.starknet.encode_transaction(
             self.address,

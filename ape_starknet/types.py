@@ -27,6 +27,10 @@ def _prepare_message(message: Any) -> List[int]:
 
 
 class StarknetSignableMessage(BaseModel):
+    """
+    Starknet Signable Message
+    """
+
     message: Optional[Any]
 
     @property
