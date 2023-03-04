@@ -33,6 +33,16 @@ python3 setup.py install
 Accounts are used to execute transactions and sign call data.
 Accounts are smart contracts in Starknet.
 
+You can access accounts using 
+
+```
+ape starknet accounts
+```
+
+Learn more about accounts by following the [accounts guide](https://docs.apeworx.io/ape-starknet/stable/userguides/accounts.html).
+
+### Testing
+
 Out of the box, `ape-starknet` comes with development accounts.
 Access them like this:
 
@@ -43,122 +53,14 @@ container = accounts.containers["starknet"]
 owner = container.test_accounts[0]
 ```
 
-See the section below about [Testing](#Testing) to learn more about test accounts.
+See the guide about [Testing](https://docs.apeworx.io/ape-starknet/stable/userguides/testing.html) to learn more about test accounts and testing with the starknet plugin.
 
-Learn more about accounts by following the [accounts guide](https://docs.apeworx.io/ape-starknet/stable/userguides/accounts.html).
-
-### Declare and Deploy Contracts
+### Contracts
 
 In Starknet, you can declare contract types by publishing them to the chain.
 This allows other contracts to create instances of them using the [deploy system call](https://www.cairo-lang.org/docs/hello_starknet/deploying_from_contracts.html).
 
-To declare a contract using `ape-starknet`, do the following (in a script or console):
-
-```python
-from ape import accounts, project
-
-account = accounts.load("<MY_STARK_ACCOUNT>")
-declaration = account.declare(project.MyContract)
-print(declaration.class_hash)
-```
-
-Then, you can use the `deploy` method to deploy the contracts.
-**NOTE**: The `deploy` method in `ape-starknet` makes an invoke-function call against the Starknet public UDC contract.
-Learn more about UDC contracts [here](https://community.starknet.io/t/universal-deployer-contract-proposal/1864).
-
-```python
-from ape import accounts, project
-
-# This only works if `project.MyContract` was declared previously.
-# The class hash is not necessary as an argument. Ape will look it up.
-account = accounts.load("<MY_STARK_ACCOUNT>")
-account.deploy(project.MyContact)
-```
-
-You can also deploy contracts by doing:
-
-```python
-from ape import accounts, project
-
-account = accounts.load("<MY_STARK_ACCOUNT>")
-my_contract = project.MyContract.deploy(sender=account)
-```
-
-Learn more about deploying contracts like factory contracts by following the [contracts guide](https://docs.apeworx.io/ape-starknet/stable/userguides/contracts.html)
-
-### Contract Interaction
-
-After you have deployed your contracts, you can begin interacting with them.
-`deploy` methods return a contract instance from which you can call methods on:
-
-```python
-from ape import project
-
-contract = project.MyContract.deploy(sender=account)
-
-# Interact with deployed contract
-receipt = contract.my_mutable_method(123)
-value = contract.my_view_method()
-```
-
-You can access the return data from a mutable method's receipt:
-
-```python
-receipt = contract.my_mutable_method(123)
-result = receipt.return_value
-```
-
-Include a sender to delegate the transaction to an account contract:
-
-```python
-from ape import accounts
-
-account = accounts.load("my_account")
-receipt = contract.my_mutable_method(123, sender=account)
-```
-
-**NOTE**: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:
-
-```python
-receipt = contract.store_my_list(3, [1, 2, 3])
-```
-
-### Testing
-
-#### Accounts
-
-You can use `starknet-devnet` accounts in your tests.
-
-```python
-import pytest
-import ape
-
-
-@pytest.fixture
-def devnet_accounts():
-    return ape.accounts.containers["starknet"].test_accounts
-
-
-@pytest.fixture
-def owner(devnet_accounts):
-    return devnet_accounts[0]
-```
-
-Additionally, any accounts deployed in the local network are **not** saved to disk and are ephemeral.
-
-```python
-import pytest
-import ape
-
-
-@pytest.fixture(scope="session")
-def ephemeral_account():
-    accounts = ape.accounts.containers["starknet"]
-    accounts.deploy_account("ALIAS")
-
-    # This account only exists in the devnet and is not a key-file account.
-    return accounts.load("ALIAS")
-```
+Learn more about contracts by following the [contracts guide](https://docs.apeworx.io/ape/stable/userguides/contracts.html).
 
 ### Paying Fees
 
