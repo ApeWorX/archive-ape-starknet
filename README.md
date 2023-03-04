@@ -33,7 +33,7 @@ python3 setup.py install
 Accounts are used to execute transactions and sign call data.
 Accounts are smart contracts in Starknet.
 
-You can access accounts using 
+You can access accounts using
 
 ```
 ape starknet accounts
