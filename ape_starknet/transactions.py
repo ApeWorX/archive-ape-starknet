@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.exceptions import APINotImplementedError, TransactionError
-from ape.types import AddressType, ContractLog, ContractLogContainer
+from ape.types import AddressType, ContractLogContainer
 from ape.utils import abstractmethod, cached_property, raises_not_implemented
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
