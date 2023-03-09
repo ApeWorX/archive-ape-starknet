@@ -423,7 +423,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
                 for address, contract in contract_types.items()
             }
 
-            decoded_logs: List[ContractLog] = []
+            decoded_logs: ContractLogContainer = ContractLogContainer()
             for log in log_data_items:
                 contract_address = address_map[log["from_address"]]
                 if contract_address not in selectors:
