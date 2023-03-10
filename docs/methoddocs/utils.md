@@ -6,7 +6,7 @@
 ```
 
 ```{eval-rst}
-.. automodule:: ape.utils.basemodel
+.. automodule:: ape_starknet.utils.basemodel
     :members:
     :show-inheritance:
 ```
