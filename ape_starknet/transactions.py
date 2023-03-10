@@ -28,8 +28,6 @@ from starkware.starknet.core.os.transaction_hash.transaction_hash import (
 )
 from starkware.starknet.definitions import constants
 from starkware.starknet.definitions.fields import ContractAddressSalt
-from starkware.starknet.public.abi import get_selector_from_name
-from starkware.starknet.services.api.contract_class.contract_class import DeprecatedCompiledClass
 
 from ape_starknet.exceptions import ContractTypeNotFoundError
 from ape_starknet.utils import (
@@ -119,7 +117,6 @@ class DeclareTransaction(AccountTransaction):
     def txn_hash(self) -> HexBytes:
         return calculate_declare_transaction_hash(
             self.starknet_contract,
-
             self.provider.chain_id,
             self.max_fee,
             to_int(self.sender),
