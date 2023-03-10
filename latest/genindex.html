@@ -62,6 +62,7 @@
 <li class="toctree-l1"><a class="reference internal" href="userguides/quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="userguides/accounts.html">Accounts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="userguides/contracts.html">Contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userguides/testing.html">Testing</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
 <ul>
@@ -79,10 +80,7 @@
 <li class="toctree-l1"><a class="reference internal" href="methoddocs/transactions.html">Transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="methoddocs/types.html">Types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="methoddocs/udc.html">Universal Deployer Contract</a></li>
-<li class="toctree-l1"><a class="reference internal" href="methoddocs/utils.html"><code class="docutils literal notranslate"><span class="pre">BaseInterface</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="methoddocs/utils.html#ape.utils.basemodel.BaseInterfaceModel"><code class="docutils literal notranslate"><span class="pre">BaseInterfaceModel</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="methoddocs/utils.html#ape.utils.basemodel.injected_before_use"><code class="docutils literal notranslate"><span class="pre">injected_before_use</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="methoddocs/utils.html#module-ape_starknet.utils">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="methoddocs/utils.html">Utils</a></li>
 </ul>
 
                 </div>
@@ -122,7 +120,6 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
- | <a href="#J"><strong>J</strong></a>
  | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
@@ -379,13 +376,6 @@
       <li><a href="methoddocs/accounts.html#ape_starknet.accounts.StarknetAccountContainer.aliases">aliases (ape_starknet.accounts.StarknetAccountContainer property)</a>
 </li>
       <li>
-    ape.utils.basemodel
-
-      <ul>
-        <li><a href="methoddocs/utils.html#module-ape.utils.basemodel">module</a>
-</li>
-      </ul></li>
-      <li>
     ape_starknet.accounts
 
       <ul>
@@ -462,6 +452,13 @@
         <li><a href="methoddocs/utils.html#module-ape_starknet.utils">module</a>
 </li>
       </ul></li>
+      <li>
+    ape_starknet.utils.basemodel
+
+      <ul>
+        <li><a href="methoddocs/utils.html#module-ape_starknet.utils.basemodel">module</a>
+</li>
+      </ul></li>
       <li><a href="methoddocs/transactions.html#ape_starknet.transactions.InvokeFunctionTransaction.as_execute">as_execute() (ape_starknet.transactions.InvokeFunctionTransaction method)</a>
 </li>
       <li><a href="methoddocs/transactions.html#ape_starknet.transactions.InvokeFunctionTransaction.as_starknet_object">as_starknet_object() (ape_starknet.transactions.InvokeFunctionTransaction method)</a>
@@ -476,14 +473,10 @@
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="methoddocs/utils.html#ape.utils.basemodel.BaseInterface">BaseInterface (class in ape.utils.basemodel)</a>
-</li>
-      <li><a href="methoddocs/utils.html#ape.utils.basemodel.BaseInterfaceModel">BaseInterfaceModel (class in ape.utils.basemodel)</a>
+      <li><a href="methoddocs/accounts.html#ape_starknet.accounts.BaseStarknetAccount">BaseStarknetAccount (class in ape_starknet.accounts)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="methoddocs/accounts.html#ape_starknet.accounts.BaseStarknetAccount">BaseStarknetAccount (class in ape_starknet.accounts)</a>
-</li>
       <li><a href="methoddocs/transactions.html#ape_starknet.transactions.StarknetReceipt.block_hash">block_hash (ape_starknet.transactions.StarknetReceipt attribute)</a>
 </li>
       <li><a href="methoddocs/provider.html#ape_starknet.provider.StarknetDevnetProvider.build_command">build_command() (ape_starknet.provider.StarknetDevnetProvider method)</a>
@@ -580,10 +573,10 @@
 </li>
       <li><a href="methoddocs/accounts.html#ape_starknet.accounts.BaseStarknetAccount.default_address">default_address (ape_starknet.accounts.BaseStarknetAccount property)</a>
 </li>
-      <li><a href="methoddocs/accounts.html#ape_starknet.accounts.BaseStarknetAccount.default_address_int">default_address_int (ape_starknet.accounts.BaseStarknetAccount property)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="methoddocs/accounts.html#ape_starknet.accounts.BaseStarknetAccount.default_address_int">default_address_int (ape_starknet.accounts.BaseStarknetAccount property)</a>
+</li>
       <li><a href="methoddocs/accounts.html#ape_starknet.accounts.StarknetKeyfileAccount.delete">delete() (ape_starknet.accounts.StarknetKeyfileAccount method)</a>
 </li>
       <li><a href="methoddocs/accounts.html#ape_starknet.accounts.StarknetAccountContainer.delete_account">delete_account() (ape_starknet.accounts.StarknetAccountContainer method)</a>
@@ -606,8 +599,6 @@
         <li><a href="methoddocs/accounts.html#ape_starknet.accounts.StarknetKeyfileAccount.deployments">(ape_starknet.accounts.StarknetKeyfileAccount property)</a>
 </li>
       </ul></li>
-      <li><a href="methoddocs/utils.html#ape.utils.basemodel.BaseInterfaceModel.dict">dict() (ape.utils.basemodel.BaseInterfaceModel method)</a>
-</li>
       <li><a href="methoddocs/provider.html#ape_starknet.provider.StarknetProvider.disconnect">disconnect() (ape_starknet.provider.StarknetProvider method)</a>
 </li>
   </ul></td>
@@ -716,8 +707,6 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="methoddocs/accounts.html#ape_starknet.accounts.StarknetAccountContainer.import_account">import_account() (ape_starknet.accounts.StarknetAccountContainer method)</a>
 </li>
-      <li><a href="methoddocs/utils.html#ape.utils.basemodel.injected_before_use">injected_before_use (class in ape.utils.basemodel)</a>
-</li>
       <li><a href="methoddocs/transactions.html#ape_starknet.transactions.InvokeFunctionTransaction">InvokeFunctionTransaction (class in ape_starknet.transactions)</a>
 </li>
   </ul></td>
@@ -730,14 +719,6 @@
         <li><a href="methoddocs/conversion.html#ape_starknet.conversion.StarknetAddressConverter.is_convertible">(ape_starknet.conversion.StarknetAddressConverter method)</a>
 </li>
       </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="J">J</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="methoddocs/utils.html#ape.utils.basemodel.BaseInterfaceModel.json">json() (ape.utils.basemodel.BaseInterfaceModel method)</a>
-</li>
   </ul></td>
 </tr></table>
 
@@ -770,8 +751,6 @@
     module
 
       <ul>
-        <li><a href="methoddocs/utils.html#module-ape.utils.basemodel">ape.utils.basemodel</a>
-</li>
         <li><a href="methoddocs/accounts.html#module-ape_starknet.accounts">ape_starknet.accounts</a>
 </li>
         <li><a href="methoddocs/conversion.html#module-ape_starknet.conversion">ape_starknet.conversion</a>
@@ -793,6 +772,8 @@
         <li><a href="methoddocs/udc.html#module-ape_starknet.udc">ape_starknet.udc</a>
 </li>
         <li><a href="methoddocs/utils.html#module-ape_starknet.utils">ape_starknet.utils</a>
+</li>
+        <li><a href="methoddocs/utils.html#module-ape_starknet.utils.basemodel">ape_starknet.utils.basemodel</a>
 </li>
       </ul></li>
   </ul></td>
@@ -830,6 +811,8 @@
       <li><a href="methoddocs/accounts.html#ape_starknet.accounts.StarknetDevelopmentAccount.private_key">private_key (ape_starknet.accounts.StarknetDevelopmentAccount attribute)</a>
 </li>
       <li><a href="methoddocs/provider.html#ape_starknet.provider.StarknetDevnetProvider.process_name">process_name (ape_starknet.provider.StarknetDevnetProvider property)</a>
+</li>
+      <li><a href="methoddocs/utils.html#ape_starknet.utils.basemodel.StarknetBase.provider">provider (ape_starknet.utils.basemodel.StarknetBase property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -920,6 +903,8 @@
       <li><a href="methoddocs/exceptions.html#ape_starknet.exceptions.StarknetAccountsError">StarknetAccountsError</a>
 </li>
       <li><a href="methoddocs/conversion.html#ape_starknet.conversion.StarknetAddressConverter">StarknetAddressConverter (class in ape_starknet.conversion)</a>
+</li>
+      <li><a href="methoddocs/utils.html#ape_starknet.utils.basemodel.StarknetBase">StarknetBase (class in ape_starknet.utils.basemodel)</a>
 </li>
       <li><a href="methoddocs/ecosystems.html#ape_starknet.ecosystems.StarknetBlock">StarknetBlock (class in ape_starknet.ecosystems)</a>
 </li>

@@ -25,7 +25,7 @@
     </script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="accounts" href="../commands/accounts.html" />
+    <link rel="next" title="Testing" href="testing.html" />
     <link rel="prev" title="Accounts" href="accounts.html" /> 
 </head>
 
@@ -65,9 +65,14 @@
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="accounts.html">Accounts</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Contracts</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#factory-contracts">Factory Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#declare-and-deploy-contracts">Declare and Deploy Contracts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#factory-contracts">Factory Contracts</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#contract-interaction">Contract Interaction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
 <ul>
@@ -85,10 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../methoddocs/transactions.html">Transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../methoddocs/types.html">Types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../methoddocs/udc.html">Universal Deployer Contract</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html"><code class="docutils literal notranslate"><span class="pre">BaseInterface</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html#ape.utils.basemodel.BaseInterfaceModel"><code class="docutils literal notranslate"><span class="pre">BaseInterfaceModel</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html#ape.utils.basemodel.injected_before_use"><code class="docutils literal notranslate"><span class="pre">injected_before_use</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html#module-ape_starknet.utils">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html">Utils</a></li>
 </ul>
 
                 </div>
@@ -118,8 +120,36 @@
   <section id="contracts">
 <h1>Contracts<a class="headerlink" href="#contracts" title="Permalink to this heading"></a></h1>
 <p>You can learn more about interacting with contracts from the ApeWorX documentation about <a class="reference external" href="https://docs.apeworx.io/ape/stable/userguides/contracts.html#contracts">contracts</a>.</p>
+<section id="declare-and-deploy-contracts">
+<h2>Declare and Deploy Contracts<a class="headerlink" href="#declare-and-deploy-contracts" title="Permalink to this heading"></a></h2>
+<p>To declare a contract using <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code>, do the following (in a script or console):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">declaration</span> <span class="o">=</span> <span class="n">account</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">declaration</span><span class="o">.</span><span class="n">class_hash</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then, you can use the <code class="docutils literal notranslate"><span class="pre">deploy</span></code> method to deploy the contracts.
+<strong>NOTE</strong>: The <code class="docutils literal notranslate"><span class="pre">deploy</span></code> method in <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code> makes an invoke-function call against the Starknet public UDC contract.
+Learn more about UDC contracts <a class="reference external" href="https://community.starknet.io/t/universal-deployer-contract-proposal/1864">here</a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="c1"># This only works if `project.MyContract` was declared previously.</span>
+<span class="c1"># The class hash is not necessary as an argument. Ape will look it up.</span>
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">account</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContact</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also deploy contracts by doing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
+
+<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
+<span class="n">my_contract</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
+</pre></div>
+</div>
 <section id="factory-contracts">
-<h2>Factory Contracts<a class="headerlink" href="#factory-contracts" title="Permalink to this heading"></a></h2>
+<h3>Factory Contracts<a class="headerlink" href="#factory-contracts" title="Permalink to this heading"></a></h3>
 <p>Alternatively, you can use the class hash in a <code class="docutils literal notranslate"><span class="pre">deploy()</span></code> system call in a local factory contract.
 Let’s say for example I have the following Cairo factory contract:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">starkware.cairo.common.alloc</span> <span class="kn">import</span> <span class="n">alloc</span>
@@ -174,13 +204,22 @@ The following example shows how to use this factory class to deploy other contra
 </div>
 </section>
 </section>
+<section id="contract-interaction">
+<h2>Contract Interaction<a class="headerlink" href="#contract-interaction" title="Permalink to this heading"></a></h2>
+<p>You can learn more about contract inteacting from the ApeWorX documentation about <a class="reference external" href="https://docs.apeworx.io/ape/stable/userguides/contracts.html">contracts</a>.</p>
+<p><strong>NOTE</strong>: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">store_my_list</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+</section>
 
 
                             </div>
                         </div>
                         <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="accounts.html" class="btn btn-neutral float-left" title="Accounts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../commands/accounts.html" class="btn btn-neutral float-right" title="accounts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="testing.html" class="btn btn-neutral float-right" title="Testing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

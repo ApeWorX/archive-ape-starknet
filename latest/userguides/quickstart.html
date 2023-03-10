@@ -71,12 +71,8 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#quick-usage">Quick Usage</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#account-management">Account Management</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#declare-and-deploy-contracts">Declare and Deploy Contracts</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#contract-interaction">Contract Interaction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#testing">Testing</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#accounts">Accounts</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="#testing">Testing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#contracts">Contracts</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#paying-fees">Paying Fees</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mainnet-alpha-whitelist-deployment-token">Mainnet Alpha Whitelist Deployment Token</a></li>
 </ul>
@@ -86,6 +82,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="accounts.html">Accounts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contracts.html">Contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
 <ul>
@@ -103,10 +100,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../methoddocs/transactions.html">Transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../methoddocs/types.html">Types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../methoddocs/udc.html">Universal Deployer Contract</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html"><code class="docutils literal notranslate"><span class="pre">BaseInterface</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html#ape.utils.basemodel.BaseInterfaceModel"><code class="docutils literal notranslate"><span class="pre">BaseInterfaceModel</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html#ape.utils.basemodel.injected_before_use"><code class="docutils literal notranslate"><span class="pre">injected_before_use</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html#module-ape_starknet.utils">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methoddocs/utils.html">Utils</a></li>
 </ul>
 
                 </div>
@@ -167,6 +161,14 @@ python3<span class="w"> </span>setup.py<span class="w"> </span>install
 <h3>Account Management<a class="headerlink" href="#account-management" title="Permalink to this heading"></a></h3>
 <p>Accounts are used to execute transactions and sign call data.
 Accounts are smart contracts in Starknet.</p>
+<p>You can access accounts using</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ape</span> <span class="n">starknet</span> <span class="n">accounts</span>
+</pre></div>
+</div>
+<p>Learn more about accounts by following the <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/accounts.html">accounts guide</a>.</p>
+</section>
+<section id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Permalink to this heading"></a></h3>
 <p>Out of the box, <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code> comes with development accounts.
 Access them like this:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
@@ -175,105 +177,13 @@ Access them like this:</p>
 <span class="n">owner</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">test_accounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>See the section below about <a class="reference external" href="#Testing">Testing</a> to learn more about test accounts.</p>
-<p>Learn more about accounts by following the <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/accounts.html">accounts guide</a>.</p>
+<p>See the guide about <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/testing.html">Testing</a> to learn more about test accounts and testing with the starknet plugin.</p>
 </section>
-<section id="declare-and-deploy-contracts">
-<h3>Declare and Deploy Contracts<a class="headerlink" href="#declare-and-deploy-contracts" title="Permalink to this heading"></a></h3>
+<section id="contracts">
+<h3>Contracts<a class="headerlink" href="#contracts" title="Permalink to this heading"></a></h3>
 <p>In Starknet, you can declare contract types by publishing them to the chain.
 This allows other contracts to create instances of them using the <a class="reference external" href="https://www.cairo-lang.org/docs/hello_starknet/deploying_from_contracts.html">deploy system call</a>.</p>
-<p>To declare a contract using <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code>, do the following (in a script or console):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
-
-<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
-<span class="n">declaration</span> <span class="o">=</span> <span class="n">account</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">declaration</span><span class="o">.</span><span class="n">class_hash</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Then, you can use the <code class="docutils literal notranslate"><span class="pre">deploy</span></code> method to deploy the contracts.
-<strong>NOTE</strong>: The <code class="docutils literal notranslate"><span class="pre">deploy</span></code> method in <code class="docutils literal notranslate"><span class="pre">ape-starknet</span></code> makes an invoke-function call against the Starknet public UDC contract.
-Learn more about UDC contracts <a class="reference external" href="https://community.starknet.io/t/universal-deployer-contract-proposal/1864">here</a>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
-
-<span class="c1"># This only works if `project.MyContract` was declared previously.</span>
-<span class="c1"># The class hash is not necessary as an argument. Ape will look it up.</span>
-<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
-<span class="n">account</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">MyContact</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>You can also deploy contracts by doing:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span><span class="p">,</span> <span class="n">project</span>
-
-<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;&lt;MY_STARK_ACCOUNT&gt;&quot;</span><span class="p">)</span>
-<span class="n">my_contract</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Learn more about deploying contracts like factory contracts by following the <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/contracts.html">contracts guide</a></p>
-</section>
-<section id="contract-interaction">
-<h3>Contract Interaction<a class="headerlink" href="#contract-interaction" title="Permalink to this heading"></a></h3>
-<p>After you have deployed your contracts, you can begin interacting with them.
-<code class="docutils literal notranslate"><span class="pre">deploy</span></code> methods return a contract instance from which you can call methods on:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">project</span>
-
-<span class="n">contract</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">MyContract</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
-
-<span class="c1"># Interact with deployed contract</span>
-<span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
-<span class="n">value</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_view_method</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>You can access the return data from a mutable method’s receipt:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">receipt</span><span class="o">.</span><span class="n">return_value</span>
-</pre></div>
-</div>
-<p>Include a sender to delegate the transaction to an account contract:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
-
-<span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;my_account&quot;</span><span class="p">)</span>
-<span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="n">account</span><span class="p">)</span>
-</pre></div>
-</div>
-<p><strong>NOTE</strong>: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">store_my_list</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
-</pre></div>
-</div>
-</section>
-<section id="testing">
-<h3>Testing<a class="headerlink" href="#testing" title="Permalink to this heading"></a></h3>
-<section id="accounts">
-<h4>Accounts<a class="headerlink" href="#accounts" title="Permalink to this heading"></a></h4>
-<p>You can use <code class="docutils literal notranslate"><span class="pre">starknet-devnet</span></code> accounts in your tests.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytest</span>
-<span class="kn">import</span> <span class="nn">ape</span>
-
-
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-<span class="k">def</span> <span class="nf">devnet_accounts</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">ape</span><span class="o">.</span><span class="n">accounts</span><span class="o">.</span><span class="n">containers</span><span class="p">[</span><span class="s2">&quot;starknet&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">test_accounts</span>
-
-
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-<span class="k">def</span> <span class="nf">owner</span><span class="p">(</span><span class="n">devnet_accounts</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">devnet_accounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</pre></div>
-</div>
-<p>Additionally, any accounts deployed in the local network are <strong>not</strong> saved to disk and are ephemeral.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytest</span>
-<span class="kn">import</span> <span class="nn">ape</span>
-
-
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;session&quot;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">ephemeral_account</span><span class="p">():</span>
-    <span class="n">accounts</span> <span class="o">=</span> <span class="n">ape</span><span class="o">.</span><span class="n">accounts</span><span class="o">.</span><span class="n">containers</span><span class="p">[</span><span class="s2">&quot;starknet&quot;</span><span class="p">]</span>
-    <span class="n">accounts</span><span class="o">.</span><span class="n">deploy_account</span><span class="p">(</span><span class="s2">&quot;ALIAS&quot;</span><span class="p">)</span>
-
-    <span class="c1"># This account only exists in the devnet and is not a key-file account.</span>
-    <span class="k">return</span> <span class="n">accounts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;ALIAS&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
+<p>Learn more about contracts by following the <a class="reference external" href="https://docs.apeworx.io/ape/stable/userguides/contracts.html">contracts guide</a>.</p>
 </section>
 <section id="paying-fees">
 <h3>Paying Fees<a class="headerlink" href="#paying-fees" title="Permalink to this heading"></a></h3>

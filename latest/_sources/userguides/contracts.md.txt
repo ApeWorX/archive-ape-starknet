@@ -2,7 +2,41 @@
 
 You can learn more about interacting with contracts from the ApeWorX documentation about [contracts](https://docs.apeworx.io/ape/stable/userguides/contracts.html#contracts).
 
-## Factory Contracts
+## Declare and Deploy Contracts
+
+To declare a contract using `ape-starknet`, do the following (in a script or console):
+
+```python
+from ape import accounts, project
+
+account = accounts.load("<MY_STARK_ACCOUNT>")
+declaration = account.declare(project.MyContract)
+print(declaration.class_hash)
+```
+
+Then, you can use the `deploy` method to deploy the contracts.
+**NOTE**: The `deploy` method in `ape-starknet` makes an invoke-function call against the Starknet public UDC contract.
+Learn more about UDC contracts [here](https://community.starknet.io/t/universal-deployer-contract-proposal/1864).
+
+```python
+from ape import accounts, project
+
+# This only works if `project.MyContract` was declared previously.
+# The class hash is not necessary as an argument. Ape will look it up.
+account = accounts.load("<MY_STARK_ACCOUNT>")
+account.deploy(project.MyContact)
+```
+
+You can also deploy contracts by doing:
+
+```python
+from ape import accounts, project
+
+account = accounts.load("<MY_STARK_ACCOUNT>")
+my_contract = project.MyContract.deploy(sender=account)
+```
+
+### Factory Contracts
 
 Alternatively, you can use the class hash in a `deploy()` system call in a local factory contract.
 Let's say for example I have the following Cairo factory contract:
@@ -58,4 +92,14 @@ factory = project.ContractFactory.deploy(declaration.class_hash, sender=account)
 call_result = factory.deploy_my_contract()
 contract_address = networks.starknet.decode_address(call_result)
 contract = Contract(contract_address, contract_type=project.MyContract.contract_type)
+```
+
+## Contract Interaction
+
+You can learn more about contract inteacting from the ApeWorX documentation about [contracts](https://docs.apeworx.io/ape/stable/userguides/contracts.html).
+
+**NOTE**: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:
+
+```python
+receipt = contract.store_my_list(3, [1, 2, 3])
 ```

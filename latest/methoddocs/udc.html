@@ -65,6 +65,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../userguides/quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../userguides/accounts.html">Accounts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../userguides/contracts.html">Contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguides/testing.html">Testing</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">CLI Reference</span></p>
 <ul>
@@ -88,10 +89,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html"><code class="docutils literal notranslate"><span class="pre">BaseInterface</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html#ape.utils.basemodel.BaseInterfaceModel"><code class="docutils literal notranslate"><span class="pre">BaseInterfaceModel</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html#ape.utils.basemodel.injected_before_use"><code class="docutils literal notranslate"><span class="pre">injected_before_use</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html#module-ape_starknet.utils">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
 </ul>
 
                 </div>
@@ -123,7 +121,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="ape_starknet.udc.UniversalDeployer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ape_starknet.udc.</span></span><span class="sig-name descname"><span class="pre">UniversalDeployer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ChecksumAddress</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'0x041A78e741e5aF2fec34B695679bc6891742439F7Afb8484ecd7766661aD02bF'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">abi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ape_starknet.udc.UniversalDeployer" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetBase</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="utils.html#ape_starknet.utils.basemodel.StarknetBase" title="ape_starknet.utils.basemodel.StarknetBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">StarknetBase</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="ape_starknet.udc.UniversalDeployer.create_deploy">
 <span class="sig-name descname"><span class="pre">create_deploy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">class_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constructor_arguments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">salt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unique</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="transactions.html#ape_starknet.transactions.InvokeFunctionTransaction" title="ape_starknet.transactions.InvokeFunctionTransaction"><span class="pre">InvokeFunctionTransaction</span></a></span></span><a class="headerlink" href="#ape_starknet.udc.UniversalDeployer.create_deploy" title="Permalink to this definition"></a></dt>
