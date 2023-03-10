@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from ape.api import ReceiptAPI, TransactionAPI
 from ape.exceptions import APINotImplementedError, TransactionError
-from ape.types import AddressType, ContractLog
+from ape.types import AddressType, ContractLogContainer
 from ape.utils import abstractmethod, cached_property, raises_not_implemented
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
@@ -330,7 +330,7 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
     @raises_not_implemented
     def decode_logs(  # type: ignore[empty-body]
         self, abi: Optional[ContractEventABI] = None
-    ) -> List[ContractLog]:
+    ) -> ContractLogContainer:
         # Overriden in InvocationReceipt
         pass
 
@@ -391,7 +391,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
     def decode_logs(
         self,
         abi: Optional[ContractEventABI] = None,
-    ) -> List[ContractLog]:
+    ) -> ContractLogContainer:
 
         log_data_items: List[Dict] = []
         for log in self.logs:
@@ -408,7 +408,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
                 abi = [abi]
 
             event_abis: List[EventABI] = [a.abi if not isinstance(a, EventABI) else a for a in abi]
-            return list(self.starknet.decode_logs(log_data_items, *event_abis))
+            return ContractLogContainer(self.starknet.decode_logs(log_data_items, *event_abis))
 
         else:
             # If ABI is not provided, decode all events
@@ -423,7 +423,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
                 for address, contract in contract_types.items()
             }
 
-            decoded_logs: List[ContractLog] = []
+            decoded_logs: ContractLogContainer = ContractLogContainer()
             for log in log_data_items:
                 contract_address = address_map[log["from_address"]]
                 if contract_address not in selectors:
@@ -431,7 +431,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
 
                 for event_key in log.get("keys", []):
                     event_abi = selectors[contract_address][event_key]
-                    decoded_logs.extend(list(self.starknet.decode_logs([log], event_abi)))
+                    decoded_logs.extend(self.starknet.decode_logs([log], event_abi))
             return decoded_logs
 
 
