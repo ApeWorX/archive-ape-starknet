@@ -307,9 +307,7 @@ class Starknet(EcosystemAPI, StarknetBase):
         Returns:
             :class:`~ape_starknet.transactions.DeclareTransaction`
         """
-        contract_type = (
-            contract.contract_type if isinstance(contract, ContractContainer) else contract
-        )
+        contract_type = getattr(contract, "contract_type", contract)
         code = (
             (contract_type.deployment_bytecode.bytecode or 0)
             if contract_type.deployment_bytecode

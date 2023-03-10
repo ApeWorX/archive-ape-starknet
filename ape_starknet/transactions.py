@@ -112,13 +112,14 @@ class DeclareTransaction(AccountTransaction):
         return to_checksum_address(value)
 
     @cached_property
-    def starknet_contract(self) -> DeprecatedCompiledClass:
-        return DeprecatedCompiledClass.deserialize(self.data)
+    def starknet_contract(self) -> SierraContractClass:
+        return SierraContractClass.deserialize(self.data)
 
     @property
     def txn_hash(self) -> HexBytes:
         return calculate_declare_transaction_hash(
             self.starknet_contract,
+
             self.provider.chain_id,
             self.max_fee,
             to_int(self.sender),
