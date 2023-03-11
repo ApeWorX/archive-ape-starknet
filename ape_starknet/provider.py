@@ -464,12 +464,18 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
         config = self.plugin_config.provider
         value = config.cairo_compiler_manifest
         if not value:
+            # Check if configured in Cairo plugin.
+            cairo_config = self.config_manager.get_config("cairo").dict()
+            manifest = cairo_config.get("manifest")
+            if manifest:
+                return Path(manifest).expanduser().resolve()
+
             raise StarknetProviderError(
                 "Must configure 'cairo_compiler_manifest' in "
                 "'starknet: provider' config (ape-config.yaml)."
             )
 
-        return Path(value).resolve()
+        return Path(value).expanduser().resolve()
 
     def connect(self):
         if self.network.name == LOCAL_NETWORK_NAME:
@@ -486,6 +492,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
+        breakpoint()
         return [
             self.process_name,
             "--host",
