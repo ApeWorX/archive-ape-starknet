@@ -9,9 +9,17 @@ from ape.utils import abstractmethod, cached_property, raises_not_implemented
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.net.client_models import Call, Event, TransactionStatus
+from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
+from starknet_py.hash.transaction import _convert_contract_class_to_cairo_lang_format
+from starknet_py.net.client_models import (
+    Call,
+    CasmClass,
+    Event,
+    SierraContractClass,
+    TransactionStatus,
+)
 from starknet_py.net.models.transaction import (
-    Declare,
+    DeclareV2,
     DeployAccount,
     Invoke,
     Transaction,
@@ -28,6 +36,7 @@ from starkware.starknet.core.os.transaction_hash.transaction_hash import (
 )
 from starkware.starknet.definitions import constants
 from starkware.starknet.definitions.fields import ContractAddressSalt
+from starkware.starknet.public.abi import get_selector_from_name
 
 from ape_starknet.exceptions import ContractTypeNotFoundError
 from ape_starknet.utils import (
@@ -40,7 +49,7 @@ from ape_starknet.utils import (
     to_checksum_address,
     to_int,
 )
-from ape_starknet.utils.basemodel import StarknetBase
+from ape_starknet.utils.basemodel import StarknetBase, create_casm_class, create_sierra_class
 
 
 class StarknetTransaction(TransactionAPI, StarknetBase):
@@ -104,19 +113,40 @@ class AccountTransaction(StarknetTransaction):
 class DeclareTransaction(AccountTransaction):
     sender: AddressType = Field(alias="sender_address")
     type: TransactionType = TransactionType.DECLARE
+    contract_type: ContractType
+    version: int = 2
 
     @validator("sender", pre=True, allow_reuse=True)
     def validate_sender(cls, value):
         return to_checksum_address(value)
 
     @cached_property
-    def starknet_contract(self) -> SierraContractClass:
-        return SierraContractClass.deserialize(self.data)
+    def sierra_contract(self) -> SierraContractClass:
+        code = (
+            (self.contract_type.runtime_bytecode.bytecode or 0)
+            if self.contract_type.runtime_bytecode
+            else 0
+        )
+        return create_sierra_class(code)
+
+    @cached_property
+    def casm_class(self) -> CasmClass:
+        code = (
+            (self.contract_type.deployment_bytecode.bytecode or 0)
+            if self.contract_type.deployment_bytecode
+            else 0
+        )
+        return create_casm_class(code)
+
+    @cached_property
+    def compiled_class_hash(self) -> int:
+        return compute_sierra_class_hash(self.sierra_contract)
 
     @property
     def txn_hash(self) -> HexBytes:
         return calculate_declare_transaction_hash(
-            self.starknet_contract,
+            _convert_contract_class_to_cairo_lang_format(self.sierra_contract),
+            self.compiled_class_hash,
             self.provider.chain_id,
             self.max_fee,
             to_int(self.sender),
@@ -124,9 +154,10 @@ class DeclareTransaction(AccountTransaction):
             self.nonce,
         )
 
-    def as_starknet_object(self) -> Declare:
-        return Declare(
-            contract_class=self.starknet_contract,
+    def as_starknet_object(self) -> DeclareV2:
+        return DeclareV2(
+            contract_class=self.sierra_contract,
+            compiled_class_hash=self.compiled_class_hash,
             max_fee=self.max_fee,
             nonce=self.nonce,
             sender_address=self.starknet.encode_address(self.sender),

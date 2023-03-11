@@ -62,7 +62,7 @@ setup(
     name="ape-starknet",
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    description="""ape-starknet: An ape plugin for the StarkNet networks""",
+    description="""ape-starknet: An ape plugin for the Starknet networks""",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="ApeWorX Ltd.",

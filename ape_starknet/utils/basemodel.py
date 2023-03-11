@@ -1,16 +1,21 @@
+import json
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, Optional, Union, cast
 
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
-from eth_utils import is_0x_prefixed
+from eth_utils import to_text
 from ethpm_types import ContractType
 from hexbytes import HexBytes
-from starkware.starknet.compiler.compile import compile_starknet_files
-from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
-    compute_deprecated_class_hash,
+from starknet_py.net.client_models import (
+    CasmClass,
+    CasmClassEntryPoint,
+    CasmClassEntryPointsByType,
+    SierraContractClass,
+    SierraEntryPoint,
+    SierraEntryPointsByType,
 )
-from starkware.starknet.services.api.contract_class.contract_class import DeprecatedCompiledClass
+from starkware.starknet.core.os.contract_class.class_hash import compute_class_hash
 
 if TYPE_CHECKING:
     from ape_starknet.accounts import StarknetAccountContainer
@@ -85,42 +90,50 @@ class StarknetBase(ManagerAccessMixin):
                 continue
 
             try:
-                contract_class = create_contract_class(code)
+                contract_class = create_sierra_class(code)
             except UnicodeDecodeError:
                 continue
 
-            contract_cls = create_contract_class(contract_class)
-            computed_class_hash = compute_deprecated_class_hash(contract_cls)
+            contract_cls = create_sierra_class(contract_class)
+            computed_class_hash = compute_class_hash(contract_cls)
             if computed_class_hash == class_hash:
                 return contract_type
 
         return None
 
 
-def create_contract_class(code: Union[str, bytes]) -> DeprecatedCompiledClass:
-    if isinstance(code, str) and is_0x_prefixed(code):
-        return DeprecatedCompiledClass.deserialize(HexBytes(code))
+def create_sierra_class(code: Union[str, bytes, int]) -> SierraContractClass:
+    contract_data = json.loads(to_text(HexBytes(code)))
+    ep_data = contract_data["entry_points_by_type"]
+    entry_points = SierraEntryPointsByType(
+        external=[create_sierra_entry_point(v) for v in ep_data["EXTERNAL"]],
+        constructor=[create_sierra_entry_point(v) for v in ep_data["CONSTRUCTOR"]],
+        l1_handler=[create_sierra_entry_point(v) for v in ep_data["L1_HANDLER"]],
+    )
+    return SierraContractClass(
+        abi=json.dumps(contract_data["abi"]),
+        contract_class_version=contract_data["contract_class_version"],
+        entry_points_by_type=entry_points,
+        sierra_program=contract_data["sierra_program"],
+    )
 
-    elif isinstance(code, str):
-        return DeprecatedCompiledClass.loads(code)
 
-    elif isinstance(code, bytes):
-        return DeprecatedCompiledClass.deserialize(code)
+def create_casm_class(code: Union[str, bytes, int]) -> CasmClass:
+    class_data = json.loads(to_text(HexBytes(code)))
+    ep_data = class_data["entry_points_by_type"]
+    entry_points = CasmClassEntryPointsByType(
+        external=[create_casm_entry_point(v) for v in ep_data["EXTERNAL"]],
+        constructor=[create_casm_entry_point(v) for v in ep_data["CONSTRUCTOR"]],
+        l1_handler=[create_casm_entry_point(v) for v in ep_data["L1_HANDLER"]],
+    )
+    return CasmClass(program=class_data, entry_points_by_type=entry_points)
 
-    else:
-        raise TypeError(f"Unhandled bytecode type '{code}'.")
+
+def create_sierra_entry_point(data: Dict) -> SierraEntryPoint:
+    return SierraEntryPoint(function_idx=data["function_idx"], selector=int(data["selector"], 16))
 
 
-def get_contract_class(
-    source: Optional[str] = None,
-    contract_class: Optional[DeprecatedCompiledClass] = None,
-    cairo_path: Optional[List[str]] = None,
-    disable_hint_validation: bool = False,
-) -> DeprecatedCompiledClass:
-    if contract_class is None:
-        contract_class = compile_starknet_files(
-            files=[source],
-            debug_info=True,
-            cairo_path=cairo_path,
-            disable_hint_validation=disable_hint_validation,
-        )
+def create_casm_entry_point(data: Dict) -> CasmClassEntryPoint:
+    return CasmClassEntryPoint(
+        selector=int(data["selector"], 16), offset=data["offset"], builtins=data["builtins"]
+    )

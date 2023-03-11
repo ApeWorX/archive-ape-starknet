@@ -15,13 +15,11 @@ from starknet_py.net.client_models import StarknetBlock as StarknetClientBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
 from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
-from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
-    compute_deprecated_class_hash,
-)
+from starkware.starknet.core.os.contract_class.class_hash import compute_class_hash
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name, get_storage_var_address
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
-from starkware.starknet.services.api.contract_class.contract_class import DeprecatedCompiledClass
+from starkware.starknet.services.api.contract_class.contract_class import ContractClass
 
 from ape_starknet.exceptions import (
     ContractTypeNotFoundError,
@@ -265,8 +263,8 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_deployment(
         self, deployment_bytecode: HexBytes, abi: ConstructorABI, *args, **kwargs
     ) -> TransactionAPI:
-        contract_class = DeprecatedCompiledClass.deserialize(deployment_bytecode)
-        class_hash = compute_deprecated_class_hash(contract_class)
+        contract_class = ContractClass.deserialize(deployment_bytecode)
+        class_hash = compute_class_hash(contract_class)
         contract_type = abi.contract_type
         if not contract_type:
             raise StarknetEcosystemError(
@@ -308,15 +306,7 @@ class Starknet(EcosystemAPI, StarknetBase):
             :class:`~ape_starknet.transactions.DeclareTransaction`
         """
         contract_type = getattr(contract, "contract_type", contract)
-        code = (
-            (contract_type.deployment_bytecode.bytecode or 0)
-            if contract_type.deployment_bytecode
-            else 0
-        )
-        starknet_contract = DeprecatedCompiledClass.deserialize(HexBytes(code))
-        return DeclareTransaction(
-            contract_type=contract_type, data=starknet_contract.serialize(), **kwargs
-        )
+        return DeclareTransaction(contract_type=contract_type, **kwargs)
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
@@ -328,6 +318,8 @@ class Starknet(EcosystemAPI, StarknetBase):
             txn_cls = DeclareTransaction
         elif txn_type == TransactionType.DEPLOY_ACCOUNT:
             txn_cls = DeployAccountTransaction
+        else:
+            raise TypeError(f"Unhandled txn_type '{txn_type}'.")
 
         txn_data: Dict[str, Any] = {**kwargs, "signature": None}
         if "chain_id" not in txn_data and self.network_manager.active_provider:

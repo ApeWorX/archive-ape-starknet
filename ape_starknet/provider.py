@@ -1,5 +1,6 @@
 import os
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -458,6 +459,18 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
     def devnet_client(self) -> DevnetClient:
         return DevnetClient(self.uri)
 
+    @property
+    def cairo_compiler_manifest(self) -> Path:
+        config = self.plugin_config.provider
+        value = config.cairo_compiler_manifest
+        if not value:
+            raise StarknetProviderError(
+                "Must configure 'cairo_compiler_manifest' in "
+                "'starknet: provider' config (ape-config.yaml)."
+            )
+
+        return Path(value).resolve()
+
     def connect(self):
         if self.network.name == LOCAL_NETWORK_NAME:
             # Behave like a 'SubprocessProvider'
@@ -485,6 +498,8 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             str(DEFAULT_ACCOUNT_SEED),
             "--initial-balance",
             str(DEVNET_ACCOUNT_START_BALANCE),
+            "--cairo-compiler-manifest",
+            str(self.cairo_compiler_manifest),
         ]
 
     def set_timestamp(self, new_timestamp: int):

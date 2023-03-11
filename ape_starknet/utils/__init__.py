@@ -37,6 +37,7 @@ from starknet_py.net.signer.stark_curve_signer import KeyPair
 from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
+from starkware.starknet.core.os.contract_class.class_hash import compute_class_hash
 from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
     compute_deprecated_class_hash,
 )
@@ -45,7 +46,7 @@ from starkware.starknet.public.abi import get_selector_from_name
 from starkware.starknet.third_party.open_zeppelin.starknet_contracts import account_contract
 
 from ape_starknet.exceptions import StarknetProviderError
-from ape_starknet.utils.basemodel import create_contract_class
+from ape_starknet.utils.basemodel import create_sierra_class
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -74,8 +75,8 @@ def convert_contract_class_to_contract_type(
         {
             "contractName": name,
             "sourceId": source_id,
-            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
-            "runtimeBytecode": {},
+            "deploymentBytecode": {},
+            "runtimeBytecode": {"bytecode": contract_class.serialize().hex()},
             "abi": contract_class.abi,
         }
     )
@@ -347,8 +348,8 @@ def to_int(val: Any) -> int:
 
 
 def get_class_hash(code: Union[str, HexBytes]):
-    contract_class = create_contract_class(code)
-    return compute_deprecated_class_hash(contract_class)
+    contract_class = create_sierra_class(code)
+    return compute_class_hash(contract_class)
 
 
 def create_keypair(private_key: Union[str, int]) -> KeyPair:

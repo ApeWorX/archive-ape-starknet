@@ -1,3 +1,5 @@
+from typing import Optional
+
 from ape.api import PluginConfig
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS
@@ -14,6 +16,7 @@ class NetworkConfig(PluginConfig):
 
 
 class ProviderConfig(PluginConfig):
+    cairo_compiler_manifest: Optional[str] = None
     mainnet: dict = {"uri": "https://alpha-mainnet.starknet.io"}
     testnet: dict = {"uri": "https://alpha4.starknet.io"}
     testnet2: dict = {"uri": "https://alpha4-2.starknet.io"}
