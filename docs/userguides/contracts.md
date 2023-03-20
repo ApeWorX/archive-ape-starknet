@@ -77,7 +77,7 @@ func deploy_my_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_ch
 }
 ```
 
-This contract accepts a class hash of a declared contract deploys it.
+This contract accepts a class hash of a declared contract and deploys it.
 The following example shows how to use this factory class to deploy other contracts:
 
 ```python
@@ -96,7 +96,7 @@ contract = Contract(contract_address, contract_type=project.MyContract.contract_
 
 ## Contract Interaction
 
-You can learn more about contract inteacting from the ApeWorX documentation about [contracts](https://docs.apeworx.io/ape/stable/userguides/contracts.html).
+You can learn more about contract interaction from the ApeWorX documentation about [contracts](https://docs.apeworx.io/ape/stable/userguides/contracts.html).
 
 **NOTE**: Currently, to pass in arrays as arguments, you have to also include the array size beforehand:
 

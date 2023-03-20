@@ -1,6 +1,6 @@
 # Quick Start
 
-Plugins for the [StarkNet Ethereum L2 networks](https://starkware.co/starknet/).
+Plugins for the [Starknet Ethereum L2 networks](https://starkware.co/starknet/).
 
 ## Dependencies
 
@@ -53,7 +53,7 @@ container = accounts.containers["starknet"]
 owner = container.test_accounts[0]
 ```
 
-See the guide about [Testing](https://docs.apeworx.io/ape-starknet/stable/userguides/testing.html) to learn more about test accounts and testing with the starknet plugin.
+See the guide about [Testing](https://docs.apeworx.io/ape-starknet/stable/userguides/testing.html) to learn more about test accounts and testing with the Starknet plugin.
 
 ### Contracts
 
@@ -76,13 +76,13 @@ print(acct.balance)
 
 If your account has a positive balance, you can begin paying fees!
 
-To pay fees, you can either manually set the `max_fee` kwarg on an invoke-transaction:
+To pay fees, you can manually set the `max_fee` kwarg on an invoke-transaction:
 
 ```python
 receipt = contract.my_mutable_method(123, max_fee=2900000000000)
 ```
 
-**NOTE**: By not setting the `max_fee`, it will automatically get set to the value returned from the provider `estimate_gas_cost()` call.
+**NOTE**: If `max_fee` is not set, it will default to the value returned from the provider's `estimate_gas_cost()` call.
 You do **not** need to call `estimate_gas_cost()` explicitly.
 
 ### Mainnet Alpha Whitelist Deployment Token
