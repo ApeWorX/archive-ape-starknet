@@ -14,7 +14,8 @@
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
     
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/sphinx_highlight.js"></script>
@@ -129,7 +130,7 @@
                                 
   <section id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this heading"></a></h1>
-<p>Plugins for the <a class="reference external" href="https://starkware.co/starknet/">StarkNet Ethereum L2 networks</a>.</p>
+<p>Plugins for the <a class="reference external" href="https://starkware.co/starknet/">Starknet Ethereum L2 networks</a>.</p>
 <section id="dependencies">
 <h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading"></a></h2>
 <ul class="simple">
@@ -177,7 +178,7 @@ Access them like this:</p>
 <span class="n">owner</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">test_accounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>See the guide about <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/testing.html">Testing</a> to learn more about test accounts and testing with the starknet plugin.</p>
+<p>See the guide about <a class="reference external" href="https://docs.apeworx.io/ape-starknet/stable/userguides/testing.html">Testing</a> to learn more about test accounts and testing with the Starknet plugin.</p>
 </section>
 <section id="contracts">
 <h3>Contracts<a class="headerlink" href="#contracts" title="Permalink to this heading"></a></h3>
@@ -196,11 +197,11 @@ To check your account balance (in ETH), use the <code class="docutils literal no
 </pre></div>
 </div>
 <p>If your account has a positive balance, you can begin paying fees!</p>
-<p>To pay fees, you can either manually set the <code class="docutils literal notranslate"><span class="pre">max_fee</span></code> kwarg on an invoke-transaction:</p>
+<p>To pay fees, you can manually set the <code class="docutils literal notranslate"><span class="pre">max_fee</span></code> kwarg on an invoke-transaction:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receipt</span> <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">my_mutable_method</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span> <span class="n">max_fee</span><span class="o">=</span><span class="mi">2900000000000</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><strong>NOTE</strong>: By not setting the <code class="docutils literal notranslate"><span class="pre">max_fee</span></code>, it will automatically get set to the value returned from the provider <code class="docutils literal notranslate"><span class="pre">estimate_gas_cost()</span></code> call.
+<p><strong>NOTE</strong>: If <code class="docutils literal notranslate"><span class="pre">max_fee</span></code> is not set, it will default to the value returned from the provider’s <code class="docutils literal notranslate"><span class="pre">estimate_gas_cost()</span></code> call.
 You do <strong>not</strong> need to call <code class="docutils literal notranslate"><span class="pre">estimate_gas_cost()</span></code> explicitly.</p>
 </section>
 <section id="mainnet-alpha-whitelist-deployment-token">

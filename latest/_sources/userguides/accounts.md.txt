@@ -75,7 +75,7 @@ ape starknet accounts deploy <NEW-ALIAS> --network testnet --funder <EXISTING-FU
 ```
 
 **NOTE**: You cannot use an Ethereum account to send funds to a Starknet account directly.
-You must use the [StarkNet L2 bridge](https://goerli.starkgate.starknet.io/) to transfer existing Goerli L1 ETH to and from the L2 account.
+You must use the [Starknet L2 bridge](https://goerli.starkgate.starknet.io/) to transfer existing Goerli L1 ETH to and from the L2 account.
 
 ## Listing Accounts
 
