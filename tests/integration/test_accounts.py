@@ -4,7 +4,7 @@ from typing import List, Tuple, Union
 
 import pytest
 from eth_utils import to_hex
-from starknet_py.utils.crypto.facade import message_signature
+from starknet_py.hash.utils import message_signature
 from starkware.crypto.signature.signature import EC_ORDER
 
 from ape_starknet.types import StarknetSignableMessage

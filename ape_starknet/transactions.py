@@ -10,7 +10,6 @@ from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
 from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
-from starknet_py.hash.transaction import _convert_contract_class_to_cairo_lang_format
 from starknet_py.net.client_models import (
     Call,
     CasmClass,
@@ -145,7 +144,7 @@ class DeclareTransaction(AccountTransaction):
     @property
     def txn_hash(self) -> HexBytes:
         return calculate_declare_transaction_hash(
-            _convert_contract_class_to_cairo_lang_format(self.sierra_contract),
+            self.sierra_contract,
             self.compiled_class_hash,
             self.provider.chain_id,
             self.max_fee,
@@ -158,6 +157,7 @@ class DeclareTransaction(AccountTransaction):
         return DeclareV2(
             contract_class=self.sierra_contract,
             compiled_class_hash=self.compiled_class_hash,
+            chain_id=self.provider.chain_id,
             max_fee=self.max_fee,
             nonce=self.nonce,
             sender_address=self.starknet.encode_address(self.sender),
