@@ -74,12 +74,12 @@ setup(
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.6.3,<0.7",
+        "eth-ape>=0.6.7,<0.7",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
-        "cairo-lang==0.11.0a0",
-        "starknet-py",  # TODO: Pin once released
-        "starknet-devnet",  # TODO: Pin once released
+        "cairo-lang==0.11.0.2",
+        "starknet-py>=0.15.1,<0.16",
+        "starknet-devnet>=0.4.7,<0.5",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
     python_requires=">=3.8,<3.11",

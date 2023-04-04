@@ -114,7 +114,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @property
     def is_connected(self) -> bool:
-        was_successful = False
         try:
             urlopen(self.uri)
             was_successful = True
@@ -492,8 +491,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
-        breakpoint()
-        return [
+        uri = [
             self.process_name,
             "--host",
             str(parts.hostname),
@@ -508,6 +506,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             "--cairo-compiler-manifest",
             str(self.cairo_compiler_manifest),
         ]
+        return uri
 
     def set_timestamp(self, new_timestamp: int):
         """
