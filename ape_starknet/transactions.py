@@ -237,7 +237,7 @@ class InvokeTransaction(AccountTransaction):
     def as_starknet_object(self) -> Invoke:
         return Invoke(
             calldata=self.data,
-            contract_address=self.receiver_int,
+            sender_address=self.receiver_int,
             max_fee=self.max_fee or 0,
             nonce=self.nonce,
             signature=self.starknet_signature,
@@ -256,7 +256,7 @@ class InvokeTransaction(AccountTransaction):
         new_tx = deepcopy(self)
         stark_tx = new_tx.as_starknet_object()
         account_call = {
-            "to": stark_tx.contract_address,
+            "to": stark_tx.sender_address,
             "selector": new_tx.entry_point_selector,
             "data_offset": 0,
             "data_len": len(stark_tx.calldata),

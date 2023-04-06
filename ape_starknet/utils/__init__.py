@@ -82,7 +82,7 @@ def convert_contract_class_to_contract_type(
     )
 
 
-OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID = "openzeppelin/account/Account.cairo"
+OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID = "../OpenZeppelin_0.6.1/Account.cairo"
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
     "Account", OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID, account_contract
 )

@@ -300,11 +300,11 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             # The DeployAccountReceipt expects first-hand access to the contract address.
             data["contract_address"] = transaction.contract_address
         elif isinstance(transaction, InvokeTransaction):
-            # Manually remove `contract_address`, as it always confused Pydantic because
-            # of TransactionAPI's `contract_address` attribute, which is required but a different
+            # Manually remove `sender_address`, as it always confused Pydantic because
+            # of TransactionAPI's `sender_address` attribute, which is required but a different
             # concept than this (for deploys, it is the new contract address but for invoke, it's
             # the receiver).
-            data["receiver"] = data.pop("contract_address")
+            data["receiver"] = data.pop("sender_address")
             original_tx = transaction.original_transaction
             was_deploy = (
                 original_tx is not None
