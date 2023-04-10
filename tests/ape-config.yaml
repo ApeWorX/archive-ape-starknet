@@ -1,3 +1,0 @@
-starknet:
-  provider:
-    cairo_compiler_manifest: "cairo/Cargo.toml"
