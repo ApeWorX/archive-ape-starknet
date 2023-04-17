@@ -1,4 +1,0 @@
-default_ecosystem: starknet
-
-cairo:
-  manifest: "../../cairo/Cargo.toml"

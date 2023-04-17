@@ -130,11 +130,6 @@ def token_project_path():
 
 
 @pytest.fixture(scope="session")
-def proxy_project_path():
-    return projects_directory / "proxy"
-
-
-@pytest.fixture(scope="session")
 def data_folder():
     return Path(__file__).parent / "data"
 
@@ -227,8 +222,8 @@ def clean_projects():
 
 
 @pytest.fixture(scope="session")
-def project_switcher(config, project_path, token_project_path, proxy_project_path):
-    projects = {"project": project_path, "token": token_project_path, "proxy": proxy_project_path}
+def project_switcher(config, project_path, token_project_path):
+    projects = {"project": project_path, "token": token_project_path}
 
     class ProjectSwitcher:
         @contextmanager
@@ -256,12 +251,12 @@ def contracts(
         @property
         def my_contract(self) -> ContractInstance:
             with self.use_project() as project:
-                if project.MyContract.deployments:
-                    return project.MyContract.deployments[-1]
+                if project.storage.deployments:
+                    return project.storage.deployments[-1]
 
                 # Declare + Deploy contract only once.
-                account.declare(project.MyContract)
-                contract = project.MyContract.deploy(sender=account)
+                account.declare(project.storage)
+                contract = project.storage.deploy(sender=account)
                 contract.initialize(sender=account)
                 return contract
 
@@ -288,17 +283,6 @@ def contracts(
 
                 account.declare(project.UseToken)
                 return project.UseToken.deploy(sender=account)
-
-        @property
-        def proxy(self):
-            with self.use_project(name="proxy") as project:
-                if project.Proxy.deployments:
-                    return project.Proxy.deployments[-1]
-
-                account.declare(project.Proxy)
-                contract = project.Proxy.deploy(self.token.address, sender=account)
-                _tokens.add_token("proxy_token", LOCAL_NETWORK_NAME, contract.address)
-                return contract
 
         @contextmanager
         def use_project(self, name: str = "project"):
