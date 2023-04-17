@@ -7,6 +7,7 @@ from ape.utils import ManagerAccessMixin
 from eth_utils import to_text
 from ethpm_types import ContractType
 from hexbytes import HexBytes
+from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
 from starknet_py.net.client_models import (
     CasmClass,
     CasmClassEntryPoint,
@@ -15,7 +16,6 @@ from starknet_py.net.client_models import (
     SierraEntryPoint,
     SierraEntryPointsByType,
 )
-from starkware.starknet.core.os.contract_class.class_hash import compute_class_hash
 
 if TYPE_CHECKING:
     from ape_starknet.accounts import StarknetAccountContainer
@@ -90,12 +90,11 @@ class StarknetBase(ManagerAccessMixin):
                 continue
 
             try:
-                contract_class = create_sierra_class(code)
+                sierra_cls = create_sierra_class(code)
             except UnicodeDecodeError:
                 continue
 
-            contract_cls = create_sierra_class(contract_class)
-            computed_class_hash = compute_class_hash(contract_cls)
+            computed_class_hash = compute_sierra_class_hash(sierra_cls)
             if computed_class_hash == class_hash:
                 return contract_type
 

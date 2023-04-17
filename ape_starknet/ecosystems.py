@@ -11,15 +11,14 @@ from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field, validator
+from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
 from starknet_py.net.client_models import StarknetBlock as StarknetClientBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
 from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
-from starkware.starknet.core.os.contract_class.class_hash import compute_class_hash
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name, get_storage_var_address
 from starkware.starknet.public.abi_structs import identifier_manager_from_abi
-from starkware.starknet.services.api.contract_class.contract_class import ContractClass
 
 from ape_starknet.exceptions import (
     ContractTypeNotFoundError,
@@ -42,7 +41,7 @@ from ape_starknet.utils import (
     get_method_abi_from_selector,
     to_checksum_address,
 )
-from ape_starknet.utils.basemodel import StarknetBase
+from ape_starknet.utils.basemodel import StarknetBase, create_sierra_class
 
 NETWORKS = {
     # chain_id, network_id
@@ -263,8 +262,8 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_deployment(
         self, deployment_bytecode: HexBytes, abi: ConstructorABI, *args, **kwargs
     ) -> TransactionAPI:
-        contract_class = ContractClass.deserialize(deployment_bytecode)
-        class_hash = compute_class_hash(contract_class)
+        sierra_class = create_sierra_class(deployment_bytecode)
+        class_hash = compute_sierra_class_hash(sierra_class)
         contract_type = abi.contract_type
         if not contract_type:
             raise StarknetEcosystemError(
