@@ -9,7 +9,7 @@ from ape.utils import abstractmethod, cached_property, raises_not_implemented
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
+from starknet_py.hash.casm_class_hash import compute_casm_class_hash
 from starknet_py.hash.transaction import compute_declare_v2_transaction_hash
 from starknet_py.net.client_models import (
     Call,
@@ -122,8 +122,8 @@ class DeclareTransaction(AccountTransaction):
     @cached_property
     def sierra_contract(self) -> SierraContractClass:
         code = (
-            (self.contract_type.runtime_bytecode.bytecode or 0)
-            if self.contract_type.runtime_bytecode
+            (self.contract_type.deployment_bytecode.bytecode or 0)
+            if self.contract_type.deployment_bytecode
             else 0
         )
         return create_sierra_class(code)
@@ -131,15 +131,15 @@ class DeclareTransaction(AccountTransaction):
     @cached_property
     def casm_class(self) -> CasmClass:
         code = (
-            (self.contract_type.deployment_bytecode.bytecode or 0)
-            if self.contract_type.deployment_bytecode
+            (self.contract_type.runtime_bytecode.bytecode or 0)
+            if self.contract_type.runtime_bytecode
             else 0
         )
         return create_casm_class(code)
 
     @cached_property
     def compiled_class_hash(self) -> int:
-        return compute_sierra_class_hash(self.sierra_contract)
+        return compute_casm_class_hash(self.casm_class)
 
     @property
     def txn_hash(self) -> HexBytes:
@@ -418,7 +418,6 @@ class InvokeReceipt(AccountReceipt):
         self,
         abi: Optional[ContractEventABI] = None,
     ) -> ContractLogContainer:
-
         log_data_items: List[Dict] = []
         for log in self.logs:
             log_data = {

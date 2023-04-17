@@ -125,7 +125,14 @@ def create_casm_class(code: Union[str, bytes, int]) -> CasmClass:
         constructor=[create_casm_entry_point(v) for v in ep_data["CONSTRUCTOR"]],
         l1_handler=[create_casm_entry_point(v) for v in ep_data["L1_HANDLER"]],
     )
-    return CasmClass(program=class_data, entry_points_by_type=entry_points)
+    return CasmClass(
+        prime=int(class_data["prime"], 16),
+        bytecode=[int(x, 16) for x in class_data["bytecode"]],
+        hints=class_data["hints"],
+        pythonic_hints=[],
+        entry_points_by_type=entry_points,
+        compiler_version=class_data["compiler_version"],
+    )
 
 
 def create_sierra_entry_point(data: Dict) -> SierraEntryPoint:
