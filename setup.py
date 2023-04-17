@@ -74,15 +74,15 @@ setup(
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.6.7,<0.7",
+        "eth-ape>=0.6.8,<0.7",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
         "cairo-lang==0.11.0.2",
         "starknet-py>=0.15.2,<0.16",
-        "starknet-devnet>=0.5.0a2,<0.6.0",
+        "starknet-devnet>=0.5.0,<0.6",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
-    python_requires=">=3.8,<3.11",
+    python_requires=">=3.9,<3.11",
     extras_require=extras_require,
     py_modules=["ape_starknet"],
     license="Apache-2.0",
@@ -98,7 +98,6 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],

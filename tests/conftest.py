@@ -165,8 +165,14 @@ def project(contracts):
         yield proj
 
 
+@pytest.fixture(scope="session", autouse=True)
+def in_tests_dir(config):
+    with config.using_project(Path(__file__).parent):
+        yield
+
+
 @pytest.fixture(scope="session")
-def use_local_starknet():
+def use_local_starknet(in_tests_dir):
     choice = f"{PLUGIN_NAME}:{LOCAL_NETWORK_NAME}:{PLUGIN_NAME}"
     return ape.networks.parse_network_choice(choice)
 
