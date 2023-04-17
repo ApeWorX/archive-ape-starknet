@@ -12,12 +12,12 @@ extras_require = {
         "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.12",  # auto-formatter and linter
+        "black>=23.3.0",  # auto-formatter and linter
         "mypy>=0.991,<1.0",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
         "types-PyYAML",  # Needed due to mypy typeshed
-        "flake8>=5.0.4",  # Style linter
+        "flake8>=6.0.0",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
         "mdformat>=0.7.16",  # Auto-formatter for markdown
         "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
