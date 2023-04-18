@@ -42,7 +42,6 @@ from ape_starknet.utils import (
     EXECUTE_ABI,
     EXECUTE_METHOD_NAME,
     OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
-    OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
     ContractEventABI,
     extract_trace_data,
     to_checksum_address,
@@ -260,9 +259,8 @@ class InvokeTransaction(AccountTransaction):
             "data_offset": 0,
             "data_len": len(stark_tx.calldata),
         }
-        full_abi = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.abi
         entire_call_data = [[account_call], stark_tx.calldata]
-        new_tx.data = new_tx.starknet._encode_calldata(full_abi, EXECUTE_ABI, entire_call_data)
+        new_tx.data = new_tx.starknet._encode_calldata(EXECUTE_ABI, entire_call_data)
 
         if new_tx.sender:
             new_tx.receiver = new_tx.sender
@@ -469,12 +467,7 @@ class ContractDeclaration(AccountReceipt):
 
     @validator("class_hash", pre=True)
     def validate_class_hash(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-        elif isinstance(value, bytes):
-            return to_int(value)
-        else:
-            return value
+        return to_int(value)
 
     @cached_property
     def contract_type(

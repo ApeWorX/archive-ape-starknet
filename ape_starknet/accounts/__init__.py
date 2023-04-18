@@ -667,7 +667,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         if isinstance(contract, ContractContainer):
             return super().deploy(contract, *args, publish=publish, **kwargs)
 
-        if contract.alias == self.alias:
+        elif contract.alias == self.alias:
             return self.deploy_account(**kwargs)
 
         raise ValueError(f"Unable to deploy '{contract}'.")

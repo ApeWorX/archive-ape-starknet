@@ -4,14 +4,13 @@ from ape.types import AddressType
 from ape.utils import cached_property
 from ethpm_types import ContractType
 from ethpm_types.abi import MethodABI
+from starknet_py.constants import DEFAULT_DEPLOYER_ADDRESS
 from starkware.starknet.definitions.fields import ContractAddressSalt
 
 from ape_starknet.transactions import InvokeTransaction
 from ape_starknet.utils.basemodel import StarknetBase
 
-DEFAULT_UDC_ADDRESS: AddressType = cast(
-    AddressType, "0x041A78e741e5aF2fec34B695679bc6891742439F7Afb8484ecd7766661aD02bF"
-)
+DEFAULT_UDC_ADDRESS: AddressType = cast(AddressType, DEFAULT_DEPLOYER_ADDRESS)
 DEFAULT_UDC_ABI: List[Dict] = [
     {
         "type": "event",
@@ -32,8 +31,8 @@ DEFAULT_UDC_ABI: List[Dict] = [
         "name": "deployContract",
         "stateMutability": "nonpayable",
         "inputs": [
-            {"name": "classHash", "type": "felt"},
-            {"name": "salt", "type": "felt"},
+            {"name": "classHash", "type": "felt252"},
+            {"name": "salt", "type": "felt252"},
             {"name": "unique", "type": "felt"},
             {"name": "calldata_len", "type": "felt"},
             {"name": "calldata", "type": "felt*"},

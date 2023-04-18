@@ -16,7 +16,7 @@ class NetworkConfig(PluginConfig):
 
 
 class ProviderConfig(PluginConfig):
-    cairo_compiler_manifest: Optional[str] = None
+    cairo_manifest: Optional[str] = None
     mainnet: dict = {"uri": "https://alpha-mainnet.starknet.io"}
     testnet: dict = {"uri": "https://alpha4.starknet.io"}
     testnet2: dict = {"uri": "https://alpha4-2.starknet.io"}

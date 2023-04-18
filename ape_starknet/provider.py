@@ -1,4 +1,5 @@
 import os
+import shutil
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
@@ -8,7 +9,12 @@ from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualMachineError
+from ape.exceptions import (
+    ProviderNotConnectedError,
+    RPCTimeoutError,
+    TransactionError,
+    VirtualMachineError,
+)
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter, RawAddress
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
@@ -340,6 +346,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
+        breakpoint()
         receipt = self.get_receipt(response.transaction_hash, transaction=txn)
         if not isinstance(txn, AccountTransaction):
             return receipt
@@ -459,9 +466,9 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
         return DevnetClient(self.uri)
 
     @property
-    def cairo_compiler_manifest(self) -> Path:
+    def cairo_manifest(self) -> Path:
         config = self.plugin_config.provider
-        value = config.cairo_compiler_manifest
+        value = config.cairo_manifest
         if not value:
             # Check if configured in Cairo plugin.
             cairo_config = self.config_manager.get_config("cairo").dict()
@@ -470,7 +477,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
                 return Path(manifest).expanduser().resolve()
 
             raise StarknetProviderError(
-                "Must configure 'cairo_compiler_manifest' in "
+                "Must configure 'cairo_manifest' in "
                 "'starknet: provider' config (ape-config.yaml)."
             )
 
@@ -482,7 +489,17 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             if not self.is_connected:
                 super().connect()
 
-            self.start()
+            try:
+                self.start()
+            except RPCTimeoutError:
+                manifest_path = self.cairo_manifest
+                path = manifest_path.parent / "target"
+                if path.is_dir():
+                    logger.warning(
+                        "Cairo stuck in locked state. Clearing debug target and retrying."
+                    )
+                    shutil.rmtree(path, ignore_errors=True)
+                    self.start()
 
             # Ensure test accounts get cached so they remain when switching providers.
             _ = self.account_container.test_accounts
@@ -504,7 +521,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             "--initial-balance",
             str(DEVNET_ACCOUNT_START_BALANCE),
             "--cairo-compiler-manifest",
-            str(self.cairo_compiler_manifest),
+            str(self.cairo_manifest),
         ]
         return uri
 

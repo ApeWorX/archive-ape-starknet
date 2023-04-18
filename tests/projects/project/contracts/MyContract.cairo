@@ -54,6 +54,7 @@ mod MyContract {
             return 0;
         }
 
-        return 0;
+        // TODO: make actually work
+        return 10;
     }
 }

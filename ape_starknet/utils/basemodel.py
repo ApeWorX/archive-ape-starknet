@@ -20,11 +20,11 @@ from starknet_py.net.client_models import (
 if TYPE_CHECKING:
     from ape_starknet.accounts import StarknetAccountContainer
     from ape_starknet.config import StarknetConfig
+    from ape_starknet.deployer import UniversalDeployer
     from ape_starknet.ecosystems import Starknet
     from ape_starknet.explorer import StarknetExplorer
     from ape_starknet.provider import StarknetProvider
     from ape_starknet.tokens import TokenManager
-    from ape_starknet.udc import UniversalDeployer
 
 
 class StarknetBase(ManagerAccessMixin):
@@ -62,7 +62,7 @@ class StarknetBase(ManagerAccessMixin):
 
     @cached_property
     def universal_deployer(self) -> "UniversalDeployer":
-        from ape_starknet.udc import UniversalDeployer
+        from ape_starknet.deployer import UniversalDeployer
 
         return UniversalDeployer()
 
@@ -129,7 +129,7 @@ def create_casm_class(code: Union[str, bytes, int]) -> CasmClass:
         prime=int(class_data["prime"], 16),
         bytecode=[int(x, 16) for x in class_data["bytecode"]],
         hints=class_data["hints"],
-        pythonic_hints=[],
+        pythonic_hints=class_data.get("pythonic_hints") or [],
         entry_points_by_type=entry_points,
         compiler_version=class_data["compiler_version"],
     )

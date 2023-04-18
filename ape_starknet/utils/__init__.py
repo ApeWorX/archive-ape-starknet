@@ -20,7 +20,7 @@ from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, is_text, remove_0x_prefix, to_hex
 from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
-from ethpm_types.abi import EventABI, MethodABI
+from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
 from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
 from starknet_py.net.client_errors import ClientError
@@ -35,6 +35,7 @@ from starknet_py.net.client_models import (
 )
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.signer.stark_curve_signer import KeyPair
+from starknet_py.serialization import FunctionSerializationAdapter, serializer_for_payload
 from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
@@ -371,3 +372,12 @@ def get_account_constructor_calldata(key_pair: KeyPair, class_hash: int) -> List
     else:
         logger.warning(f"Constructor calldata for account with class '{class_hash}' not known.")
         return []
+
+
+def get_fn_serializer(abi: Union[MethodABI, ConstructorABI]) -> FunctionSerializationAdapter:
+    input_dict = {x.name: x.type for x in getattr(abi, "inputs", [])}
+    output_dict = {x.name: x.type for x in getattr(abi, "outputs", [])}
+    return FunctionSerializationAdapter(
+        inputs_serializer=serializer_for_payload(input_dict),
+        outputs_deserializer=serializer_for_payload(output_dict),
+    )
