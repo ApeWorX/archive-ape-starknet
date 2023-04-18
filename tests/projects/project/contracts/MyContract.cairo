@@ -54,19 +54,6 @@ mod MyContract {
             return 0;
         }
 
-        // TODO: Try again once Cairo handles gas in recursion automatically.
-        //  Spent many hours trying to get it to work, looking at other code
-        //   and everything... to no avail.
-        // let mut current_index = 0;
-        // let end = len - 1;
-        // loop {
-        //    if current_index == end {
-        //        break true;
-        //    }
-
-        //    current_index += 1;
-        //};
-
         return 0;
     }
 }
