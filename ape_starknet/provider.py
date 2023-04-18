@@ -346,7 +346,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if response.code != StarkErrorCode.TRANSACTION_RECEIVED.name:
             raise TransactionError(message="Transaction not received.")
 
-        breakpoint()
         receipt = self.get_receipt(response.transaction_hash, transaction=txn)
         if not isinstance(txn, AccountTransaction):
             return receipt

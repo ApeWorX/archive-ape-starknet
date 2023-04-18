@@ -11,33 +11,46 @@ from ape_starknet.transactions import InvokeTransaction
 from ape_starknet.utils.basemodel import StarknetBase
 
 DEFAULT_UDC_ADDRESS: AddressType = cast(AddressType, DEFAULT_DEPLOYER_ADDRESS)
+
+# TODO: Replace with actual OpenZeppelin ABI once exists.
+#  This was made from a custom implementation of the UDC.
 DEFAULT_UDC_ABI: List[Dict] = [
     {
-        "type": "event",
-        "name": "ContractDeployed",
         "inputs": [
-            {"name": "address", "type": "felt", "indexed": False},
-            {"name": "deployer", "type": "felt", "indexed": False},
-            {"name": "unique", "type": "felt", "indexed": False},
-            {"name": "classHash", "type": "felt", "indexed": False},
-            {"name": "calldata_len", "type": "felt", "indexed": False},
-            {"name": "calldata", "type": "felt*", "indexed": False},
-            {"name": "salt", "type": "felt", "indexed": False},
+            {"name": "classHash", "type": "core::starknet::class_hash::ClassHash"},
+            {"name": "salt", "type": "core::felt252"},
+            {"name": "unique", "type": "core::bool"},
+            {"name": "calldata", "type": "core::array::Array::<core::felt252>"},
         ],
-        "anonymous": False,
+        "name": "deployContract",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
     },
     {
-        "type": "function",
-        "name": "deployContract",
-        "stateMutability": "nonpayable",
+        "anonymous": False,
         "inputs": [
-            {"name": "classHash", "type": "felt252"},
-            {"name": "salt", "type": "felt252"},
-            {"name": "unique", "type": "felt"},
-            {"name": "calldata_len", "type": "felt"},
-            {"name": "calldata", "type": "felt*"},
+            {
+                "indexed": False,
+                "name": "address",
+                "type": "core::starknet::contract_address::ContractAddress",
+            },
+            {
+                "indexed": False,
+                "name": "deployer",
+                "type": "core::starknet::contract_address::ContractAddress",
+            },
+            {"indexed": False, "name": "unique", "type": "core::bool"},
+            {
+                "indexed": False,
+                "name": "classHash",
+                "type": "core::starknet::class_hash::ClassHash",
+            },
+            {"indexed": False, "name": "calldata", "type": "core::array::Array::<core::felt252>"},
+            {"indexed": False, "name": "salt", "type": "core::felt252"},
         ],
-        "outputs": [{"name": "address", "type": "felt"}],
+        "name": "ContractDeployed",
+        "type": "event",
     },
 ]
 
@@ -46,8 +59,8 @@ class UniversalDeployer(StarknetBase):
     @cached_property
     def contract_type(self) -> ContractType:
         return ContractType(
-            contractName="openzeppelin.utils.presets.UniversalDeployer",
-            sourceId="openzeppelin/utils/presets/UniversalDeployer.cairo",
+            contractName="UniversalDeployer",
+            sourceId="UniversalDeployer.cairo",
             abi=self.abi,
             # NOTE: code is not necessary for its use-cases (use like an interface)
             deploymentBytecode={},

@@ -63,11 +63,11 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-latest, macos-latest]   # eventually add `windows-latest`
-                python-version: [3.8, 3.9]
+                python-version: [3.9, "3.10"]
 
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CAIRO_VERSION: v1.0.0-alpha.6
+          CAIRO_VERSION: v1.0.0-alpha.7
 
         steps:
         - uses: actions/checkout@v3
