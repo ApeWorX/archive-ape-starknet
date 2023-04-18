@@ -119,6 +119,7 @@ version.py
 
 # Ape stuff
 .build/
+tests/cairo 
 
 # IDEs stuff
 .vscode

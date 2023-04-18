@@ -1,23 +1,30 @@
+import json
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, Optional, Union, cast
 
 from ape.types import AddressType
 from ape.utils import ManagerAccessMixin
-from eth_utils import is_0x_prefixed
+from eth_utils import to_text
 from ethpm_types import ContractType
 from hexbytes import HexBytes
-from starknet_py.net.client_models import ContractClass
-from starkware.starknet.core.os.class_hash import compute_class_hash
-from starkware.starknet.testing.contract_utils import get_contract_class
+from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
+from starknet_py.net.client_models import (
+    CasmClass,
+    CasmClassEntryPoint,
+    CasmClassEntryPointsByType,
+    SierraContractClass,
+    SierraEntryPoint,
+    SierraEntryPointsByType,
+)
 
 if TYPE_CHECKING:
     from ape_starknet.accounts import StarknetAccountContainer
     from ape_starknet.config import StarknetConfig
+    from ape_starknet.deployer import UniversalDeployer
     from ape_starknet.ecosystems import Starknet
     from ape_starknet.explorer import StarknetExplorer
     from ape_starknet.provider import StarknetProvider
     from ape_starknet.tokens import TokenManager
-    from ape_starknet.udc import UniversalDeployer
 
 
 class StarknetBase(ManagerAccessMixin):
@@ -55,7 +62,7 @@ class StarknetBase(ManagerAccessMixin):
 
     @cached_property
     def universal_deployer(self) -> "UniversalDeployer":
-        from ape_starknet.udc import UniversalDeployer
+        from ape_starknet.deployer import UniversalDeployer
 
         return UniversalDeployer()
 
@@ -66,6 +73,10 @@ class StarknetBase(ManagerAccessMixin):
         ) or self.starknet_explorer.get_contract_type(address)
 
     def get_local_contract_type(self, class_hash: int) -> Optional[ContractType]:
+        """
+        Given a class hash, find and return its ``ethpm_types.ContractType``.
+        """
+
         for contract_name, contract_type in self.project_manager.contracts.items():
             if not contract_type.source_id or not contract_type.source_id.endswith(".cairo"):
                 continue
@@ -79,27 +90,56 @@ class StarknetBase(ManagerAccessMixin):
                 continue
 
             try:
-                contract_class = create_contract_class(code)
+                sierra_cls = create_sierra_class(code)
             except UnicodeDecodeError:
                 continue
 
-            contract_cls = get_contract_class(contract_class=contract_class)
-            computed_class_hash = compute_class_hash(contract_cls)
+            computed_class_hash = compute_sierra_class_hash(sierra_cls)
             if computed_class_hash == class_hash:
                 return contract_type
 
         return None
 
 
-def create_contract_class(code: Union[str, bytes]) -> ContractClass:
-    if isinstance(code, str) and is_0x_prefixed(code):
-        return ContractClass.deserialize(HexBytes(code))
+def create_sierra_class(code: Union[str, bytes, int]) -> SierraContractClass:
+    contract_data = json.loads(to_text(HexBytes(code)))
+    ep_data = contract_data["entry_points_by_type"]
+    entry_points = SierraEntryPointsByType(
+        external=[create_sierra_entry_point(v) for v in ep_data["EXTERNAL"]],
+        constructor=[create_sierra_entry_point(v) for v in ep_data["CONSTRUCTOR"]],
+        l1_handler=[create_sierra_entry_point(v) for v in ep_data["L1_HANDLER"]],
+    )
+    return SierraContractClass(
+        abi=json.dumps(contract_data["abi"]),
+        contract_class_version=contract_data["contract_class_version"],
+        entry_points_by_type=entry_points,
+        sierra_program=contract_data["sierra_program"],
+    )
 
-    elif isinstance(code, str):
-        return ContractClass.loads(code)
 
-    elif isinstance(code, bytes):
-        return ContractClass.deserialize(code)
+def create_casm_class(code: Union[str, bytes, int]) -> CasmClass:
+    class_data = json.loads(to_text(HexBytes(code)))
+    ep_data = class_data["entry_points_by_type"]
+    entry_points = CasmClassEntryPointsByType(
+        external=[create_casm_entry_point(v) for v in ep_data["EXTERNAL"]],
+        constructor=[create_casm_entry_point(v) for v in ep_data["CONSTRUCTOR"]],
+        l1_handler=[create_casm_entry_point(v) for v in ep_data["L1_HANDLER"]],
+    )
+    return CasmClass(
+        prime=int(class_data["prime"], 16),
+        bytecode=[int(x, 16) for x in class_data["bytecode"]],
+        hints=class_data["hints"],
+        pythonic_hints=class_data.get("pythonic_hints") or [],
+        entry_points_by_type=entry_points,
+        compiler_version=class_data["compiler_version"],
+    )
 
-    else:
-        raise TypeError(f"Unhandled bytecode type '{code}'.")
+
+def create_sierra_entry_point(data: Dict) -> SierraEntryPoint:
+    return SierraEntryPoint(function_idx=data["function_idx"], selector=int(data["selector"], 16))
+
+
+def create_casm_entry_point(data: Dict) -> CasmClassEntryPoint:
+    return CasmClassEntryPoint(
+        selector=int(data["selector"], 16), offset=data["offset"], builtins=data["builtins"]
+    )

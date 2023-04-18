@@ -1,5 +1,7 @@
 import os
+import shutil
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -7,7 +9,12 @@ from urllib.request import urlopen
 
 from ape.api import BlockAPI, ProviderAPI, ReceiptAPI, SubprocessProvider, TransactionAPI
 from ape.api.networks import LOCAL_NETWORK_NAME
-from ape.exceptions import ProviderNotConnectedError, TransactionError, VirtualMachineError
+from ape.exceptions import (
+    ProviderNotConnectedError,
+    RPCTimeoutError,
+    TransactionError,
+    VirtualMachineError,
+)
 from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractLog, LogFilter, RawAddress
 from ape.utils import DEFAULT_NUMBER_OF_TEST_ACCOUNTS, cached_property, raises_not_implemented
@@ -30,7 +37,7 @@ from ape_starknet.transactions import (
     AccountTransaction,
     DeclareTransaction,
     DeployAccountTransaction,
-    InvokeFunctionTransaction,
+    InvokeTransaction,
     StarknetTransaction,
 )
 from ape_starknet.utils import (
@@ -113,7 +120,6 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @property
     def is_connected(self) -> bool:
-        was_successful = False
         try:
             urlopen(self.uri)
             was_successful = True
@@ -192,9 +198,9 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def estimate_gas_cost(self, txn: StarknetTransaction) -> int:
-        if isinstance(txn, InvokeFunctionTransaction):
+        if isinstance(txn, InvokeTransaction):
             if not txn.is_prepared:
-                txn = cast(InvokeFunctionTransaction, self.prepare_transaction(txn))
+                txn = cast(InvokeTransaction, self.prepare_transaction(txn))
 
             if txn.method_abi.name != EXECUTE_METHOD_NAME:
                 txn = txn.as_execute()
@@ -248,7 +254,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
 
     @handle_client_errors
     def send_call(self, txn: TransactionAPI) -> bytes:
-        if not isinstance(txn, InvokeFunctionTransaction):
+        if not isinstance(txn, InvokeTransaction):
             type_str = f"{txn.type!r}" if isinstance(txn.type, bytes) else str(txn.type)
             raise StarknetProviderError(
                 f"Transaction must be from an invocation. Received type {type_str}."
@@ -299,12 +305,12 @@ class StarknetProvider(ProviderAPI, StarknetBase):
         if isinstance(transaction, DeployAccountTransaction):
             # The DeployAccountReceipt expects first-hand access to the contract address.
             data["contract_address"] = transaction.contract_address
-        elif isinstance(transaction, InvokeFunctionTransaction):
-            # Manually remove `contract_address`, as it always confused Pydantic because
-            # of TransactionAPI's `contract_address` attribute, which is required but a different
+        elif isinstance(transaction, InvokeTransaction):
+            # Manually remove `sender_address`, as it always confused Pydantic because
+            # of TransactionAPI's `sender_address` attribute, which is required but a different
             # concept than this (for deploys, it is the new contract address but for invoke, it's
             # the receiver).
-            data["receiver"] = data.pop("contract_address")
+            data["receiver"] = data.pop("sender_address")
             original_tx = transaction.original_transaction
             was_deploy = (
                 original_tx is not None
@@ -345,7 +351,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
             return receipt
 
         sender_address = None
-        if isinstance(txn, InvokeFunctionTransaction):
+        if isinstance(txn, InvokeTransaction):
             # The real sender is the account contract address.
             sender_address = txn.receiver
         elif isinstance(txn, DeclareTransaction):
@@ -375,10 +381,7 @@ class StarknetProvider(ProviderAPI, StarknetBase):
                 "Unable to send non-Starknet transaction using a Starknet provider "
                 f"(received type '{type(txn)}')."
             )
-        elif (
-            isinstance(txn, InvokeFunctionTransaction)
-            and txn.method_abi.name != EXECUTE_METHOD_NAME
-        ):
+        elif isinstance(txn, InvokeTransaction) and txn.method_abi.name != EXECUTE_METHOD_NAME:
             raise StarknetProviderError(
                 f"Can only send invoke transaction to an account {EXECUTE_METHOD_NAME} method."
             )
@@ -461,13 +464,41 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
     def devnet_client(self) -> DevnetClient:
         return DevnetClient(self.uri)
 
+    @property
+    def cairo_manifest(self) -> Path:
+        config = self.plugin_config.provider
+        value = config.cairo_manifest
+        if not value:
+            # Check if configured in Cairo plugin.
+            cairo_config = self.config_manager.get_config("cairo").dict()
+            manifest = cairo_config.get("manifest")
+            if manifest:
+                return Path(manifest).expanduser().resolve()
+
+            raise StarknetProviderError(
+                "Must configure 'cairo_manifest' in "
+                "'starknet: provider' config (ape-config.yaml)."
+            )
+
+        return Path(value).expanduser().resolve()
+
     def connect(self):
         if self.network.name == LOCAL_NETWORK_NAME:
             # Behave like a 'SubprocessProvider'
             if not self.is_connected:
                 super().connect()
 
-            self.start()
+            try:
+                self.start()
+            except RPCTimeoutError:
+                manifest_path = self.cairo_manifest
+                path = manifest_path.parent / "target"
+                if path.is_dir():
+                    logger.warning(
+                        "Cairo stuck in locked state. Clearing debug target and retrying."
+                    )
+                    shutil.rmtree(path, ignore_errors=True)
+                    self.start()
 
             # Ensure test accounts get cached so they remain when switching providers.
             _ = self.account_container.test_accounts
@@ -476,7 +507,7 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
 
     def build_command(self) -> List[str]:
         parts = urlparse(self.uri)
-        return [
+        uri = [
             self.process_name,
             "--host",
             str(parts.hostname),
@@ -488,7 +519,10 @@ class StarknetDevnetProvider(SubprocessProvider, StarknetProvider):
             str(DEFAULT_ACCOUNT_SEED),
             "--initial-balance",
             str(DEVNET_ACCOUNT_START_BALANCE),
+            "--cairo-compiler-manifest",
+            str(self.cairo_manifest),
         ]
+        return uri
 
     def set_timestamp(self, new_timestamp: int):
         """

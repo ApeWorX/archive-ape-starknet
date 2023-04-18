@@ -11,15 +11,12 @@ from ethpm_types import ContractType
 from ethpm_types.abi import ConstructorABI, EventABI, EventABIType, MethodABI
 from hexbytes import HexBytes
 from pydantic import Field, validator
+from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
 from starknet_py.net.client_models import StarknetBlock as StarknetClientBlock
 from starknet_py.net.models.address import parse_address
 from starknet_py.net.models.chains import StarknetChainId
-from starknet_py.utils.data_transformer.execute_transformer import FunctionCallSerializer
-from starkware.starknet.core.os.class_hash import compute_class_hash
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.public.abi import get_selector_from_name, get_storage_var_address
-from starkware.starknet.public.abi_structs import identifier_manager_from_abi
-from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import (
     ContractTypeNotFoundError,
@@ -31,18 +28,19 @@ from ape_starknet.transactions import (
     DeclareTransaction,
     DeployAccountReceipt,
     DeployAccountTransaction,
-    InvokeFunctionReceipt,
-    InvokeFunctionTransaction,
+    InvokeReceipt,
+    InvokeTransaction,
     StarknetReceipt,
     StarknetTransaction,
 )
 from ape_starknet.utils import (
     EXECUTE_ABI,
     STARKNET_FEE_TOKEN_SYMBOL,
+    get_fn_serializer,
     get_method_abi_from_selector,
     to_checksum_address,
 )
-from ape_starknet.utils.basemodel import StarknetBase
+from ape_starknet.utils.basemodel import StarknetBase, create_sierra_class
 
 NETWORKS = {
     # chain_id, network_id
@@ -119,12 +117,9 @@ class Starknet(EcosystemAPI, StarknetBase):
         if not raw_data:
             return raw_data
 
-        full_abi = [
-            a.dict() for a in (abi.contract_type.abi if abi.contract_type is not None else [abi])
-        ]
-        call_serializer = FunctionCallSerializer(abi.dict(), identifier_manager_from_abi(full_abi))
+        serializer = get_fn_serializer(abi)
         raw_data = [self.encode_primitive_value(v) for v in raw_data]
-        decoded = call_serializer.to_python(raw_data)
+        decoded = serializer.deserialize(raw_data)
 
         # Keep only the expected data instead of a 1-item array
         if len(abi.outputs) == 1 or (
@@ -135,17 +130,13 @@ class Starknet(EcosystemAPI, StarknetBase):
         return decoded
 
     def encode_calldata(self, abi: Union[ConstructorABI, MethodABI], *args) -> List:  # type: ignore
-        full_abi = abi.contract_type.abi if abi.contract_type is not None else [abi]
-        return self._encode_calldata(full_abi=full_abi, abi=abi, call_args=args)
+        return self._encode_calldata(abi, args)
 
     def _encode_calldata(
         self,
-        full_abi: List,
         abi: Union[ConstructorABI, MethodABI],
         call_args,
     ) -> List:
-        full_abi = [abi.dict() if hasattr(abi, "dict") else abi for abi in full_abi]
-        call_serializer = FunctionCallSerializer(abi.dict(), identifier_manager_from_abi(full_abi))
         pre_encoded_args: List[Any] = []
         index = 0
         last_index = min(len(abi.inputs), len(call_args)) - 1
@@ -181,8 +172,23 @@ class Starknet(EcosystemAPI, StarknetBase):
 
             index += 1
 
-        calldata, _ = call_serializer.from_python(*pre_encoded_args)
-        return list(calldata)
+        # Handle complex inputs (e.g. structs) again.
+        # Broken once we switched to Cairo 1.
+        arguments = []
+
+        def build_args(ls):
+            for arg in ls:
+                if isinstance(arg, int):
+                    arguments.append(arg)
+                elif isinstance(arg, (list, tuple)):
+                    build_args(arg)
+                elif isinstance(arg, dict):
+                    build_args(arg.values())
+                else:
+                    arguments.append(self.encode_primitive_value(arg))
+
+        build_args(pre_encoded_args)
+        return arguments
 
     def _pre_encode_value(self, value: Any) -> Any:
         if isinstance(value, dict):
@@ -234,13 +240,13 @@ class Starknet(EcosystemAPI, StarknetBase):
         return value
 
     def decode_receipt(self, data: dict) -> ReceiptAPI:
-        txn_type = TransactionType(data["transaction"].type)
+        txn_type = data["transaction"].type
         receipt_cls: Type[StarknetReceipt]
-        if txn_type == TransactionType.INVOKE_FUNCTION:
-            receipt_cls = InvokeFunctionReceipt
-        elif txn_type == TransactionType.DECLARE:
+        if txn_type.value == "INVOKE":
+            receipt_cls = InvokeReceipt
+        elif txn_type.value == "DECLARE":
             receipt_cls = ContractDeclaration
-        elif txn_type == TransactionType.DEPLOY_ACCOUNT:
+        elif txn_type.value == "DEPLOY_ACCOUNT":
             receipt_cls = DeployAccountReceipt
         else:
             raise StarknetProviderError(f"Unable to handle contract type '{txn_type.value}'.")
@@ -263,15 +269,15 @@ class Starknet(EcosystemAPI, StarknetBase):
     def encode_deployment(
         self, deployment_bytecode: HexBytes, abi: ConstructorABI, *args, **kwargs
     ) -> TransactionAPI:
-        contract_class = ContractClass.deserialize(deployment_bytecode)
-        class_hash = compute_class_hash(contract_class)
+        sierra_class = create_sierra_class(deployment_bytecode)
+        class_hash = compute_sierra_class_hash(sierra_class)
         contract_type = abi.contract_type
         if not contract_type:
             raise StarknetEcosystemError(
                 "Unable to encode deployment - missing full contract type for constructor."
             )
 
-        constructor_arguments = self._encode_calldata(contract_type.abi, abi, args)
+        constructor_arguments = self._encode_calldata(abi, args)
         return self.universal_deployer.create_deploy(class_hash, constructor_arguments, **kwargs)
 
     def encode_transaction(
@@ -283,8 +289,8 @@ class Starknet(EcosystemAPI, StarknetBase):
             raise ContractTypeNotFoundError(address)
 
         arguments = list(args)
-        encoded_calldata = self._encode_calldata(contract_type.abi, abi, arguments)
-        return InvokeFunctionTransaction(
+        encoded_calldata = self._encode_calldata(abi, arguments)
+        return InvokeTransaction(
             receiver=address,
             method_abi=abi,
             calldata=encoded_calldata,
@@ -305,29 +311,21 @@ class Starknet(EcosystemAPI, StarknetBase):
         Returns:
             :class:`~ape_starknet.transactions.DeclareTransaction`
         """
-        contract_type = (
-            contract.contract_type if isinstance(contract, ContractContainer) else contract
-        )
-        code = (
-            (contract_type.deployment_bytecode.bytecode or 0)
-            if contract_type.deployment_bytecode
-            else 0
-        )
-        starknet_contract = ContractClass.deserialize(HexBytes(code))
-        return DeclareTransaction(
-            contract_type=contract_type, data=starknet_contract.serialize(), **kwargs
-        )
+        contract_type = getattr(contract, "contract_type", contract)
+        return DeclareTransaction(contract_type=contract_type, **kwargs)
 
     def create_transaction(self, **kwargs) -> TransactionAPI:
         txn_type = TransactionType(kwargs.pop("type", kwargs.pop("tx_type", "")))
         txn_cls: Type[StarknetTransaction]
-        invoking = txn_type == TransactionType.INVOKE_FUNCTION
+        invoking = txn_type == TransactionType.INVOKE
         if invoking:
-            txn_cls = InvokeFunctionTransaction
+            txn_cls = InvokeTransaction
         elif txn_type == TransactionType.DECLARE:
             txn_cls = DeclareTransaction
         elif txn_type == TransactionType.DEPLOY_ACCOUNT:
             txn_cls = DeployAccountTransaction
+        else:
+            raise TypeError(f"Unhandled txn_type '{txn_type}'.")
 
         txn_data: Dict[str, Any] = {**kwargs, "signature": None}
         if "chain_id" not in txn_data and self.network_manager.active_provider:

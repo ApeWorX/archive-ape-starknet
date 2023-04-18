@@ -28,6 +28,8 @@ python3 setup.py install
 
 ## Quick Usage
 
+First, follow the [ape-caro README](https://github.com/ApeWorX/ape-cairo) to set up Cairo properly.
+
 ### Account Management
 
 Accounts are used to execute transactions and sign call data.

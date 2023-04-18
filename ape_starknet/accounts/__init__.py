@@ -14,13 +14,14 @@ from ape.logging import logger
 from ape.types import AddressType, TransactionSignature
 from ape.utils import ZERO_ADDRESS, cached_property
 from ape.utils.basemodel import BaseModel
+from crypto_cpp_py.cpp_bindings import ECSignature
 from eth_keyfile import create_keyfile_json, decode_keyfile_json
 from eth_utils import text_if_str, to_bytes, to_hex
 from ethpm_types import ContractType
 from hexbytes import HexBytes
 from pydantic import Field, validator
+from starknet_py.hash.utils import message_signature
 from starknet_py.net.signer.stark_curve_signer import StarkCurveSigner
-from starknet_py.utils.crypto.facade import ECSignature, message_signature
 from starkware.cairo.lang.vm.cairo_runner import verify_ecdsa_sig
 from starkware.starknet.core.os.contract_address.contract_address import (
     calculate_contract_address_from_hash,
@@ -33,7 +34,7 @@ from ape_starknet.provider import StarknetDevnetProvider, StarknetProvider
 from ape_starknet.transactions import (
     AccountTransaction,
     DeployAccountTransaction,
-    InvokeFunctionTransaction,
+    InvokeTransaction,
     StarknetTransaction,
 )
 from ape_starknet.types import StarknetSignableMessage
@@ -666,7 +667,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
         if isinstance(contract, ContractContainer):
             return super().deploy(contract, *args, publish=publish, **kwargs)
 
-        if contract.alias == self.alias:
+        elif contract.alias == self.alias:
             return self.deploy_account(**kwargs)
 
         raise ValueError(f"Unable to deploy '{contract}'.")
@@ -748,7 +749,7 @@ class BaseStarknetAccount(AccountAPI, StarknetBase):
 
         txn.nonce = self.nonce
         txn = super().prepare_transaction(txn)
-        if isinstance(txn, InvokeFunctionTransaction):
+        if isinstance(txn, InvokeTransaction):
             return txn.as_execute()
 
         return txn

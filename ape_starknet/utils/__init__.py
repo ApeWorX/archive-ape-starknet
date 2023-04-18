@@ -20,30 +20,34 @@ from eth_typing import HexAddress, HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, is_text, remove_0x_prefix, to_hex
 from eth_utils import to_int as eth_to_int
 from ethpm_types import ContractType
-from ethpm_types.abi import EventABI, MethodABI
+from ethpm_types.abi import ConstructorABI, EventABI, MethodABI
 from hexbytes import HexBytes
-from starknet_py.net import KeyPair
+from starknet_py.hash.sierra_class_hash import compute_sierra_class_hash
 from starknet_py.net.client_errors import ClientError
 from starknet_py.net.client_models import (
     BlockSingleTransactionTrace,
+    ContractClass,
     DeclareTransaction,
     DeployAccountTransaction,
     InvokeTransaction,
     Transaction,
+    TransactionType,
 )
-from starknet_py.net.models import TransactionType
 from starknet_py.net.models.address import parse_address
+from starknet_py.net.signer.stark_curve_signer import KeyPair
+from starknet_py.serialization import FunctionSerializationAdapter, serializer_for_payload
 from starknet_py.transaction_exceptions import TransactionRejectedError
 from starkware.cairo.bootloaders.compute_fact import keccak_ints
 from starkware.crypto.signature.signature import get_random_private_key as get_random_pkey
-from starkware.starknet.core.os.class_hash import compute_class_hash
+from starkware.starknet.core.os.contract_class.deprecated_class_hash import (
+    compute_deprecated_class_hash,
+)
 from starkware.starknet.definitions.general_config import StarknetChainId
 from starkware.starknet.public.abi import get_selector_from_name
-from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.third_party.open_zeppelin.starknet_contracts import account_contract
 
 from ape_starknet.exceptions import StarknetProviderError
-from ape_starknet.utils.basemodel import create_contract_class
+from ape_starknet.utils.basemodel import create_sierra_class
 
 PLUGIN_NAME = "starknet"
 NETWORKS = {
@@ -72,18 +76,18 @@ def convert_contract_class_to_contract_type(
         {
             "contractName": name,
             "sourceId": source_id,
-            "deploymentBytecode": {"bytecode": contract_class.serialize().hex()},
-            "runtimeBytecode": {},
+            "deploymentBytecode": {},
+            "runtimeBytecode": {"bytecode": contract_class.serialize().hex()},
             "abi": contract_class.abi,
         }
     )
 
 
-OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID = "openzeppelin/account/Account.cairo"
+OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID = "../OpenZeppelin_0.6.1/Account.cairo"
 OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE = convert_contract_class_to_contract_type(
     "Account", OPEN_ZEPPELIN_ACCOUNT_SOURCE_ID, account_contract
 )
-OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_class_hash(account_contract)
+OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH = compute_deprecated_class_hash(account_contract)
 EXECUTE_ABI = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.mutable_methods[EXECUTE_METHOD_NAME]
 
 # Taken from https://github.com/argentlabs/argent-x/blob/develop/packages/extension/src/background/wallet.ts  # noqa: E501
@@ -275,7 +279,7 @@ def _try_extract_message_from_json(value: str) -> str:
 def get_dict_from_tx_info(txn_info: Transaction) -> Dict:
     txn_dict = {**asdict(txn_info)}
     if isinstance(txn_info, InvokeTransaction):
-        txn_dict["type"] = TransactionType.INVOKE_FUNCTION
+        txn_dict["type"] = TransactionType.INVOKE
     elif isinstance(txn_info, DeclareTransaction):
         txn_dict["type"] = TransactionType.DECLARE
     elif isinstance(txn_info, DeployAccountTransaction):
@@ -345,8 +349,8 @@ def to_int(val: Any) -> int:
 
 
 def get_class_hash(code: Union[str, HexBytes]):
-    contract_class = create_contract_class(code)
-    return compute_class_hash(contract_class)
+    contract_class = create_sierra_class(code)
+    return compute_sierra_class_hash(contract_class)
 
 
 def create_keypair(private_key: Union[str, int]) -> KeyPair:
@@ -368,3 +372,12 @@ def get_account_constructor_calldata(key_pair: KeyPair, class_hash: int) -> List
     else:
         logger.warning(f"Constructor calldata for account with class '{class_hash}' not known.")
         return []
+
+
+def get_fn_serializer(abi: Union[MethodABI, ConstructorABI]) -> FunctionSerializationAdapter:
+    input_dict = {x.name: x.type for x in getattr(abi, "inputs", [])}
+    output_dict = {x.name: x.type for x in getattr(abi, "outputs", [])}
+    return FunctionSerializationAdapter(
+        inputs_serializer=serializer_for_payload(input_dict),
+        outputs_deserializer=serializer_for_payload(output_dict),
+    )

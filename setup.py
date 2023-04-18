@@ -12,12 +12,12 @@ extras_require = {
         "ape-cairo",  # For compiling contracts in tests
     ],
     "lint": [
-        "black>=22.12",  # auto-formatter and linter
+        "black>=23.3.0",  # auto-formatter and linter
         "mypy>=0.991,<1.0",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
         "types-PyYAML",  # Needed due to mypy typeshed
-        "flake8>=5.0.4",  # Style linter
+        "flake8>=6.0.0",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
         "mdformat>=0.7.16",  # Auto-formatter for markdown
         "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
@@ -62,7 +62,7 @@ setup(
     name="ape-starknet",
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    description="""ape-starknet: An ape plugin for the StarkNet networks""",
+    description="""ape-starknet: An ape plugin for the Starknet networks""",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="ApeWorX Ltd.",
@@ -74,15 +74,15 @@ setup(
         "hexbytes",  # Use same version as eth-ape
         "pydantic",  # Use same version as eth-ape
         # ** ApeWorX maintained **
-        "eth-ape>=0.6.3,<0.7",
+        "eth-ape>=0.6.8,<0.7",
         "ethpm-types",  # Use same version as eth-ape
         # ** Starknet Ecosystem **
-        "cairo-lang>=0.10.3,<0.11",
-        "starknet_py>=0.14.0a0,<0.15",
-        "starknet-devnet>=0.4.4,<0.5",
+        "cairo-lang==0.11.0.2",
+        "starknet-py>=0.15.2,<0.16",
+        "starknet-devnet>=0.5.0,<0.6",
     ],
     entry_points={"ape_cli_subcommands": ["ape_starknet=ape_starknet._cli:cli"]},
-    python_requires=">=3.8,<3.11",
+    python_requires=">=3.9,<3.11",
     extras_require=extras_require,
     py_modules=["ape_starknet"],
     license="Apache-2.0",
@@ -98,7 +98,6 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],

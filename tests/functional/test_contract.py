@@ -46,7 +46,7 @@ def test_declare_then_deploy(account, chain, project, provider):
     assert actual_balance == expected_balance
 
     # Grab the new contract address from the receipt's logs.
-    logs = list(receipt.decode_logs(factory.contract_deployed))
+    logs = list(receipt.decode_logs(factory.ContractDeployed))
     new_contract_address = provider.starknet.decode_address(logs[0]["contract_address"])
 
     # Interact with deployed contract from 'class_hash'.
@@ -58,26 +58,6 @@ def test_declare_then_deploy(account, chain, project, provider):
     balance_pre_call = new_contract_instance.get_balance(account)
     new_contract_instance.increase_balance(account, 9, sender=account)
     assert new_contract_instance.get_balance(account) == balance_pre_call + 9
-
-
-def test_get_caller_address(contract, account, provider):
-    expected = provider.starknet.encode_address(account.address)
-    assert contract.get_caller(sender=account).return_value == expected
-
-
-def test_validate_signature_on_chain(contract, account, initial_balance):
-    # NOTE: This test validates the account signature but the transaction
-    # is not directly sent from the account.
-    increase_amount = 42 * 2**152
-
-    signature = account.sign_message(increase_amount)
-    contract.increase_balance_signed(
-        account.public_key, account.address, increase_amount, signature, sender=account
-    )
-
-    actual = contract.get_balance(account)
-    expected = initial_balance + increase_amount
-    assert actual == expected
 
 
 def test_transact_from_account(contract, account, initial_balance):
@@ -112,7 +92,7 @@ def test_unsigned_contract_transaction(contract, account, initial_balance):
 def test_decode_logs(contract, account, starknet):
     increase_amount = 9933
     receipt = contract.increase_balance(account.address, increase_amount, sender=account)
-    logs = list(receipt.decode_logs(contract.balance_increased))
+    logs = list(receipt.decode_logs(contract.BalanceIncreased))
     assert len(logs) == 1
     assert logs[0].amount == increase_amount
 
@@ -149,23 +129,6 @@ def test_array_inputs(contract, account):
     # NOTE: Due to a limitation in ape, we have to include the array length argument.
     contract.store_sum(3, [1, 2, 3], sender=account)
     assert contract.get_last_sum() == 6
-
-
-def test_complex_struct_argument(contract, account):
-    complex_struct = {
-        "timestamp": 42,
-        "value0": 123,  # == Uint256(123, 0)
-        "value1": {
-            "low": 0,
-            "high": 123,
-        },  # == Uint256(0, 123) == 41854731131275431005995076714107490009088
-    }
-    receipt = contract.store_complex_struct(complex_struct, sender=account)
-    assert receipt.return_value == {
-        "timestamp": 42,
-        "value0": 123,
-        "value1": 41854731131275431005995076714107490009088,
-    }
 
 
 #

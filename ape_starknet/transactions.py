@@ -9,11 +9,19 @@ from ape.utils import abstractmethod, cached_property, raises_not_implemented
 from ethpm_types import ContractType, HexBytes
 from ethpm_types.abi import EventABI, MethodABI
 from pydantic import Field, validator
-from starknet_py.net.client_models import Call, Event, TransactionStatus
+from starknet_py.hash.casm_class_hash import compute_casm_class_hash
+from starknet_py.hash.transaction import compute_declare_v2_transaction_hash
+from starknet_py.net.client_models import (
+    Call,
+    CasmClass,
+    Event,
+    SierraContractClass,
+    TransactionStatus,
+)
 from starknet_py.net.models.transaction import (
-    Declare,
+    DeclareV2,
     DeployAccount,
-    InvokeFunction,
+    Invoke,
     Transaction,
     TransactionType,
 )
@@ -22,27 +30,24 @@ from starkware.starknet.core.os.contract_address.contract_address import (
 )
 from starkware.starknet.core.os.transaction_hash.transaction_hash import (
     TransactionHashPrefix,
-    calculate_declare_transaction_hash,
     calculate_deploy_account_transaction_hash,
     calculate_transaction_hash_common,
 )
 from starkware.starknet.definitions import constants
 from starkware.starknet.definitions.fields import ContractAddressSalt
 from starkware.starknet.public.abi import get_selector_from_name
-from starkware.starknet.services.api.contract_class import ContractClass
 
 from ape_starknet.exceptions import ContractTypeNotFoundError
 from ape_starknet.utils import (
     EXECUTE_ABI,
     EXECUTE_METHOD_NAME,
     OPEN_ZEPPELIN_ACCOUNT_CLASS_HASH,
-    OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE,
     ContractEventABI,
     extract_trace_data,
     to_checksum_address,
     to_int,
 )
-from ape_starknet.utils.basemodel import StarknetBase
+from ape_starknet.utils.basemodel import StarknetBase, create_casm_class, create_sierra_class
 
 
 class StarknetTransaction(TransactionAPI, StarknetBase):
@@ -106,29 +111,51 @@ class AccountTransaction(StarknetTransaction):
 class DeclareTransaction(AccountTransaction):
     sender: AddressType = Field(alias="sender_address")
     type: TransactionType = TransactionType.DECLARE
+    contract_type: ContractType
+    version: int = 2
 
     @validator("sender", pre=True, allow_reuse=True)
     def validate_sender(cls, value):
         return to_checksum_address(value)
 
     @cached_property
-    def starknet_contract(self) -> ContractClass:
-        return ContractClass.deserialize(self.data)
+    def sierra_contract(self) -> SierraContractClass:
+        code = (
+            (self.contract_type.deployment_bytecode.bytecode or 0)
+            if self.contract_type.deployment_bytecode
+            else 0
+        )
+        return create_sierra_class(code)
+
+    @cached_property
+    def casm_class(self) -> CasmClass:
+        code = (
+            (self.contract_type.runtime_bytecode.bytecode or 0)
+            if self.contract_type.runtime_bytecode
+            else 0
+        )
+        return create_casm_class(code)
+
+    @cached_property
+    def compiled_class_hash(self) -> int:
+        return compute_casm_class_hash(self.casm_class)
 
     @property
     def txn_hash(self) -> HexBytes:
-        return calculate_declare_transaction_hash(
-            self.starknet_contract,
-            self.provider.chain_id,
-            self.max_fee,
-            to_int(self.sender),
-            self.version,
-            self.nonce,
+        return compute_declare_v2_transaction_hash(
+            contract_class=self.sierra_contract,
+            compiled_class_hash=self.compiled_class_hash,
+            chain_id=self.provider.chain_id,
+            max_fee=self.max_fee,
+            sender_address=to_int(self.sender),
+            version=self.version,
+            nonce=self.nonce,
         )
 
-    def as_starknet_object(self) -> Declare:
-        return Declare(
-            contract_class=self.starknet_contract,
+    def as_starknet_object(self) -> DeclareV2:
+        return DeclareV2(
+            contract_class=self.sierra_contract,
+            compiled_class_hash=self.compiled_class_hash,
             max_fee=self.max_fee,
             nonce=self.nonce,
             sender_address=self.starknet.encode_address(self.sender),
@@ -137,10 +164,10 @@ class DeclareTransaction(AccountTransaction):
         )
 
 
-class InvokeFunctionTransaction(AccountTransaction):
+class InvokeTransaction(AccountTransaction):
     method_abi: MethodABI
     sender: Optional[AddressType] = None
-    type: TransactionType = TransactionType.INVOKE_FUNCTION
+    type: TransactionType = TransactionType.INVOKE
 
     contract_address: Optional[AddressType]
     """
@@ -149,13 +176,11 @@ class InvokeFunctionTransaction(AccountTransaction):
 
     # Gets set when calling `as_execute()` and is intended to be the
     # transaction before transforming to an `__execute__()`transaction.
-    original_transaction: Optional["InvokeFunctionTransaction"] = Field(
-        None, exclude=True, repr=False
-    )
+    original_transaction: Optional["InvokeTransaction"] = Field(None, exclude=True, repr=False)
     """
     The original transaction before transforming to an account ``__execute__()``
     invoke transaction. Gets set in the
-    ``:meth:`~ape_starknet.transactions.InvokeFunctionTransaction.as_execute`` method.
+    ``:meth:`~ape_starknet.transactions.InvokeTransaction.as_execute`` method.
     """
 
     data: List[Any] = Field([], alias="calldata")  # type: ignore
@@ -207,21 +232,21 @@ class InvokeFunctionTransaction(AccountTransaction):
         )
         return HexBytes(hash_int)
 
-    def as_starknet_object(self) -> InvokeFunction:
-        return InvokeFunction(
+    def as_starknet_object(self) -> Invoke:
+        return Invoke(
             calldata=self.data,
-            contract_address=self.receiver_int,
+            sender_address=self.receiver_int,
             max_fee=self.max_fee or 0,
             nonce=self.nonce,
             signature=self.starknet_signature,
             version=self.version,
         )
 
-    def _as_call(self) -> InvokeFunction:
+    def _as_call(self) -> Invoke:
         receiver_int = self.starknet.encode_address(self.receiver)
         return Call(to_addr=receiver_int, selector=self.entry_point_selector, calldata=self.data)
 
-    def as_execute(self) -> "InvokeFunctionTransaction":
+    def as_execute(self) -> "InvokeTransaction":
         """
         Convert this transaction to an account ``__execute__`` transaction.
         """
@@ -229,14 +254,13 @@ class InvokeFunctionTransaction(AccountTransaction):
         new_tx = deepcopy(self)
         stark_tx = new_tx.as_starknet_object()
         account_call = {
-            "to": stark_tx.contract_address,
+            "to": stark_tx.sender_address,
             "selector": new_tx.entry_point_selector,
             "data_offset": 0,
             "data_len": len(stark_tx.calldata),
         }
-        full_abi = OPEN_ZEPPELIN_ACCOUNT_CONTRACT_TYPE.abi
         entire_call_data = [[account_call], stark_tx.calldata]
-        new_tx.data = new_tx.starknet._encode_calldata(full_abi, EXECUTE_ABI, entire_call_data)
+        new_tx.data = new_tx.starknet._encode_calldata(EXECUTE_ABI, entire_call_data)
 
         if new_tx.sender:
             new_tx.receiver = new_tx.sender
@@ -335,13 +359,13 @@ class StarknetReceipt(ReceiptAPI, StarknetBase):
         pass
 
 
-class AccountTransactionReceipt(StarknetReceipt):
+class AccountReceipt(StarknetReceipt):
     @property
     def total_fees_paid(self) -> int:
         return self.gas_used  # gas_used is a misleading name.
 
 
-class DeployAccountReceipt(AccountTransactionReceipt):
+class DeployAccountReceipt(AccountReceipt):
     contract_address: AddressType
     status: TransactionStatus
 
@@ -353,7 +377,7 @@ class DeployAccountReceipt(AccountTransactionReceipt):
         return to_checksum_address(value)
 
 
-class InvokeFunctionReceipt(AccountTransactionReceipt):
+class InvokeReceipt(AccountReceipt):
     logs: List[dict] = Field(alias="events")
 
     @validator("logs", pre=True, allow_reuse=True)
@@ -379,7 +403,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
     @cached_property
     def return_value(self) -> Any:
         txn = self.transaction
-        if not isinstance(txn, InvokeFunctionTransaction):
+        if not isinstance(txn, InvokeTransaction):
             return None  # Should never get here.
 
         if txn.original_transaction:
@@ -392,7 +416,6 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
         self,
         abi: Optional[ContractEventABI] = None,
     ) -> ContractLogContainer:
-
         log_data_items: List[Dict] = []
         for log in self.logs:
             log_data = {
@@ -435,7 +458,7 @@ class InvokeFunctionReceipt(AccountTransactionReceipt):
             return decoded_logs
 
 
-class ContractDeclaration(AccountTransactionReceipt):
+class ContractDeclaration(AccountReceipt):
     """
     The result of declaring a contract type in Starknet.
     """
@@ -444,12 +467,7 @@ class ContractDeclaration(AccountTransactionReceipt):
 
     @validator("class_hash", pre=True)
     def validate_class_hash(cls, value):
-        if isinstance(value, str):
-            return int(value, 16)
-        elif isinstance(value, bytes):
-            return to_int(value)
-        else:
-            return value
+        return to_int(value)
 
     @cached_property
     def contract_type(
@@ -464,7 +482,7 @@ class ContractDeclaration(AccountTransactionReceipt):
 
 __all__ = [
     "ContractDeclaration",
-    "InvokeFunctionTransaction",
+    "InvokeTransaction",
     "StarknetReceipt",
     "StarknetTransaction",
 ]
