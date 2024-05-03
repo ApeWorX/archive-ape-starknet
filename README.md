@@ -4,7 +4,7 @@ Plugins for the [Starknet Ethereum L2 networks](https://starkware.co/starknet/).
 
 ## Dependencies
 
-- [python3](https://www.python.org/downloads) version 3.8 or greater, python3-dev
+- [python3](https://www.python.org/downloads) version 3.8 up to 3.12.
 
 ## Installation
 
